@@ -1,5 +1,5 @@
 import os
-from mne import filter as fl
+import mne
 import sys
 import numpy as np
 
@@ -7,14 +7,15 @@ import scipy.io as sio
 
 
 def import_data(datadir, filename):
+    # TODO add finger choice
     path = os.path.join(datadir, filename)
     if os.path.exists(path):
         dataset = sio.loadmat(os.path.join(data_dir, file_name))
         X = dataset['train_data'].astype(np.float)
         y = dataset['train_dg'][:, 0] # considering only the thumb
 
-        print('input data shape: X: {}, y: {}'.format(X.shape, y.shape))
-
+        print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'.format(X.shape,
+                                                                                                                y.shape))
         return X, y
     else:
         print("No such file '{}'".format(path), file=sys.stderr)
@@ -25,17 +26,34 @@ def filter_data(X):
     X_filtered = np.zeros((X.shape[0], X.shape[1] * len(band_ranges)), dtype=float)
     for index, band in enumerate(band_ranges):
         print('range: {} , {}'.format(X.shape[1]*index, X.shape[1]*index+1))
-        X_filtered[:, X.shape[1]*index:X.shape[1]*index+1] = fl.filter_data(X,500, band[0],band[1], method='fir')
+        X_filtered[:, X.shape[1]*index:X.shape[1]*index+1] = mne.filter.filter_data(X,500, band[0],band[1], method='fir')
 
     return  X_filtered
 
-def find_event():
-    pass
+def find_events(raw,duration=5., overlap=1.):
+    events = mne.make_fixed_length_events(raw, duration, overlap)
+    return events
 
-def create_epoch():
-    pass
+def create_raw(X, n_channels, sampling_rate):
+
+
+    info = mne.create_info(n_channels, sampling_rate, 'ecog')
+    info['description'] = 'ECoG dataset IV BCI competition'
+
+    return mne.io.RawArray(X.T, info)
+
+def create_epoch(X, sampling_rate, events=None, duration=4.):
+    # Create Basic info data
+    n_channels = X.shape[1]
+    raw = create_raw(X, n_channels, sampling_rate)
+    if events is None:
+        epochs = mne.make_fixed_length_epochs(raw, duration)
+    else:
+        epochs = mne.Epochs(raw, find_events(raw))
+    return epochs
 
 def y_resampling():
+    # TODO find a way to process the y data respect to the events (discretize the y)
     pass
 
 def pre_process(X, y):
@@ -47,13 +65,18 @@ file_name = 'sub1_comp.mat'
 
 X, y = import_data(data_dir, file_name)
 
-X_new = filter_data(X)
-
-print(X.shape) # 400000 time samples x 62 channel
-print(y.shape) # 400000 time samples x 5 fingers
-
-print(X_new.shape)
 print('Example of fingers position : {}'.format(y[0]))
+
+
+# find event on Y target
+
+
+
+
+
+
+
+
 
 
 
