@@ -7,8 +7,8 @@ import sklearn
 from mne.decoding import SPoC as SPoc
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import KFold, cross_val_predict
-
+from sklearn.model_selection import KFold, cross_val_predict, cross_validate, train_test_split, cross_val_score
+from sklearn.metrics import mean_squared_error
 
 import scipy.io as sio
 
@@ -69,6 +69,9 @@ def y_resampling(y, n_chunks):
 
     return y
 
+def split_data(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
+
 
 def pre_process(X, y):
     pass
@@ -92,15 +95,36 @@ print('epochs with events generation')
 epochs_event = create_epoch(X, sampling_rate, True)
 print(epochs_event)
 
-X = epochs_event.get_data()
+# X = epochs_event.get_data()
+X = epochs.get_data()
+
 y = y_resampling(y, X.shape[0])
 
 # SPoC algotithms
 
 spoc = SPoc(n_components=2, log=True, reg='oas', rank='full')
 
+cv = KFold(n_splits=4, shuffle=False)
+
+pipeline = make_pipeline(spoc, Ridge())
+
+scores_1 = cross_val_score(pipeline, X, y, cv=cv, scoring='neg_root_mean_squared_error')
+
+scores = cross_validate(pipeline, X, y, cv=cv, scoring='neg_root_mean_squared_error', return_estimator=True)
+
+print('Cross_val_score score : {}'.format(scores_1))
+print('Cross_validate score : {}'.format(scores))
+
+# Run cross validaton
+# y_pred = cross_val_predict(pipeline, X, y, cv=cv)
+
+# print(mean_squared_error(y, y_pred))
 
 
+# TODO,  find a way to evaluate the pipleine as well as the SPoC algorithm
+# TODO, implement approach not using epoched data
+# TODO, implement normalization
+# TODO, implement classical split test
 
 
 
