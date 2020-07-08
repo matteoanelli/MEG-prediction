@@ -8,19 +8,20 @@ from mne.decoding import SPoC as SPoc
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold, cross_val_predict, cross_validate, train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import scipy.io as sio
 import matplotlib.pyplot as plt
 
 # %%
-def import_data(datadir, filename):
-    # TODO add finger choice
+def import_data(datadir, filename, finger):
+    # TODO add finger choice dict
     path = os.path.join(datadir, filename)
     if os.path.exists(path):
         dataset = sio.loadmat(os.path.join(data_dir, file_name))
         X = dataset['train_data'].astype(np.float)
-        y = dataset['train_dg'][:, 0] # considering only the thumb
+        assert finger >= 0 and finger <5, 'Finger input not valid, range value from 0 to 4.'
+        y = dataset['train_dg'][:, finger] #
 
         print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'.format(X.shape,
                                                                                                                 y.shape))
@@ -51,15 +52,21 @@ def create_raw(X, n_channels, sampling_rate):
 
     return mne.io.RawArray(X.T, info)
 
-def create_epoch(X, sampling_rate, events=False, duration=4.):
-    # TODO implement possibility of sliding window
+def create_epoch(X, sampling_rate, duration=4., overlap=0., verbose=None, baseline=None):
     # Create Basic info data
     n_channels = X.shape[1]
     raw = create_raw(X, n_channels, sampling_rate)
-    if events is False:
-        epochs = mne.make_fixed_length_epochs(raw, duration)
-    else:
-        epochs = mne.Epochs(raw, find_events(raw))
+
+    # events = mne.make_fixed_length_events(raw, 1, duration=duration)
+    # delta = 1. / raw.info['sfreq'] # TODO understand this delta
+    # epochs = mne.Epochs(raw, events, event_id=[1], tmin=tmin,
+    #               tmax=tmax - delta,
+    #               verbose=verbose, baseline=baseline)
+    events = mne.make_fixed_length_events(raw, 1, duration=duration, overlap=overlap)
+    delta = 1. / raw.info['sfreq']
+    epochs = mne.Epochs(raw, events, event_id=[1], tmin=0.,
+                        tmax=duration - delta,
+                        verbose=verbose, baseline=baseline)
     return epochs
 
 def y_resampling(y, n_chunks):
@@ -70,33 +77,29 @@ def y_resampling(y, n_chunks):
 
     return y
 
-def split_data(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
+def split_data(X, y, test_size=0.4, random_state=0):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+    return X_train, X_test, y_train, y_test
 
 
 def pre_process(X, y):
     pass
 
 #%%
-data_dir  = os.environ['DATA_PATH']
+# data_dir  = os.environ['DATA_PATH']
+data_dir = 'C:\\Users\\anellim1\Develop\Econ\BCICIV_4_mat\\'
 file_name = 'sub1_comp.mat'
 sampling_rate = 1000
 
 #%%
 # Example
-X, y = import_data(data_dir, file_name)
+X, y = import_data(data_dir, file_name, 0)
 
 print('Example of fingers position : {}'.format(y[0]))
-
-
-# find event on Y target
-print('epochs without events generation')
-epochs = create_epoch(X, sampling_rate)
-print(epochs)
-
 print('epochs with events generation')
-epochs_event = create_epoch(X, sampling_rate, True)
-print(epochs_event)
+epochs = create_epoch(X, sampling_rate, 4., 1)
+
 
 # X = epochs_event.get_data()
 X = epochs.get_data()
@@ -124,23 +127,57 @@ print('Cross_validate score : {}'.format(scores))
 
 print(pipeline.get_params())
 # %%
+print('X shape {}, y shape {}'.format(X.shape, y.shape))
+spoc_estimator = SPoc(n_components=10, log=True, reg='oas', rank='full')
 
-spoc_estimator = SPoc(n_components=2, log=True, reg='oas', rank='full')
-spoc_estimator.fit(X, y)
-spoc_estimator.plot_patterns(epochs.info)
+X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
 
-print(spoc_estimator.get_params())
+print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
 
-# Run cross validaton
+pipeline = make_pipeline(spoc, Ridge())
+
+# X_new = spoc_estimator.fit_transform(X_train, y_train)
+# regressor = Ridge()
+# regressor.fit(X_new, y_train)
+
+# y_new = regressor.predict(spoc_estimator.transform(X_test))
+
+pipeline.fit(X_train, y_train)
+
+y_new_train = pipeline.predict(X_train)
+y_new = pipeline.predict(X_test)
+
+print('mean squared error {}'.format(mean_squared_error(y_test, y_new)))
+print('mean absolute error {}'.format(mean_absolute_error(y_test, y_new)))
+
+# plot y_new against the true value
+fig, ax = plt.subplots(1, 2, figsize=[10, 4])
+times = np.arange(y_new.shape[0])
+ax[0].plot(times, y_new, color='b', label='Predicted')
+ax[0].plot(times, y_test, color='r', label='True')
+ax[0].set_xlabel('Epoch')
+ax[0].set_ylabel('Finger Movement')
+ax[0].set_title('SPoC Finger Movement')
+times = np.arange(y_new_train.shape[0])
+ax[1].plot(times, y_new_train, color='b', label='Predicted')
+ax[1].plot(times, y_train, color='r', label='True')
+ax[1].set_xlabel('Epoch')
+ax[1].set_ylabel('Finger Movement')
+ax[1].set_title('SPoC Finger Movement training')
+plt.legend()
+mne.viz.tight_layout()
+plt.show()
+
 # y_pred = cross_val_predict(pipeline, X, y, cv=cv)
 
 # print(mean_squared_error(y, y_pred))
 
 
-# TODO,  find a way to evaluate the pipeline as well as the SPoC algorithm
+# TODO,  find a way to evaluate the pipeline as well as the SPoC algorithm done
 # TODO, implement approach not using epoched data (form continuous data)
 # TODO, implement normalization
-# TODO, implement classical split test
+# TODO, implement classical split test done
+# TODO, channel selection
 
 
 
