@@ -8,8 +8,6 @@ from sklearn.model_selection import train_test_split
 
 import scipy.io as sio
 
-
-# %%
 def import_data(datadir, filename, finger):
     # TODO add finger choice dict
     path = os.path.join(datadir, filename)
