@@ -11,8 +11,9 @@ from sklearn.model_selection import KFold, cross_val_predict, cross_validate, tr
 from sklearn.metrics import mean_squared_error
 
 import scipy.io as sio
+import matplotlib.pyplot as plt
 
-
+# %%
 def import_data(datadir, filename):
     # TODO add finger choice
     path = os.path.join(datadir, filename)
@@ -76,11 +77,13 @@ def split_data(X, y):
 def pre_process(X, y):
     pass
 
-
-data_dir  = 'C:\\Users\\anellim1\Develop\Econ\BCICIV_4_mat\\'
+#%%
+data_dir  = os.environ['DATA_PATH']
 file_name = 'sub1_comp.mat'
 sampling_rate = 1000
 
+#%%
+# Example
 X, y = import_data(data_dir, file_name)
 
 print('Example of fingers position : {}'.format(y[0]))
@@ -97,9 +100,10 @@ print(epochs_event)
 
 # X = epochs_event.get_data()
 X = epochs.get_data()
+#%%
 
 y = y_resampling(y, X.shape[0])
-
+#%%
 # SPoC algotithms
 
 spoc = SPoc(n_components=2, log=True, reg='oas', rank='full')
@@ -110,10 +114,22 @@ pipeline = make_pipeline(spoc, Ridge())
 
 scores_1 = cross_val_score(pipeline, X, y, cv=cv, scoring='neg_root_mean_squared_error')
 
-scores = cross_validate(pipeline, X, y, cv=cv, scoring='neg_root_mean_squared_error', return_estimator=True)
+pipeline2 = make_pipeline(spoc, Ridge())
+
+
+scores = cross_validate(pipeline2, X, y, cv=cv, scoring='neg_root_mean_squared_error', return_estimator=True)
 
 print('Cross_val_score score : {}'.format(scores_1))
 print('Cross_validate score : {}'.format(scores))
+
+print(pipeline.get_params())
+# %%
+
+spoc_estimator = SPoc(n_components=2, log=True, reg='oas', rank='full')
+spoc_estimator.fit(X, y)
+spoc_estimator.plot_patterns(epochs.info)
+
+print(spoc_estimator.get_params())
 
 # Run cross validaton
 # y_pred = cross_val_predict(pipeline, X, y, cv=cv)
@@ -121,8 +137,8 @@ print('Cross_validate score : {}'.format(scores))
 # print(mean_squared_error(y, y_pred))
 
 
-# TODO,  find a way to evaluate the pipleine as well as the SPoC algorithm
-# TODO, implement approach not using epoched data
+# TODO,  find a way to evaluate the pipeline as well as the SPoC algorithm
+# TODO, implement approach not using epoched data (form continuous data)
 # TODO, implement normalization
 # TODO, implement classical split test
 
