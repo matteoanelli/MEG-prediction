@@ -4,6 +4,7 @@ import sys
 import numpy as np
 
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler, normalize
 
 
 import scipy.io as sio
@@ -17,22 +18,22 @@ def import_data(datadir, filename, finger):
         assert finger >= 0 and finger <5, 'Finger input not valid, range value from 0 to 4.'
         y = dataset['train_dg'][:, finger] #
 
-        print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'.format(X.shape,
-                                                                                                                y.shape))
+        print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'
+              .format(X.shape, y.shape))
         return X, y
     else:
         print("No such file '{}'".format(path), file=sys.stderr)
 
-def filter_data(X):
-    # TODO appropriate filtering
-    band_ranges = [(1, 60), (60, 100), (100, 200)]
+def filter_data(X, sampling_rate):
+    # TODO appropriate filtering and generalize function
 
+    # careful with x shape, the last dimension should be n_times
+    band_ranges = [(1, 60), (60, 100), (100, 200)]
     X_filtered = np.zeros((X.shape[0], X.shape[1] * len(band_ranges)), dtype=float)
     for index, band in enumerate(band_ranges):
-        print('range: {} , {}'.format(X.shape[1]*index, X.shape[1]*index+1))
-        X_filtered[:, X.shape[1]*index:X.shape[1]*index+1] = mne.filter.filter_data(X,500, band[0],band[1], method='fir')
+        X_filtered[:, X.shape[1]*index:X.shape[1]*(index+1)] = mne.filter.filter_data(X,sampling_rate, band[0],band[1], method='fir')
 
-    return  X_filtered
+    return  X_filtered.T
 
 def find_events(raw,duration=5., overlap=1.):
     events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
@@ -46,21 +47,26 @@ def create_raw(X, n_channels, sampling_rate):
 
     return mne.io.RawArray(X.T, info)
 
-def create_epoch(X, sampling_rate, duration=4., overlap=0., verbose=None, baseline=None):
+def create_epoch(X, sampling_rate, duration=4., overlap=0., ds_factor=1., verbose=None, baseline=None):
     # Create Basic info data
     n_channels = X.shape[1]
     raw = create_raw(X, n_channels, sampling_rate)
+
 
     # events = mne.make_fixed_length_events(raw, 1, duration=duration)
     # delta = 1. / raw.info['sfreq'] # TODO understand this delta
     # epochs = mne.Epochs(raw, events, event_id=[1], tmin=tmin,
     #               tmax=tmax - delta,
     #               verbose=verbose, baseline=baseline)
+
     events = mne.make_fixed_length_events(raw, 1, duration=duration, overlap=overlap)
     delta = 1. / raw.info['sfreq']
     epochs = mne.Epochs(raw, events, event_id=[1], tmin=0.,
                         tmax=duration - delta,
-                        verbose=verbose, baseline=baseline)
+                        verbose=verbose, baseline=baseline, preload=True)
+    if float(ds_factor) != 1.:
+        epochs = epochs.copy().resample(sampling_rate/ds_factor, npad='auto')
+
     return epochs
 
 def y_resampling(y, n_chunks):
@@ -76,6 +82,20 @@ def split_data(X, y, test_size=0.4, random_state=0):
 
     return X_train, X_test, y_train, y_test
 
+def normalize(X, y):
+    print(X.shape)
+    print(y.shape)
+
+    scaler_X = MinMaxScaler()
+    scaler_y = MinMaxScaler()
+
+    print('Start scaling')
+    scaler_X.fit_transform(X)
+    scaler_y.fit_transform(y)
+
+    return scaler_X.fit_transform(X), scaler_y.fit_transform(y)
 
 def pre_process(X, y):
     pass
+
+# TODO fix all the Transpose function coherently
