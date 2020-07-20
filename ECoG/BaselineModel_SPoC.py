@@ -6,7 +6,7 @@ Created on ...
 @author: Matteo Anelli
 """
 
-from ECoG.utils import *
+from utils import *
 
 from mne.decoding import SPoC as SPoc
 from sklearn.pipeline import make_pipeline
@@ -25,8 +25,9 @@ sampling_rate = 1000
 
 #%%
 # Example
-X, y = import_data(data_dir, file_name, 0)
-X = filter_data(X.T, sampling_rate)
+X, y = import_ECoG(data_dir, file_name, 0)
+print(X.shape)
+X = filter_data(X, sampling_rate)
 print(X.shape)
 print('Example of fingers position : {}'.format(y[0]))
 print('epochs with events generation')

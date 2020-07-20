@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler, normalize
 
 import scipy.io as sio
 
-def import_data(datadir, filename, finger):
+def import_ECoG(datadir, filename, finger):
     # TODO add finger choice dict
     path = os.path.join(datadir, filename)
     if os.path.exists(path):
@@ -20,7 +20,7 @@ def import_data(datadir, filename, finger):
 
         print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'
               .format(X.shape, y.shape))
-        return X, y
+        return X.T, y
     else:
         print("No such file '{}'".format(path), file=sys.stderr)
 
@@ -33,7 +33,7 @@ def filter_data(X, sampling_rate):
     for index, band in enumerate(band_ranges):
         X_filtered[:, X.shape[1]*index:X.shape[1]*(index+1)] = mne.filter.filter_data(X,sampling_rate, band[0],band[1], method='fir')
 
-    return  X_filtered.T
+    return  X_filtered
 
 def find_events(raw,duration=5., overlap=1.):
     events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
@@ -45,11 +45,12 @@ def create_raw(X, n_channels, sampling_rate):
     info = mne.create_info(n_channels, sampling_rate, 'ecog')
     info['description'] = 'ECoG dataset IV BCI competition'
 
-    return mne.io.RawArray(X.T, info)
+    return mne.io.RawArray(X, info)
 
 def create_epoch(X, sampling_rate, duration=4., overlap=0., ds_factor=1., verbose=None, baseline=None):
     # Create Basic info data
-    n_channels = X.shape[1]
+    # X.shape to be channel, n_sample
+    n_channels = X.shape[0]
     raw = create_raw(X, n_channels, sampling_rate)
 
 
