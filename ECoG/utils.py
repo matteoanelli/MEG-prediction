@@ -62,16 +62,22 @@ def create_epoch(X, sampling_rate, duration=4., overlap=0., ds_factor=1., verbos
 
     events = mne.make_fixed_length_events(raw, 1, duration=duration, overlap=overlap)
     delta = 1. / raw.info['sfreq']
-    epochs = mne.Epochs(raw, events, event_id=[1], tmin=0.,
-                        tmax=duration - delta,
-                        verbose=verbose, baseline=baseline, preload=True)
+
     if float(ds_factor) != 1.:
+        epochs = mne.Epochs(raw, events, event_id=[1], tmin=0.,
+                            tmax=duration - delta,
+                            verbose=verbose, baseline=baseline, preload=True)
         epochs = epochs.copy().resample(sampling_rate/ds_factor, npad='auto')
+    else:
+        epochs = mne.Epochs(raw, events, event_id=[1], tmin=0.,
+                            tmax=duration - delta,
+                            verbose=verbose, baseline=baseline, preload=False)
 
     return epochs
 
 def y_resampling(y, n_chunks):
     # TODO find a way to process the y data respect to the events (discretize the y)
+    # Continuous data down sampling
     # Simply aggregate data based on number of epochs
     split = np.array_split(y, n_chunks)
     y = np.array([np.mean(c) for c in split])
@@ -99,4 +105,10 @@ def normalize(X, y):
 def pre_process(X, y):
     pass
 
+def save_skl_model(esitimator, path):
+    pass
+
+def load_skl_model(path):
+    pass
 # TODO fix all the Transpose function coherently
+# TODO Save and Load model
