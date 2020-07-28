@@ -38,43 +38,16 @@ print('epochs with events generation')
 epochs = create_epoch(X, sampling_rate, duration=0.5, overlap=0.25, ds_factor=4)
 
 
-# X = epochs_event.get_data()
 X = epochs.get_data()
 print(X.shape)
 
-
 #%%
-
 y = y_resampling(y, X.shape[0])
-# X, y = normalize(X, y)
-# SPoC algotithms
 
-# spoc = SPoc(n_components=2, log=True, reg='oas', rank='full')
-#
-# cv = KFold(n_splits=4, shuffle=False)
-#
-# pipeline = make_pipeline(spoc, Ridge())
-#
-# scores_1 = cross_val_score(pipeline, X, y, cv=cv, scoring='neg_root_mean_squared_error')
-#
-# pipeline2 = make_pipeline(spoc, Ridge())
-#
-#
-# scores = cross_validate(pipeline2, X, y, cv=cv, scoring='neg_root_mean_squared_error', return_estimator=True)
-#
-# print('Cross_val_score score : {}'.format(scores_1))
-# print('Cross_validate score : {}'.format(scores))
-#
-# print(pipeline.get_params())
 # %%
 print('X shape {}, y shape {}'.format(X.shape, y.shape))
-# spoc_estimator = SPoc(n_components=2, log=True, reg='oas', rank='full')
-
 X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
-
 print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
-
-# pipeline = make_pipeline(spoc_estimator, Ridge())
 
 pipeline = Pipeline([('Spoc', SPoc(log=True, reg='oas', rank='full')),
                     ('Ridge', Ridge())])
@@ -84,15 +57,7 @@ cv = KFold(n_splits=10, shuffle=False)
 tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 21))))}]
 
 clf = GridSearchCV(pipeline, tuned_parameters, scoring= 'neg_mean_squared_error', n_jobs=-1, cv=cv)
-
-
-
-# X_new = spoc_estimator.fit_transform(X_train, y_train)
-# regressor = Ridge()
-# regressor.fit(X_new, y_train)
-
-# y_new = regressor.predict(spoc_estimator.transform(X_test))
-
+#%%
 start = time.time()
 print('Start Fitting model ...')
 clf.fit(X_train, y_train)
@@ -103,9 +68,6 @@ print('Best Score and parameter combination: ')
 
 print(clf.best_score_)
 print(clf.best_params_)
-# print('all parameters : {}'.format(clf.cv_results_))
-
-
 
 y_new_train = clf.predict(X_train)
 y_new = clf.predict(X_test)
@@ -164,19 +126,13 @@ mne.viz.tight_layout()
 plt.savefig(os.path.join(figure_path, 'SPoC_Components_Analysis.pdf'))
 plt.show()
 
+# %%
+name = 'BaselineModel_SPoC_Best_Filtered_1-60.p'
+save_skl_model(clf, model_path, name)
+
 # TODO, implement approach not using epoched data (form continuous data)
 # TODO, implement normalization
 # TODO, find a good way to create the epochs. In term of window duration
 # TODO, Implement of y resampling
 # TODO, Implement filters
 # TODO, component analysis
-
-# %%
-print('BaselineModel_SPoC_Best_{}.p'.format(clf.best_params_['Spoc__n_components']))
-name = 'BaselineModel_SPoC_Best_{}.p.'.format(clf.best_params_['Spoc__n_components'])
-save_skl_model(clf, model_path, name)
-# %%
-
-model = load_skl_model(os.path.join(model_path, name))
-
-

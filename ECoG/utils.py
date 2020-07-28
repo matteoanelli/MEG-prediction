@@ -117,8 +117,9 @@ def save_skl_model(esitimator, models_path, name):
 
 def load_skl_model(models_path):
     with open(models_path, 'rb') as model:
-        pickle.load(model)
+        model = pickle.load(model)
         print('Model loaded successfully.')
+        return model
 
 
 # TODO fix all the Transpose function coherently
