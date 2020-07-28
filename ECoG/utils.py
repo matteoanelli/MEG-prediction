@@ -5,6 +5,8 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, normalize
+import pickle
+import errno
 
 
 import scipy.io as sio
@@ -105,10 +107,19 @@ def normalize(X, y):
 def pre_process(X, y):
     pass
 
-def save_skl_model(esitimator, path):
-    pass
+def save_skl_model(esitimator, models_path, name):
+    if os.path.exists(models_path):
+        pickle.dump(esitimator, open(os.path.join(models_path, name), 'wb'))
+        print('Model saved successfully.')
+    else:
+        FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), models_path)
 
-def load_skl_model(path):
-    pass
+
+def load_skl_model(models_path):
+    with open(models_path, 'rb') as model:
+        pickle.load(model)
+        print('Model loaded successfully.')
+
+
 # TODO fix all the Transpose function coherently
 # TODO Save and Load model

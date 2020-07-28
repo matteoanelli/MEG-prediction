@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 #%%
 # data_dir  = os.environ['DATA_PATH']
 figure_path = 'ECoG\Figures'
+model_path = 'ECoG\Models'
 data_dir = 'C:\\Users\\anellim1\Develop\Econ\BCICIV_4_mat\\'
 file_name = 'sub1_comp.mat'
 sampling_rate = 1000
@@ -102,7 +103,7 @@ print('Best Score and parameter combination: ')
 
 print(clf.best_score_)
 print(clf.best_params_)
-print('all parameters : {}'.format(clf.cv_results_))
+# print('all parameters : {}'.format(clf.cv_results_))
 
 
 
@@ -157,7 +158,8 @@ ax.plot(n_components, MSEs, color='b')
 ax.set_xlabel('Number of SPoC components')
 ax.set_ylabel('MSE')
 ax.set_title('SPoC Components Analysis')
-plt.legend()
+# plt.legend()
+plt.xticks(n_components, n_components)
 mne.viz.tight_layout()
 plt.savefig(os.path.join(figure_path, 'SPoC_Components_Analysis.pdf'))
 plt.show()
@@ -170,8 +172,11 @@ plt.show()
 # TODO, component analysis
 
 # %%
-l = list(np.arange(2,21))
-print(type(l[0]))
+print('BaselineModel_SPoC_Best_{}.p'.format(clf.best_params_['Spoc__n_components']))
+name = 'BaselineModel_SPoC_Best_{}.p.'.format(clf.best_params_['Spoc__n_components'])
+save_skl_model(clf, model_path, name)
+# %%
 
+model = load_skl_model(os.path.join(model_path, name))
 
 
