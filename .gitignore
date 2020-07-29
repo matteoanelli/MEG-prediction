@@ -1,0 +1,5 @@
+__pycache__/
+.idea/
+ECoG/SPoC/Downsampling_analysis.py
+ECoG/Figures
+ECoG/Models
