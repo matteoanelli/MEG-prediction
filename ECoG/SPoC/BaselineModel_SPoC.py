@@ -9,14 +9,16 @@ Created on ...
 from utils import *
 
 from mne.decoding import SPoC as SPoc
-from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import KFold, cross_validate, cross_val_score, GridSearchCV
+from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import time
 
 import matplotlib.pyplot as plt
+
+mne.set_config('MNE_LOGGING_LEVEL', 'WARNING')
 
 
 #%%
@@ -31,11 +33,11 @@ sampling_rate = 1000
 # Example
 X, y = import_ECoG(data_dir, file_name, 0)
 print(X.shape)
-# X = filter_data(X, sampling_rate)
-print(X.shape)
+X = filter_data(X, sampling_rate)
+# print(X.shape)
 print('Example of fingers position : {}'.format(y[0]))
 print('epochs with events generation')
-epochs = create_epoch(X, sampling_rate, duration=0.5, overlap=0.25, ds_factor=4)
+epochs = create_epoch(X, sampling_rate, duration=0.5, overlap=0.25, ds_factor=1)
 
 
 X = epochs.get_data()
@@ -54,9 +56,9 @@ pipeline = Pipeline([('Spoc', SPoc(log=True, reg='oas', rank='full')),
 
 # tuned_parameters = [{'Spoc__n_components': list(np.arange(2, 5))}]
 cv = KFold(n_splits=10, shuffle=False)
-tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 21))))}]
+tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 16))))}]
 
-clf = GridSearchCV(pipeline, tuned_parameters, scoring= 'neg_mean_squared_error', n_jobs=-1, cv=cv)
+clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=2, cv=cv, verbose=2)
 #%%
 start = time.time()
 print('Start Fitting model ...')
@@ -127,12 +129,5 @@ plt.savefig(os.path.join(figure_path, 'SPoC_Components_Analysis.pdf'))
 plt.show()
 
 # %%
-name = 'BaselineModel_SPoC_Best_Filtered_1-60.p'
+name = 'BaselineModel_SPoC_Best_Filtered_60-200_fir.p'
 save_skl_model(clf, model_path, name)
-
-# TODO, implement approach not using epoched data (form continuous data)
-# TODO, implement normalization
-# TODO, find a good way to create the epochs. In term of window duration
-# TODO, Implement of y resampling
-# TODO, Implement filters
-# TODO, component analysis

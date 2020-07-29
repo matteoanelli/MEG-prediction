@@ -30,7 +30,8 @@ def filter_data(X, sampling_rate):
     # TODO appropriate filtering and generalize function
 
     # careful with x shape, the last dimension should be n_times
-    band_ranges = [(1, 60), (60, 100), (100, 200)]
+    band_ranges = [(60, 200)]
+    # band_ranges = [(100, 200)]
     X_filtered = np.zeros((X.shape[0], X.shape[1] * len(band_ranges)), dtype=float)
     for index, band in enumerate(band_ranges):
         X_filtered[:, X.shape[1]*index:X.shape[1]*(index+1)] = mne.filter.filter_data(X,sampling_rate, band[0],band[1], method='fir')
