@@ -8,6 +8,8 @@ Created on ...
 from DL.DL_utils import *
 from DL.Dataset import ECoG_Dataset
 from torch.utils.data import DataLoader
+from DL.Models import LeNet5
+import torch
 #%%
 if __name__ == '__main__':
     # data_dir  = os.environ['DATA_PATH']
@@ -24,5 +26,18 @@ if __name__ == '__main__':
     for idx, samples in enumerate(trainloader):
         print(' batch number {}, X shape {}, y shape {}'.format(idx, samples[0].shape, samples[1].shape))
 
+    print(torch.__version__)
 
+
+
+
+
+
+
+# TODO create the model structure
+# TODO create first model test architecture
+# TODO create the loss function
+# TODO create function to save and load model
+# TODO test the workflow
+# TODO add feature like filtering and downsampling
 
