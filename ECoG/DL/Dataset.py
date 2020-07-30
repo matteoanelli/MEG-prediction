@@ -1,6 +1,7 @@
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from DL.DL_utils import import_ECoG_Tensor
 
+import torch
 
 
 class ECoG_Dataset(Dataset):
@@ -13,13 +14,14 @@ class ECoG_Dataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return self.data.shape
+        return self.data.shape[0]
 
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
+
+        sample_data = self.data[idx, :, :]
+        sample_target = self.target[idx]
 
         if self.transform:
-            sample = self.transform(sample)
+            sample_data, sample_target = self.transform(sample_data, sample_target)
 
-        return sample
+        return sample_data, sample_target
