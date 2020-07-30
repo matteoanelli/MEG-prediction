@@ -16,13 +16,13 @@ def import_ECoG(datadir, filename, finger):
     path = os.path.join(datadir, filename)
     if os.path.exists(path):
         dataset = sio.loadmat(os.path.join(datadir, filename))
-        X = dataset['train_data'].astype(np.float)
+        X = dataset['train_data'].astype(np.float).T
         assert finger >= 0 and finger <5, 'Finger input not valid, range value from 0 to 4.'
         y = dataset['train_dg'][:, finger] #
 
         print('The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}'
               .format(X.shape, y.shape))
-        return X.T, y
+        return X, y
     else:
         print("No such file '{}'".format(path), file=sys.stderr)
 
