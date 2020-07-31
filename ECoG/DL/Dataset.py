@@ -1,5 +1,5 @@
 from torch.utils.data import Dataset
-from DL.DL_utils import import_ECoG_Tensor
+from DL_utils import import_ECoG_Tensor
 
 import torch
 
