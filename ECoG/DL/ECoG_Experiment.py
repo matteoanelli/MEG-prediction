@@ -20,7 +20,7 @@ if __name__ == '__main__':
     data_dir = 'C:\\Users\\anellim1\Develop\Econ\BCICIV_4_mat\\'
     file_name = 'sub1_comp.mat'
     sampling_rate = 1000
-    skip_training = False
+    skip_training = True
 
     dataset = ECoG_Dataset(data_dir, file_name, 0, 0.5, 1000)
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     net = LeNet5()
 
     if not skip_training:
-        EPOCHS = 100
+        EPOCHS = 1
         optimizer = Adam(net.parameters(), lr=0.001)
         net.train()
         loss_function = torch.nn.MSELoss()
@@ -54,6 +54,11 @@ if __name__ == '__main__':
 
             print('Epoch: {}/{}. loss = {:.4f}'.format(epoch, EPOCHS, np.mean(losses)))
 
+    if not skip_training:
+        save_pytorch_model(net, model_path, 'Baselinemodel_lenet5.pth')
+    else:
+        net = LeNet5()
+        net = load_pytorch_model(net, os.path.join(model_path,'Baselinemodel_lenet5.pth'), 'cpu')
 
 
 
@@ -65,9 +70,9 @@ if __name__ == '__main__':
 # TODO create the model structure done
 # TODO implement model tests done architecture, missing values
 # TODO select the loss function, done pytorch MSEloss
-# TODO Create training loop
+# TODO Create training loop done
+# TODO create function to save and load model done
 # TODO Manage to work with different devices
-# TODO create function to save and load model
 # TODO test the workflow
 # TODO add feature like filtering and downsampling
 

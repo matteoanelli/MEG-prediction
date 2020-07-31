@@ -38,3 +38,22 @@ def y_resampling(y, n_chunks):
     y = torch.stack([torch.mean(s) for s in split])
 
     return y
+
+def save_pytorch_model(model, path, filename):
+
+    if os.path.exists(path):
+        do_save = input('Do you want to save the model (type yes to confirm)? ').lower()
+        if do_save == 'yes':
+            torch.save(model.state_dict(), os.path.join(path, filename))
+            print('Model saved to {}.'.format(os.path.join(path, filename)))
+        else:
+            print('Model not saved.')
+    else:
+        raise Exception('The path does not exist, path: {}'.format(path))
+
+def load_pytorch_model(model, path, device):
+    model.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+    print('Model loaded from {}.'.format(path))
+    model.to(device)
+    model.eval()
+    return model
