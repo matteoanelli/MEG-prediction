@@ -93,17 +93,17 @@ def split_data(X, y, test_size=0.4, random_state=0):
     return X_train, X_test, y_train, y_test
 
 def normalize(X, y):
-    print(X.shape)
-    print(y.shape)
+    # print(X.shape)
+    # print(y.shape)
+    #
+    # scaler_X = MinMaxScaler()
+    # scaler_y = MinMaxScaler()
+    #
+    # print('Start scaling')
+    # scaler_X.fit_transform(X)
+    # scaler_y.fit_transform(y)
+    pass
 
-    scaler_X = MinMaxScaler()
-    scaler_y = MinMaxScaler()
-
-    print('Start scaling')
-    scaler_X.fit_transform(X)
-    scaler_y.fit_transform(y)
-
-    return scaler_X.fit_transform(X), scaler_y.fit_transform(y)
 
 def pre_process(X, y):
     pass

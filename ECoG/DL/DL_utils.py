@@ -4,6 +4,8 @@ import sys
 
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
+
 
 def import_ECoG_Tensor(datadir, filename, finger, window_size, sample_rate):
     # TODO add finger choice dict
@@ -43,7 +45,7 @@ def save_pytorch_model(model, path, filename):
 
     if os.path.exists(path):
         do_save = input('Do you want to save the model (type yes to confirm)? ').lower()
-        if do_save == 'yes':
+        if do_save == 'yes' or do_save == 'y':
             torch.save(model.state_dict(), os.path.join(path, filename))
             print('Model saved to {}.'.format(os.path.join(path, filename)))
         else:
@@ -57,3 +59,8 @@ def load_pytorch_model(model, path, device):
     model.to(device)
     model.eval()
     return model
+
+def split_data(X, y, test_size=0.4, random_state=0):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+    return X_train, X_test, y_train, y_test
