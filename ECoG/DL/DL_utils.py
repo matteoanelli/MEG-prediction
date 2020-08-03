@@ -92,6 +92,10 @@ def downsampling(x, down=1, npad=100, axis=-1, window='boxcar', n_jobs=1, pad='r
                                                 axis=axis, window=window, n_jobs=n_jobs, pad=pad, verbose=verbose))
 
 
-def filtering():
+def filtering(x, sfreq, l_freq, h_freq, picks=None, filter_length='auto',
+                l_trans_bandwidth='auto', h_trans_bandwidth='auto', n_jobs=1,
+                method='fir', iir_params=None, copy=True, phase='zero',
+                fir_window='hamming', fir_design='firwin',
+                pad='reflect_limited', verbose=None):
 
-    pass
+    return mne.filter.filter_data(x, sfreq, l_freq, h_freq)

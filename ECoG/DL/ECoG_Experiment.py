@@ -31,7 +31,6 @@ if __name__ == '__main__':
     skip_training = False
     test_window_stack()
     test_downsampling_shape()
-    exit(0)
     # Set the torch device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Device = {}'.format(device))
@@ -123,7 +122,8 @@ if __name__ == '__main__':
 # TODO Manage to work with different devices done to test
 # TODO test the workflow done
 # TODO implement windowing as data augmentation (data leakage) done
-# TODO add feature like filtering and downsampling
+# TODO add feature like filtering and downsampling done (More on filtering)
+# TODO prepare ml tuning pipeline
 # TODO add validation pipeline
 # TODO create notebook
 
