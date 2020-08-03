@@ -30,6 +30,8 @@ if __name__ == '__main__':
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
     test_window_stack()
+    test_downsampling_shape()
+    exit(0)
     # Set the torch device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Device = {}'.format(device))
@@ -120,7 +122,8 @@ if __name__ == '__main__':
 # TODO create function to save and load model done
 # TODO Manage to work with different devices done to test
 # TODO test the workflow done
-# TODO implement windowing as data augmentation (data leakage)
+# TODO implement windowing as data augmentation (data leakage) done
 # TODO add feature like filtering and downsampling
-
+# TODO add validation pipeline
+# TODO create notebook
 
