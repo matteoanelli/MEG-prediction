@@ -5,7 +5,7 @@ import torch
 
 
 class ECoG_Dataset(Dataset):
-    def __init__(self, datadir, filename, train=True, finger=0, window_size=0.5, sample_rate=1000, transform=None):
+    def __init__(self, datadir, filename, train=True, finger=0, window_size=0.5, sample_rate=1000, overlap=0., transform=None):
         """
         Args:
 
@@ -13,10 +13,10 @@ class ECoG_Dataset(Dataset):
         # TODO improve training import
         if train:
             self.data, _, self.target, _ = split_data(*import_ECoG_Tensor(datadir, filename, finger,
-                                                                         window_size, sample_rate))
+                                                                         window_size, sample_rate, overlap=0.25))
         else:
             _, self.data, _, self.target = split_data(*import_ECoG_Tensor(datadir, filename, finger,
-                                                                         window_size, sample_rate))
+                                                                         window_size, sample_rate, overlap=0.25))
 
         self.transform = transform
 

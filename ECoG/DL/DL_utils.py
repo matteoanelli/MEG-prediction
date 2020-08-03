@@ -6,21 +6,34 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
+def window_stack(x, window, overlap, sample_rate):
+    window_size = round(window*sample_rate)
+    stride = round((window-overlap)*sample_rate)
+    print(x.shape)
+    print('window {}, stride {}, x.shape {}'.format(window_size, stride, x.shape))
 
-def import_ECoG_Tensor(datadir, filename, finger, window_size, sample_rate):
+    return torch.cat([x[:, i:min(x.shape[1], i+window_size)] for i in range(0, x.shape[1], stride)], dim=1)
+    # return [x[:, i:min(x.shape[1], i+window_size)] for i in range(0, x.shape[1], stride)]
+
+def import_ECoG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1000, overlap=0.):
     # TODO add finger choice dict
-    # TODO refactor reshaping of X (add the mean)
+    # TODO refactor reshaping of X (for instance add the mean)
     path = os.path.join(datadir, filename)
     if os.path.exists(path):
         dataset = sio.loadmat(os.path.join(datadir, filename))
         X = torch.from_numpy(dataset['train_data'].astype(np.float32).T)
+        y = torch.from_numpy(dataset['train_dg'][:, finger].astype(np.float32))
+
+        if overlap != 0.:
+            X = window_stack(X, 0.5, 0.25, sample_rate)
+            y = window_stack(y.unsqueeze(0), 0.5, 0.25, sample_rate).squeeze()
 
         module = X.shape[1]%int(window_size*sample_rate)
         if module != 0:
             X = X[:, :-module] # Discard some of the last time points to allow the reshape
         X = torch.reshape(X, (-1, X.shape[0], int(window_size*sample_rate)))
         assert finger >= 0 and finger <5, 'Finger input not valid, range value from 0 to 4.'
-        y = torch.from_numpy(dataset['train_dg'][:, finger].astype(np.float32))
+
 
         if module != 0:
             y = y[:-module]

@@ -28,8 +28,8 @@ if __name__ == '__main__':
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
-    skip_training = True
-
+    skip_training = False
+    test_window_stack()
     # Set the torch device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Device = {}'.format(device))
@@ -40,10 +40,10 @@ if __name__ == '__main__':
 
     print('Trainset dim: {}, Testset dim: {}'.format(trainset.__len__(), testset.__len__()))
 
+
     # Initialize the DataLoaders
     trainloader = DataLoader(trainset, batch_size=50, shuffle=False, num_workers=1)
     testloader = DataLoader(trainset, batch_size=5, shuffle=False, num_workers=1)
-
     # Test the network architecture
     sample, _ = iter(trainloader).next()
     test_LeNet5_shape(sample, device)
