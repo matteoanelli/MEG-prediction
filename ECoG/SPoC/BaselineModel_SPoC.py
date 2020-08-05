@@ -18,15 +18,15 @@ import time
 
 import matplotlib.pyplot as plt
 
-mne.set_config('MNE_LOGGING_LEVEL', 'WARNING')
+mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 
 #%%
 # data_dir  = os.environ['DATA_PATH']
-figure_path = 'ECoG\Figures'
-model_path = 'ECoG\Models'
-data_dir = 'C:\\Users\\anellim1\Develop\Econ\BCICIV_4_mat\\'
-file_name = 'sub1_comp.mat'
+figure_path = "ECoG\Figures"
+model_path = "ECoG\Models"
+data_dir = "C:\\Users\\anellim1\Develop\Thesis\BCICIV_4_mat\\"
+file_name = "sub1_comp.mat"
 sampling_rate = 1000
 
 #%%
@@ -35,8 +35,8 @@ X, y = import_ECoG(data_dir, file_name, 0)
 print(X.shape)
 X = filter_data(X, sampling_rate)
 # print(X.shape)
-print('Example of fingers position : {}'.format(y[0]))
-print('epochs with events generation')
+print("Example of fingers position : {}".format(y[0]))
+print("epochs with events generation")
 epochs = create_epoch(X, sampling_rate, duration=0.5, overlap=0.25, ds_factor=1)
 
 
@@ -45,28 +45,31 @@ print(X.shape)
 
 #%%
 y = y_resampling(y, X.shape[0])
-
+exit(0)
 # %%
-print('X shape {}, y shape {}'.format(X.shape, y.shape))
+print("X shape {}, y shape {}".format(X.shape, y.shape))
 X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
-print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
+print(
+    "X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}".format(
+        X_train.shape, y_train.shape, X_test.shape, y_test.shape
+    )
+)
 
-pipeline = Pipeline([('Spoc', SPoc(log=True, reg='oas', rank='full')),
-                    ('Ridge', Ridge())])
+pipeline = Pipeline([("Spoc", SPoc(log=True, reg="oas", rank="full")), ("Ridge", Ridge())])
 
 # tuned_parameters = [{'Spoc__n_components': list(np.arange(2, 5))}]
 cv = KFold(n_splits=10, shuffle=False)
-tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 16))))}]
+tuned_parameters = [{"Spoc__n_components": list(map(int, list(np.arange(2, 16))))}]
 
-clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=2, cv=cv, verbose=2)
+clf = GridSearchCV(pipeline, tuned_parameters, scoring="neg_mean_squared_error", n_jobs=2, cv=cv, verbose=2,)
 #%%
 start = time.time()
-print('Start Fitting model ...')
+print("Start Fitting model ...")
 clf.fit(X_train, y_train)
 
-print(f'Training time : {time.time() - start}s ')
-print('Number of cross-validation splits folds/iteration: {}'.format(clf.n_splits_))
-print('Best Score and parameter combination: ')
+print(f"Training time : {time.time() - start}s ")
+print("Number of cross-validation splits folds/iteration: {}".format(clf.n_splits_))
+print("Best Score and parameter combination: ")
 
 print(clf.best_score_)
 print(clf.best_params_)
@@ -74,8 +77,8 @@ print(clf.best_params_)
 y_new_train = clf.predict(X_train)
 y_new = clf.predict(X_test)
 
-print('mean squared error {}'.format(mean_squared_error(y_test, y_new)))
-print('mean absolute error {}'.format(mean_absolute_error(y_test, y_new)))
+print("mean squared error {}".format(mean_squared_error(y_test, y_new)))
+print("mean absolute error {}".format(mean_absolute_error(y_test, y_new)))
 
 # plot y_new against the true value
 # fig, ax = plt.subplots(1, 2, figsize=[10, 4])
@@ -98,14 +101,14 @@ print('mean absolute error {}'.format(mean_absolute_error(y_test, y_new)))
 
 fig, ax = plt.subplots(1, 1, figsize=[10, 4])
 times = np.arange(y_new.shape[0])
-ax.plot(times, y_new, color='b', label='Predicted')
-ax.plot(times, y_test, color='r', label='True')
-ax.set_xlabel('Epoch')
-ax.set_ylabel('Finger Movement')
-ax.set_title('SPoC Finger Movement')
+ax.plot(times, y_new, color="b", label="Predicted")
+ax.plot(times, y_test, color="r", label="True")
+ax.set_xlabel("Epoch")
+ax.set_ylabel("Finger Movement")
+ax.set_title("SPoC Finger Movement")
 plt.legend()
 mne.viz.tight_layout()
-plt.savefig(os.path.join(figure_path, 'SPoC_Finger_Prediction.pdf'))
+plt.savefig(os.path.join(figure_path, "SPoC_Finger_Prediction.pdf"))
 plt.show()
 
 
@@ -113,21 +116,21 @@ plt.show()
 
 # print(mean_squared_error(y, y_pred))
 # %%
-n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
-MSEs = clf.cv_results_['mean_test_score']
+n_components = np.ma.getdata(clf.cv_results_["param_Spoc__n_components"])
+MSEs = clf.cv_results_["mean_test_score"]
 # %%
 
 fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-ax.plot(n_components, MSEs, color='b')
-ax.set_xlabel('Number of SPoC components')
-ax.set_ylabel('MSE')
-ax.set_title('SPoC Components Analysis')
+ax.plot(n_components, MSEs, color="b")
+ax.set_xlabel("Number of SPoC components")
+ax.set_ylabel("MSE")
+ax.set_title("SPoC Components Analysis")
 # plt.legend()
 plt.xticks(n_components, n_components)
 mne.viz.tight_layout()
-plt.savefig(os.path.join(figure_path, 'SPoC_Components_Analysis.pdf'))
+plt.savefig(os.path.join(figure_path, "SPoC_Components_Analysis.pdf"))
 plt.show()
 
 # %%
-name = 'BaselineModel_SPoC_Best_Filtered_60-200_fir.p'
+name = "BaselineModel_SPoC_Best_Filtered_60-200_fir.p"
 save_skl_model(clf, model_path, name)
