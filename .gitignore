@@ -3,3 +3,7 @@ __pycache__/
 ECoG/SPoC/Downsampling_analysis.py
 ECoG/Figures
 ECoG/Models
+.pytest_cache
+/.venv/
+MEG/Figures
+MEG/Modelsca
