@@ -95,7 +95,7 @@ def downsampling(
     # TODO check padding and window choices
 
     return torch.from_numpy(
-        mne.filter.resample(
+        filter.resample(
             x.numpy().astype("float64"),
             down=down,
             npad=npad,
