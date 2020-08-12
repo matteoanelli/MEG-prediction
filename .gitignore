@@ -7,3 +7,4 @@ ECoG/Models
 /.venv/
 MEG/Figures
 MEG/Modelsca
+MEG/strokemotor_import.py

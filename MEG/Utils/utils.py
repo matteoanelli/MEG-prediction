@@ -4,27 +4,47 @@ import pickle
 import sys
 
 import numpy as np
-from mne import read_epochs, filter
+import mne
 from sklearn.model_selection import train_test_split
 
 
-def import_MEG(datadir, filename):
-    path = os.path.join(datadir, filename)
-    if os.path.exists(path):
-        # Import pre-epoched data
-        X = np.array(read_epochs(os.path.join(path)).get_data())
-        # TODO insert actual Y
-        t = np.linspace(0, 1, 180, endpoint=False)
-        y = np.sin(30 * np.pi * t)
+def import_MEG(raw_fnames):
+    epochs = []
+    for fname in raw_fnames:
+        if os.path.exists(fname):
+            raw = mne.io.Raw(raw_fnames[0], preload=True)
+            events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
+            raw.pick_types(meg='grad', misc=True)
+            raw.notch_filter([50, 100])
+            raw.filter(l_freq=1., h_freq=70)
+            # Import pre-epoched data
+            # TODO insert actual Y
+            t = np.linspace(0, 1, 180, endpoint=False)
+            y = np.sin(30 * np.pi * t)
 
-        print(
-            "The input data are of shape: {}, the corresponding y shape is: {}".format(
-                X.shape, y.shape
-            )
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., baseline=(0, 0)))
+            del raw
+        else:
+            print("No such file '{}'".format(fname), file=sys.stderr)
+    epochs = mne.concatenate_epochs(epochs)
+    # get indices of accelerometer channels
+    accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
+                                                 include=["MISC001", "MISC002"])
+    accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
+                                                  include=["MISC003", "MISC004"])
+    # pic only with gradiometer
+    X = epochs.get_data()[:, :204, :]
+
+    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :])
+    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :])
+
+    print(
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"\
+        "the corresponding y_right shape is:".format(
+            X.shape, y_left.shape
         )
-        return X, y
-    else:
-        print("No such file '{}'".format(path), file=sys.stderr)
+    )
+    return X, y_left, y_right
 
 def filter_data(X, sampling_rate):
     # TODO appropriate filtering and generalize function
@@ -58,3 +78,8 @@ def load_skl_model(models_path):
         model = pickle.load(model)
         print("Model loaded successfully.")
         return model
+
+def y_reshape(y):
+    # the y has 2 position
+    y = np.mean(y[:, 0, :], axis=1)
+    return y

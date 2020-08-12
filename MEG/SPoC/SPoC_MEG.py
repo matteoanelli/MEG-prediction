@@ -15,11 +15,13 @@ from  MEG.Utils.utils import *
 
 figure_path = "MEG\Figures"
 model_path = "MEG\Models"
-data_dir = "C:\\Users\\anellim1\Develop\Thesis\MEG\\"
-file_name = "long_epochs.fif"
-sampling_rate = 1000
-exit(0)
-X, y = import_MEG(data_dir, file_name)
+data_dir = "Z:\Desktop\\"
+
+subj_n = 8
+subj_id = "sub"+str(subj_n)+"\\ball"
+raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
+
+X, y, _ = import_MEG(raw_fnames)   # concentrate the analysis only on the left hand
 
 print('X shape {}, y shape {}'.format(X.shape, y.shape))
 X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
