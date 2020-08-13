@@ -17,21 +17,19 @@ def import_MEG(raw_fnames):
             raw.pick_types(meg='grad', misc=True)
             raw.notch_filter([50, 100])
             raw.filter(l_freq=1., h_freq=70)
-            # Import pre-epoched data
-            # TODO insert actual Y
-            t = np.linspace(0, 1, 180, endpoint=False)
-            y = np.sin(30 * np.pi * t)
 
+            # get indices of accelerometer channels
+            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
+                                                         include=["MISC001", "MISC002"])
+            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
+                                                          include=["MISC003", "MISC004"])
             epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., baseline=(0, 0)))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
     epochs = mne.concatenate_epochs(epochs)
     # get indices of accelerometer channels
-    accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                 include=["MISC001", "MISC002"])
-    accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                  include=["MISC003", "MISC004"])
+
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 
@@ -81,5 +79,8 @@ def load_skl_model(models_path):
 
 def y_reshape(y):
     # the y has 2 position
-    y = np.mean(y[:, 0, :], axis=1)
+    y = np.mean(np.sqrt(np.power(y[:, 0, :], 2)), axis=1)
     return y
+
+
+# TODO add notch filter
