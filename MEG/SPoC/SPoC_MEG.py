@@ -10,7 +10,6 @@ from mne import viz
 
 import matplotlib.pyplot as plt
 # TODO maybe better implementation
-argv = sys.argv
 sys.path.insert(1, r'')
 from  MEG.Utils.utils import *
 
@@ -49,7 +48,7 @@ def main(argv):
 
 
     cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 3))))}]
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30))))}]
 
     clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=2, cv=cv, verbose=2)
     #%%
@@ -62,7 +61,7 @@ def main(argv):
     print('Best Score and parameter combination: ')
 
     print(clf.best_score_)
-    print(clf.best_params_)
+    print(clf.best_params_['Spoc__n_components'])
 
     y_new_train = clf.predict(X_train)
     y_new = clf.predict(X_test)
@@ -79,7 +78,7 @@ def main(argv):
     ax.set_title('SPoC hand Movement')
     plt.legend()
     viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_MSE_:.4f}.pdf'.format(mean_squared_error(y_test, y_new))))
+    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_MSE_{:.4f}.pdf'.format(mean_squared_error(y_test, y_new))))
     plt.show()
 
 
