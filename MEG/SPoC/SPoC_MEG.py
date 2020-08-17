@@ -13,18 +13,26 @@ import matplotlib.pyplot as plt
 sys.path.insert(1, r'')
 from  MEG.Utils.utils import *
 
+def usage():
+    print('\SPoC_MEG.py -i <data_dir> -f <figure_fir> -m <model_dir>')
+
 def main(argv):
-
+    #TODO use arg.parse instead
     try:
-        opts, _ = getopt.getopt(argv, "hi:f:m:")
+        opts, args = getopt.getopt(argv, "i:f:m:h")
 
-    except getopt.GetoptError:
-        print('\SPoC_MEG.py -i <data_dir>')
+    except getopt.GetoptError as err:
+        print(err)
+        usage()
         sys.exit(2)
+
+    data_dir = 'Z:\Desktop'
+    figure_path = 'MEG\Figures'
+    model_path = 'MEG\Models'
 
     for opt, arg in opts:
         if opt == '-h':
-            print('\SPoC_MEG.py -i <data_dir>')
+            print('\SPoC_MEG.py -i <data_dir> -f <figure_fir> -m <model_dir>')
             sys.exit()
         elif opt in "-i":
             data_dir = arg
@@ -37,7 +45,7 @@ def main(argv):
     subj_id = "sub"+str(subj_n)+"\\ball"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
 
-    X, y, _ = import_MEG(raw_fnames)   # concentrate the analysis only on the left hand
+    X, y, _ = import_MEG(raw_fnames, duration=1., overlap=0.)   # concentrate the analysis only on the left hand
 
     print('X shape {}, y shape {}'.format(X.shape, y.shape))
     X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
@@ -70,9 +78,9 @@ def main(argv):
     print('mean absolute error {}'.format(mean_absolute_error(y_test, y_new)))
 
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(y_new.shape[0])
-    ax.plot(times, y_new, color='b', label='Predicted')
-    ax.plot(times, y_test, color='r', label='True')
+    times = np.arange(y_new.shape[0][100:200])
+    ax.plot(times, y_new[100:200], color='b', label='Predicted')
+    ax.plot(times, y_test[100:200], color='r', label='True')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Hand movement')
     ax.set_title('SPoC hand Movement')

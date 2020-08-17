@@ -2,7 +2,7 @@ import sys
 import torch
 import MEG.dl.models as models
 
-def test_LeNet5_shape():
+def test_SCNN_swap():
 
     net = models.SCNN_swap()
 
@@ -15,3 +15,11 @@ def test_LeNet5_shape():
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test LeNet5 output shape: Success.")
+
+def test_import():
+    pass
+
+def test_y_reshaping():
+    pass
+
+# TODO tests
