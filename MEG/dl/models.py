@@ -39,11 +39,11 @@ class SCNN_swap(nn.Module):
     def __init__(self):
         super(SCNN_swap, self).__init__()
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[204, 128]),
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[204, 32]),
                                      nn.ReLU(),
-                                     nn.Conv2d(32, 64, kernel_size=[1, 128]),
+                                     nn.Conv2d(32, 64, kernel_size=[1, 32]),
                                      nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 64]))
+                                     nn.MaxPool2d(kernel_size=[1, 2]))
 
         self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[16, 16]),
                                       nn.ReLU(),
@@ -67,7 +67,7 @@ class SCNN_swap(nn.Module):
 
         self.concatenate = nn.Sequential()
 
-        self.ff = nn.Sequential(nn.Linear(128 * 2 * 11, 1024),
+        self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
                                 nn.ReLU(),
                                 nn.Linear(1024, 512),
                                 nn.ReLU(),

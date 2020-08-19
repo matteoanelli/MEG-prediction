@@ -48,45 +48,24 @@ def import_MEG(raw_fnames, duration, overlap):
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {},"\
-        "the corresponding y_right shape is:".format(
-            X.shape, y_left.shape
+        "the corresponding y_right shape is: {}".format(
+            X.shape, y_left.shape, y_right.shape
         )
     )
     return X, y_left, y_right
 
-# def import_EEG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1000, overlap=0.0):
-#     # TODO add finger choice dict
-#     # TODO refactor reshaping of X (for instance add the mean)
-#     path = os.path.join(datadir, filename)
-#     if os.path.exists(path):
-#         dataset = sio.loadmat(os.path.join(datadir, filename))
-#         X = torch.from_numpy(dataset["train_data"].astype(np.float32).T)
-#         y = torch.from_numpy(dataset["train_dg"][:, finger].astype(np.float32))
-#
-#         if overlap != 0.0:
-#             X = window_stack(X, 0.5, 0.25, sample_rate)
-#             y = window_stack(y.unsqueeze(0), 0.5, 0.25, sample_rate).squeeze()
-#
-#         module = X.shape[1] % int(window_size * sample_rate)
-#         if module != 0:
-#             X = X[:, :-module]  # Discard some of the last time points to allow the reshape
-#         X = torch.reshape(X, (-1, X.shape[0], int(window_size * sample_rate)))
-#         assert 0 <= finger < 5, "Finger input not valid, range value from 0 to 4."
-#
-#         if module != 0:
-#             y = y[:-module]
-#         # y = y_resampling(y, X.shape[2])
-#
-#         print(
-#             "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(
-#                 X.shape, y.shape
-#             )
-#         )
-#
-#         return X, y
-#     else:
-#         print("No such file '{}'".format(path), file=sys.stderr)
-#         return None, None
+def import_MEG_Tensor(raw_fnames, duration, overlap):
+
+    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap)
+
+    X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+
+    y_left = torch.from_numpy(y_left.astype(np.float32))
+    y_right = torch.from_numpy(y_right.astype(np.float32))
+
+
+    return X, torch.stack([y_left, y_right], dim=1)
+
 
 def filter_data(X, sampling_rate):
     # TODO appropriate filtering and generalize function
@@ -123,8 +102,29 @@ def load_skl_model(models_path):
 
 def y_reshape(y):
     # the y has 2 position
-    y = np.mean(np.sqrt(np.power(y[:, 0, :], 2)), axis=1)
+    y = np.sqrt(np.mean(np.power(y[:, 0, :], 2), axis=1))
     return y
 
+def save_pytorch_model(model, path, filename):
+
+    if os.path.exists(path):
+        # do_save = input("Do you want to save the model (type yes to confirm)? ").lower()
+        do_save = 'y'
+        if do_save == "yes" or do_save == "y":
+            torch.save(model.state_dict(), os.path.join(path, filename))
+            print("Model saved to {}.".format(os.path.join(path, filename)))
+        else:
+            print("Model not saved.")
+    else:
+        raise Exception("The path does not exist, path: {}".format(path))
+
+
+def load_pytorch_model(model, path, device):
+    # model.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+    model.load_state_dict(torch.load(path))
+    print("Model loaded from {}.".format(path))
+    model.to(device)
+    model.eval()
+    return model
 
 # TODO add notch filter
