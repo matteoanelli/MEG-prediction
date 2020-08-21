@@ -54,11 +54,13 @@ def import_MEG(raw_fnames, duration, overlap):
     )
     return X, y_left, y_right
 
-def import_MEG_Tensor(raw_fnames, duration, overlap):
+def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True):
 
     X, y_left, y_right = import_MEG(raw_fnames, duration, overlap)
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+    if normalize_input:
+        X = normalize(X)
 
     y_left = torch.from_numpy(y_left.astype(np.float32))
     y_right = torch.from_numpy(y_right.astype(np.float32))
@@ -126,5 +128,9 @@ def load_pytorch_model(model, path, device):
     model.to(device)
     model.eval()
     return model
+
+def normalize(data):
+
+    return data.sub(torch.mean(data, dim=1).unsqueeze(1))
 
 # TODO add notch filter

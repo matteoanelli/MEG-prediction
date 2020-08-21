@@ -6,6 +6,6 @@ ECoG/Models
 .pytest_cache
 /.venv/
 MEG/Figures/
-MEG/Models/
 MEG/strokemotor_import.py
-
+/MEG/Models/
+/mlruns/

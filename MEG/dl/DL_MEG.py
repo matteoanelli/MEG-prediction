@@ -2,16 +2,19 @@ import getopt
 import sys
 
 import matplotlib.pyplot as plt
+import mlflow
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
+
+sys.path.insert(1, r'')
+
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.models import SCNN_swap
 
 # TODO maybe better implementation
-sys.path.insert(1, r'')
 from  MEG.Utils.utils import *
 
 def usage():
@@ -55,20 +58,21 @@ def main(argv):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    dataset = MEG_Dataset(raw_fnames, duration, overlap)
+    dataset = MEG_Dataset(raw_fnames, duration, overlap, normalize_input=True)
 
     train_dataset, test_dataset = random_split(dataset, [round(len(dataset)*0.7), round(len(dataset)*0.3)])
 
-    trainloader = DataLoader(train_dataset, batch_size=200, shuffle=False, num_workers=1)
-    testloader = DataLoader(test_dataset, batch_size=5, shuffle=False, num_workers=1)
+    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
+    testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
 
     net = SCNN_swap()
+    print(net)
     net = net.to(device)
 
     # Training loop or model loading
     if not skip_training:
         print("Begin training...")
-        EPOCHS = 1
+        EPOCHS = 10
         optimizer = Adam(net.parameters(), lr=0.001)
         net.train()
         loss_function = torch.nn.MSELoss()
@@ -89,6 +93,7 @@ def main(argv):
                 loss.backward()
                 optimizer.step()
 
+
             print("Epoch: {}/{}. loss = {:.4f}".format(epoch, EPOCHS, np.mean(losses)))
 
     if not skip_training:
@@ -106,11 +111,15 @@ def main(argv):
     y = []
     with torch.no_grad():
         for data, labels in testloader:
+            data, labels = data.to(device), labels.to(device)
             y.extend(list(labels[:, 0]))
             y_pred.extend((list(net(data))))
 
+
+
     # Calculate Evaluation measures
-    print("mean squared error {}".format(mean_squared_error(y, y_pred)))
+    mse = mean_squared_error(y, y_pred)
+    print("mean squared error {}".format(mse))
     print("mean absolute error {}".format(mean_absolute_error(y, y_pred)))
 
     # plot y_new against the true value
@@ -122,8 +131,14 @@ def main(argv):
     ax.set_ylabel("Acceleration")
     ax.set_title("Accelerometer prediction")
     plt.legend()
-    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction.pdf"))
+    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_{}.pdf".format(mse)))
     plt.show()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
+# TODO y normalization
+# TODO Input normalization
+# TODO early stopping
+# TODO Validation set
+

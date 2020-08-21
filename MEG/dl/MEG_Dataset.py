@@ -4,7 +4,7 @@ from MEG.Utils.utils import import_MEG_Tensor
 
 
 class MEG_Dataset(Dataset):
-    def __init__(self, raw_fnames, duration=1., overlap=0.0, transform=None):
+    def __init__(self, raw_fnames, duration=1., overlap=0.0, transform=None, normalize_input=True):
         """
         Args:
 
@@ -17,7 +17,7 @@ class MEG_Dataset(Dataset):
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
 
-        self.data, self.target = import_MEG_Tensor(raw_fnames, duration, overlap)
+        self.data, self.target = import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True)
 
         self.transform = transform
 

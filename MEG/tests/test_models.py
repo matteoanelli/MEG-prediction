@@ -2,7 +2,7 @@ import sys
 import torch
 import numpy as np
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape
+from MEG.Utils.utils import y_reshape, normalize
 
 from MEG.dl.MEG_Dataset import MEG_Dataset
 
@@ -62,7 +62,19 @@ def test_MEG_dataset_shape():
 
 
 
-def test_MEG_dataset():
-    pass
+def test_normalize():
+    data = torch.Tensor([[1, 1, 2, 2], [1, 1, 3, 3]])
+
+    data_ = normalize(data)
+
+    expected = torch.Tensor([[-0.5, -0.5, 0.5, 0.5], [-1, -1, 1, 1]])
+
+    print("Expected = {}".format(expected))
+    print("Normalized = {}".format(data_))
+
+    assert data_.allclose(expected), "Wrong normalization!"
+
+
+
 
 # TODO tests
