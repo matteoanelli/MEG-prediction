@@ -59,34 +59,33 @@ def main(argv):
 
     dataset = MEG_Dataset(raw_fnames, duration, overlap, normalize_input=True)
 
+    # print(len(dataset))
+    # print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
+
     train_dataset, valid_test, test_dataset = random_split(dataset,
                                                            [
                                                                round(len(dataset)*0.7),
-                                                               round(len(dataset)*0.15),
+                                                               round(len(dataset)*0.15+1),
                                                                round(len(dataset)*0.15)
                                                            ])
 
     trainloader = DataLoader(train_dataset, batch_size=100, shuffle=False, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=50, shuffle=False, num_workers=1)
-
     testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
 
     # net = LeNet5_seq(in_channel=204, n_times=1001)
-    net = SCNN_swap_seq()
+    net = DNN()
     print(net)
 
     # Training loop or model loading
     if not skip_training:
         print("Begin training...")
-        EPOCHS = 500
-        optimizer = Adam(net.parameters(), lr=0.00001)
+        EPOCHS = 5
+        optimizer = Adam(net.parameters(), lr=0.001)
         loss_function = torch.nn.MSELoss()
         patient = 20
 
         train(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patient)
-
-
-
 
     if not skip_training:
         # Save the trained model
@@ -105,10 +104,10 @@ def main(argv):
         for data, labels in testloader:
             data, labels = data.to(device), labels.to(device)
             y.extend(list(labels[:, 0]))
+            print(net(data))
             y_pred.extend((list(net(data))))
 
-
-    print('SCNN_swap_seq...')
+    print('DNN_seq...')
     # Calculate Evaluation measures
     mse = mean_squared_error(y, y_pred)
     print("mean squared error {}".format(mse))
@@ -119,8 +118,8 @@ def main(argv):
     # plot y_new against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(100)
-    ax.plot(times, y_pred[100:200], color="b", label="Predicted")
-    ax.plot(times, y[100:200], color="r", label="True")
+    ax.plot(times, y_pred[0:100], color="b", label="Predicted")
+    ax.plot(times, y[0:100], color="r", label="True")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Acceleration")
     ax.set_title("Accelerometer prediction")

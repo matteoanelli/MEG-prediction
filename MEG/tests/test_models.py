@@ -1,12 +1,16 @@
 import sys
 import torch
 import numpy as np
+import pytest
 import MEG.dl.models as models
 from MEG.Utils.utils import y_reshape, normalize
 
 from MEG.dl.MEG_Dataset import MEG_Dataset
+from MEG.dl.train import train
 
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, TensorDataset
+from torch.optim.adam import Adam
+
 
 def test_SCNN_swap():
 
@@ -88,7 +92,31 @@ def test_sequetial():
     data = torch.ones([10, 205, 1001])
     y = torch.ones([1001])
 
+@pytest.mark.skip(reason="Development porposes test")
+def test_train_no_error():
 
+    train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 1001]), torch.zeros([10, 2]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 2
+
+    net = models.DNN()
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    print("begin training...")
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs)
+
+    print('Training do not rise error')
 
 
 
