@@ -38,15 +38,24 @@ def test_MEG_dataset_shape():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
 
-    dataset = MEG_Dataset(dataset_path, train=True, duration=1., overlap=0.)
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
     # test_dataset = MEG_Dataset(dataset_path, train=False, duration=1., overlap=0., test_size=0.3)
 
-    train_dataset, test_dataset = random_split(dataset, [round(len(dataset)*0.5)+1, round(len(dataset)*0.5)])
+    train_dataset, valid_test, test_dataset = random_split(dataset,
+                                               [
+                                                    round(len(dataset)*0.5)+1,
+                                                    round(len(dataset)*0.25),
+                                                    round(len(dataset)*0.25)
+                                                ]
+                                               )
 
     assert train_dataset.__len__() == 375, "Bad split, train set length expected = 375, got {}"\
         .format(train_dataset.__len__())
 
-    assert test_dataset.__len__() == 374, "Bad split, test set length expected = 374 , got {}"\
+    assert test_dataset.__len__() == 187, "Bad split, validation set length expected = 187 , got {}" \
+        .format(valid_test.__len__()
+                )
+    assert test_dataset.__len__() == 187, "Bad split, test set length expected = 187 , got {}" \
         .format(test_dataset.__len__()
                 )
 
@@ -54,8 +63,8 @@ def test_MEG_dataset_shape():
 
     sample_data, sample_target = iter(trainloader).next()
 
-    assert sample_data.shape == torch.Size([50, 204, 1001]), 'wrong data shape, data shape expected = {}, got {}'\
-        .format(torch.Size([50, 204, 1001]), sample_data.shape)
+    assert sample_data.shape == torch.Size([50, 1, 204, 1001]), 'wrong data shape, data shape expected = {}, got {}'\
+        .format(torch.Size([50, 1, 204, 1001]), sample_data.shape)
 
     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
         .format(torch.Size([50, 2]), sample_target.shape)
@@ -73,6 +82,13 @@ def test_normalize():
     print("Normalized = {}".format(data_))
 
     assert data_.allclose(expected), "Wrong normalization!"
+
+
+def test_sequetial():
+    data = torch.ones([10, 205, 1001])
+    y = torch.ones([1001])
+
+
 
 
 

@@ -6,13 +6,12 @@ import mlflow
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split
-from tqdm import tqdm
-
 
 sys.path.insert(1, r'')
 
+from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap
+from MEG.dl.models import SCNN_swap, DNN, LeNet5, DNN_seq, LeNet5_seq, SCNN_swap_seq
 
 # TODO maybe better implementation
 from  MEG.Utils.utils import *
@@ -46,8 +45,8 @@ def main(argv):
             model_path = arg
 
     subj_n = 8
-    subj_id = "sub"+str(subj_n)+"\\ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
+    subj_id = "/sub"+str(subj_n)+"/ball"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
     duration = 1.
     overlap = 0.
 
@@ -60,41 +59,34 @@ def main(argv):
 
     dataset = MEG_Dataset(raw_fnames, duration, overlap, normalize_input=True)
 
-    train_dataset, test_dataset = random_split(dataset, [round(len(dataset)*0.7), round(len(dataset)*0.3)])
+    train_dataset, valid_test, test_dataset = random_split(dataset,
+                                                           [
+                                                               round(len(dataset)*0.7),
+                                                               round(len(dataset)*0.15),
+                                                               round(len(dataset)*0.15)
+                                                           ])
 
-    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
+    trainloader = DataLoader(train_dataset, batch_size=100, shuffle=False, num_workers=1)
+    validloader = DataLoader(valid_test, batch_size=50, shuffle=False, num_workers=1)
+
     testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
 
-    net = SCNN_swap()
+    # net = LeNet5_seq(in_channel=204, n_times=1001)
+    net = SCNN_swap_seq()
     print(net)
-    net = net.to(device)
 
     # Training loop or model loading
     if not skip_training:
         print("Begin training...")
-        EPOCHS = 10
-        optimizer = Adam(net.parameters(), lr=0.001)
-        net.train()
+        EPOCHS = 500
+        optimizer = Adam(net.parameters(), lr=0.00001)
         loss_function = torch.nn.MSELoss()
+        patient = 20
 
-        for epoch in tqdm(range(1, EPOCHS + 1)):
-            losses = []
-            for data, labels in trainloader:
-                # Set data to appropiate device
-                data, labels = data.to(device), labels.to(device)
-                # Clear the gradients
-                optimizer.zero_grad()
-                # Fit the network
-                out = net(data)
-                # Loss function
-                loss = loss_function(out, labels[:, 0])
-                losses.append(loss.item())
-                # Backpropagation and weights update
-                loss.backward()
-                optimizer.step()
+        train(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patient)
 
 
-            print("Epoch: {}/{}. loss = {:.4f}".format(epoch, EPOCHS, np.mean(losses)))
+
 
     if not skip_training:
         # Save the trained model
@@ -116,11 +108,13 @@ def main(argv):
             y_pred.extend((list(net(data))))
 
 
-
+    print('SCNN_swap_seq...')
     # Calculate Evaluation measures
     mse = mean_squared_error(y, y_pred)
     print("mean squared error {}".format(mse))
     print("mean absolute error {}".format(mean_absolute_error(y, y_pred)))
+
+    print(y_pred[:10])
 
     # plot y_new against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -131,14 +125,13 @@ def main(argv):
     ax.set_ylabel("Acceleration")
     ax.set_title("Accelerometer prediction")
     plt.legend()
-    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_{}.pdf".format(mse)))
+    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_seq{:.4f}.pdf".format(mse)))
     plt.show()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
 
 # TODO y normalization
-# TODO Input normalization
 # TODO early stopping
 # TODO Validation set
 
