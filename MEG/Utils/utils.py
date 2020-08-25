@@ -131,6 +131,15 @@ def load_pytorch_model(model, path, device):
 
 def normalize(data):
 
-    return data.sub(torch.mean(data, dim=1).unsqueeze(1))
+    # linear rescale to range [0, 1]
+    min = torch.min(data.view(data.shape[2], -1), dim=1, keepdim=True)[0]
+    data -= min.view(1, 1, min.shape[0], 1)
+    max = torch.max(data.view(data.shape[2], -1), dim=1, keepdim=True)[0]
+    data /= max.view(1, 1, max.shape[0], 1)
+
+    # Linear rescale to range [-1, 1]
+    return 2 * data - 1
+    # signal centered
+    # return data.sub_(torch.mean(data, dim=2, keepdim=True))
 
 # TODO add notch filter

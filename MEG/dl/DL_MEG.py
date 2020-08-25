@@ -73,6 +73,16 @@ def main(argv):
     validloader = DataLoader(valid_test, batch_size=50, shuffle=False, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
 
+    # data, _ = iter(trainloader).next()
+    # print('trainloader : {}'.format(data))
+    #
+    # data, _ = iter(testloader).next()
+    # print('testloader : {}'.format(data))
+    #
+    # data, _ = iter(validloader).next()
+    # print('validloader : {}'.format(data))
+
+
     # net = LeNet5_seq(in_channel=204, n_times=1001)
     net = DNN()
     print(net)
@@ -80,8 +90,8 @@ def main(argv):
     # Training loop or model loading
     if not skip_training:
         print("Begin training...")
-        EPOCHS = 5
-        optimizer = Adam(net.parameters(), lr=0.001)
+        EPOCHS = 100
+        optimizer = Adam(net.parameters(), lr=0.00001)
         loss_function = torch.nn.MSELoss()
         patient = 20
 
@@ -104,10 +114,10 @@ def main(argv):
         for data, labels in testloader:
             data, labels = data.to(device), labels.to(device)
             y.extend(list(labels[:, 0]))
-            print(net(data))
+            # print(net(data))
             y_pred.extend((list(net(data))))
 
-    print('DNN_seq...')
+    print('DNN...')
     # Calculate Evaluation measures
     mse = mean_squared_error(y, y_pred)
     print("mean squared error {}".format(mse))
@@ -124,7 +134,7 @@ def main(argv):
     ax.set_ylabel("Acceleration")
     ax.set_title("Accelerometer prediction")
     plt.legend()
-    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_seq{:.4f}.pdf".format(mse)))
+    plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_DNN{:.4f}.pdf".format(mse)))
     plt.show()
 
 if __name__ == "__main__":

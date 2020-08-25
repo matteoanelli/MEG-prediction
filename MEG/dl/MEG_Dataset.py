@@ -17,7 +17,7 @@ class MEG_Dataset(Dataset):
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
 
-        self.data, self.target = import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True)
+        self.data, self.target = import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=normalize_input)
 
         self.transform = transform
 
