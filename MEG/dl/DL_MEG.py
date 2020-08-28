@@ -11,7 +11,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, LeNet5, DNN_seq, LeNet5_seq, SCNN_swap_seq
+from MEG.dl.models import SCNN_swap, DNN, LeNet5
 
 # TODO maybe better implementation
 from  MEG.Utils.utils import *
@@ -46,9 +46,9 @@ def main(argv):
 
     subj_n = 8
     subj_id = "/sub"+str(subj_n)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
     duration = 1.
-    overlap = 0.
+    overlap = 0.1
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -59,16 +59,16 @@ def main(argv):
 
     dataset = MEG_Dataset(raw_fnames, duration, overlap, normalize_input=True)
 
-    # print(len(dataset))
-    # print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
+    print(len(dataset))
+    print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15+1), round(len(dataset)*0.15)))
 
     train_dataset, valid_test, test_dataset = random_split(dataset,
                                                            [
                                                                round(len(dataset)*0.7),
-                                                               round(len(dataset)*0.15+1),
+                                                               round(len(dataset)*0.15),
                                                                round(len(dataset)*0.15)
                                                            ])
-
+    exit(0)
     trainloader = DataLoader(train_dataset, batch_size=100, shuffle=False, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=50, shuffle=False, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
@@ -86,6 +86,7 @@ def main(argv):
     # net = LeNet5_seq(in_channel=204, n_times=1001)
     net = DNN()
     print(net)
+    net = net.to(device)
 
     # Training loop or model loading
     if not skip_training:
@@ -95,7 +96,7 @@ def main(argv):
         loss_function = torch.nn.MSELoss()
         patient = 20
 
-        train(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patient)
+        net, _, _, = train(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patient)
 
     if not skip_training:
         # Save the trained model

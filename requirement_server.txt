@@ -11,3 +11,4 @@ pytest
 pylint
 tqdm
 mne==0.20.7
+mlflow

@@ -55,7 +55,7 @@ class EarlyStopping(object):
 
 def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS=100, patient=20 ):
 
-    net = net.to(device)
+    net = net.to(device) # TODO probably to remove
     avg_train_losses = []
     avg_valid_losses = []
 

@@ -28,10 +28,10 @@ if __name__ == "__main__":
     sampling_rate = 1000
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
-    skip_training = True
+    skip_training = False
 
-    test_window_stack()
-    test_downsampling_shape()
+    # test_window_stack()
+    # test_downsampling_shape()
     # Set the torch device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
@@ -47,10 +47,10 @@ if __name__ == "__main__":
     testloader = DataLoader(trainset, batch_size=5, shuffle=False, num_workers=1)
     # Test the network architecture
     sample, _ = iter(trainloader).next()
-    test_LeNet5_shape(sample, device=device)
+    # test_LeNet5_shape(sample, device=device)
 
     sample = torch.zeros([10, 32, 250])
-    test_LeNet5_shape(sample, 32, 250, device)
+    # test_LeNet5_shape(sample, 32, 250, device)
 
     net = LeNet5()
     net = net.to(device)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     if not skip_training:
         print("Begin training...")
         EPOCHS = 200
-        optimizer = Adam(net.parameters(), lr=0.001)
+        optimizer = Adam(net.parameters(), lr=0.0001)
         net.train()
         loss_function = torch.nn.MSELoss()
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     ax.set_ylabel("Finger Movement")
     ax.set_title("SPoC Finger Movement")
     plt.legend()
-    plt.savefig(os.path.join(figure_path, "SPoC_Finger_Prediction.pdf"))
+    plt.savefig(os.path.join(figure_path, "DL_Finger_Prediction_LeNet5.pdf"))
     plt.show()
 
 
