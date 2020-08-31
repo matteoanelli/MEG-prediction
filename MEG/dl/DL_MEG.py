@@ -170,8 +170,6 @@ def main(argv):
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_half_01_{:.4f}.pdf".format(mse)))
     plt.show()
-    image2 = fig
-    print(image2)
 
 
     # log the model

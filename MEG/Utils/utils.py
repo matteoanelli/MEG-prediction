@@ -3,10 +3,14 @@ import os
 import pickle
 import sys
 
-import numpy as np
 import mne
-from sklearn.model_selection import train_test_split
+import numpy as np
 import torch
+from mne.decoding import Scaler
+from mne.decoding import UnsupervisedSpatialFilter
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -17,7 +21,7 @@ def window_stack(x, window, overlap, sample_rate):
     return torch.cat([x[:, i : min(x.shape[1], i + window_size)] for i in range(0, x.shape[1], stride)], dim=1,)
 
 
-def import_MEG(raw_fnames, duration, overlap):
+def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
@@ -43,6 +47,9 @@ def import_MEG(raw_fnames, duration, overlap):
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 
+    if normalize_input:
+        X = standard_scaling(X, scalings="mean", log=True)
+
     y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :])
     y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :])
 
@@ -54,13 +61,12 @@ def import_MEG(raw_fnames, duration, overlap):
     )
     return X, y_left, y_right
 
+
 def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True):
 
-    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap)
+    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input)
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
-    if normalize_input:
-        X = normalize(X)
 
     y_left = torch.from_numpy(y_left.astype(np.float32))
     y_right = torch.from_numpy(y_right.astype(np.float32))
@@ -82,6 +88,7 @@ def filter_data(X, sampling_rate):
 
     return X_filtered
 
+
 def split_data(X, y, test_size=0.3, random_state=0):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
@@ -102,10 +109,21 @@ def load_skl_model(models_path):
         print("Model loaded successfully.")
         return model
 
+
 def y_reshape(y):
     # the y has 2 position
     y = np.sqrt(np.mean(np.power(y[:, 0, :], 2), axis=1))
+
     return y
+
+
+def y_PCA(y):
+
+    print('y.shape: {}'.format(y.shape))
+    pca = UnsupervisedSpatialFilter(PCA(1), average=False)
+    print(pca.fit_transform(y).shape)
+    return pca.fit_transform(y)
+
 
 def save_pytorch_model(model, path, filename):
 
@@ -129,6 +147,7 @@ def load_pytorch_model(model, path, device):
     model.eval()
     return model
 
+
 def normalize(data):
 
     # linear rescale to range [0, 1]
@@ -141,5 +160,22 @@ def normalize(data):
     return 2 * data - 1
     # signal centered
     # return data.sub_(torch.mean(data, dim=2, keepdim=True))
+
+
+def standard_scaling(data, scalings="mean", log=True):
+
+    print(np.finfo(np.float32).eps)
+    if log:
+        data = np.log(data + np.finfo(np.float32).eps)
+
+    if scalings in ["mean", "median"]:
+        scaler = Scaler(scalings=scalings)
+        data = scaler.fit_transform(data)
+    else:
+        raise ValueError("scalings should be mean or median")
+
+    return data
+
+
 
 # TODO add notch filter

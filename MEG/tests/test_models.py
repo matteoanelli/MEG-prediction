@@ -1,15 +1,13 @@
-import sys
-import torch
 import numpy as np
 import pytest
-import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize
+import torch
+from torch.optim.adam import Adam
+from torch.utils.data import DataLoader, random_split, TensorDataset
 
+import MEG.dl.models as models
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
-
-from torch.utils.data import DataLoader, random_split, TensorDataset
-from torch.optim.adam import Adam
 
 
 def test_SCNN_swap():
@@ -36,6 +34,15 @@ def test_y_reshaping():
     y = y_reshape(y_before)
 
     assert y.shape == (10,), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10,))
+
+
+def test_y_PCA():
+    # Just testing the shape
+    y_before = np.ones([10, 2, 1001])
+
+    y = y_PCA(y_before)
+
+    assert y.shape == (10, 1, 1001), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10, 1, 1001))
 
 
 def test_MEG_dataset_shape():
@@ -90,6 +97,27 @@ def test_normalize():
     assert data_.allclose(expected), "Wrong normalization!"
 
 
+def test_standard_scaling():
+    # TODO implement better test
+    data = torch.Tensor([[1, 1, 2, 2], [1, 1, 3, 3]]).repeat(2, 1, 1).numpy()
+
+    print(data.shape)
+    print(data)
+
+    data_mean = standard_scaling(data, log=False)
+    print(data_mean)
+
+    data_median = standard_scaling(data, scalings="median", log=False)
+
+    expected = torch.Tensor([[-1., -1., 1., 1.], [-1, -1, 1, 1]])\
+        .repeat(2, 1, 1).numpy()
+
+    print("Expected = {}".format(expected))
+    print("Stundardized = {}".format(data_mean))
+
+    assert np.allclose(data_mean, expected), "Wrong normalization!"
+
+
 @pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
@@ -116,6 +144,7 @@ def test_train_no_error():
 
     print('Training do not rise error')
 
+
 def test_windowing_shape():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
@@ -129,6 +158,7 @@ def test_windowing_shape():
     assert 2*len(dataset) == len(windowed_dataset), \
         "Something went wrong during the augmentation process, len expected: {}, got: {}".\
             format(2*len(dataset), len(windowed_dataset))
+
 
 def test_parameters_class():
     pass
