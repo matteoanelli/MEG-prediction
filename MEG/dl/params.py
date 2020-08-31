@@ -9,3 +9,11 @@ class Params(object):
         self.overlap = overlap
         self.patient = patient
         self.device = device
+
+    def __str__(self):
+        return "_" + str(self.batch_size) + \
+               "_" + str(self.epochs) + \
+               "_" + str(self.lr) + \
+               "_" + str(self.duration) + \
+               "_" + str(self.overlap) + \
+               "_" + str(self.device)

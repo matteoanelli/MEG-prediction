@@ -130,5 +130,8 @@ def test_windowing_shape():
         "Something went wrong during the augmentation process, len expected: {}, got: {}".\
             format(2*len(dataset), len(windowed_dataset))
 
+def test_parameters_class():
+    pass
+
 
 # TODO tests

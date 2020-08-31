@@ -21,6 +21,22 @@ class Print(nn.Module):
         return x
 
 
+# Model only used for development purposes
+class Sample(nn.Module):
+    def __init__(self):
+        super(Sample, self).__init__()
+
+        self.net = nn.Sequential(
+            Flatten_MEG(),
+            nn.Linear(204 * 1001, 1),
+            nn.ReLU(),
+            nn.Dropout(1)
+        )
+
+    def forward(self, x):
+        return self.net(x).squeeze(1)
+
+
 class DNN(nn.Module):
     def __init__(self):
         super(DNN, self).__init__()

@@ -13,7 +13,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN
+from MEG.dl.models import SCNN_swap, DNN, Sample
 from MEG.dl.params import Params
 
 # TODO maybe better implementation
@@ -49,7 +49,7 @@ def main(argv):
 
     subj_n = 8
     subj_id = "/sub"+str(subj_n)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -59,18 +59,19 @@ def main(argv):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    parameters = Params(batch_size=100, valid_batch_size=50, test_batch_size=10, epochs=200,
+    parameters = Params(batch_size=100, valid_batch_size=50, test_batch_size=10, epochs=2,
                         lr=0.00001, duration=1., overlap=0., patient=20, device=device)
+
 
     dataset = MEG_Dataset(raw_fnames, parameters.duration, parameters.overlap, normalize_input=True)
 
-    # print(len(dataset))
-    # print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
-
+    print(len(dataset))
+    print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
+    # TODO make it general
     train_dataset, valid_test, test_dataset = random_split(dataset,
                                                            [
                                                                round(len(dataset)*0.7),
-                                                               round(len(dataset)*0.15),
+                                                               round(len(dataset)*0.15+1),
                                                                round(len(dataset)*0.15)
                                                            ])
 
@@ -89,7 +90,7 @@ def main(argv):
 
 
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_swap()
+    net = Sample()
     print(net)
     # net = net.to(device)
 
@@ -107,13 +108,13 @@ def main(argv):
 
 
         # visualize the loss as the network trained
-        fig = plt.figure(figsize=(10,8))
-        plt.plot(range(1,len(train_loss)+1),train_loss, label='Training Loss')
-        plt.plot(range(1,len(valid_loss)+1),valid_loss,label='Validation Loss')
+        fig = plt.figure(figsize=(10, 8))
+        plt.plot(range(1, len(train_loss)+1), train_loss, label='Training Loss')
+        plt.plot(range(1, len(valid_loss)+1), valid_loss,label='Validation Loss')
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss))+1
-        plt.axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
+        plt.axvline(minposs, linestyle='--', color='r', label='Early Stopping Checkpoint')
 
         plt.xlabel('epochs')
         plt.ylabel('loss')
@@ -123,6 +124,7 @@ def main(argv):
         plt.legend()
         plt.tight_layout()
         plt.show()
+        image1 = fig
         plt.savefig(os.path.join(figure_path, "loss_plot.png"))
 
     if not skip_training:
@@ -168,18 +170,23 @@ def main(argv):
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_half_01_{:.4f}.pdf".format(mse)))
     plt.show()
+    image2 = fig
+    print(image2)
 
 
     # log the model
     with mlflow.start_run() as run:
-        mlflow.log_param("epochs", EPOCHS)
-        mlflow.log_param("lr", lr)
-        mlflow.log_param('overlap', overlap)
-        mlflow.log_param('duration', duration)
+        for key, value in vars(parameters).items():
+            mlflow.log_param(key, value)
 
         mlflow.log_metric('MSE', mse)
-        mlflow.log_param('RMSE', rmse)
-        mlflow.log_param('MAE', mae)
+        mlflow.log_metric('RMSE', rmse)
+        mlflow.log_metric('MAE', mae)
+
+        mlflow.log_artifact(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_half_01_{:.4f}.pdf"
+                                         .format(mse)))
+        mlflow.log_artifact(os.path.join(figure_path, "loss_plot.png"))
+        mlflow.pytorch.log_model(net, model_path)
 
 
 
