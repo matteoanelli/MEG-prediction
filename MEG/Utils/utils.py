@@ -50,8 +50,8 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
-    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :])
-    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :])
+    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]))
+    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]))
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {},"\
@@ -110,11 +110,18 @@ def load_skl_model(models_path):
         return model
 
 
-def y_reshape(y):
+def y_reshape(y, measure="mean"):
     # the y has 2 position
-    y = np.sqrt(np.mean(np.power(y[:, 0, :], 2), axis=1))
+    if measure == 'mean':
+        y = np.sqrt(np.mean(np.power(y, 2), axis=2))
+    elif measure == 'movement':
+        y = np.sum(np.abs(y), axis=2)
+    elif measure == 'position':
+        pass
+    else:
+        raise ValueError("measure should be one of: mean, movement, position")
 
-    return y
+    return y.squeeze()
 
 
 def y_PCA(y):
@@ -158,13 +165,9 @@ def normalize(data):
 
     # Linear rescale to range [-1, 1]
     return 2 * data - 1
-    # signal centered
-    # return data.sub_(torch.mean(data, dim=2, keepdim=True))
-
 
 def standard_scaling(data, scalings="mean", log=True):
 
-    print(np.finfo(np.float32).eps)
     if log:
         data = np.log(data + np.finfo(np.float32).eps)
 

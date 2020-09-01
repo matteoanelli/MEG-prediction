@@ -29,11 +29,25 @@ def test_import():
 
 def test_y_reshaping():
 
-    y_before = np.zeros([10, 2, 1001])
+    y_before = np.ones([10, 1, 1001])
 
     y = y_reshape(y_before)
 
-    assert y.shape == (10,), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10,))
+    assert y.shape == (10,), "Bad shape of y with mean as measure: expected y.shape={}, got {}".format(y.shape, (10,))
+
+    y = y_reshape(y_before, measure="movement")
+
+    y_exected = np.ones([10]) * 1001.
+
+    assert y.shape == (10,), "Bad shape of y with movement as measure: expected y.shape={}, got {}"\
+        .format(y.shape, (10,))
+
+    assert np.array_equal(y, y_exected), "Bad values of y with movement as measure: expected y: {}, got {}".format(y_exected, y)
+
+    y_neg = y_reshape(y_before * (-1), measure="movement")
+
+    assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
+                       "expected {}, got {}".format(y, y_neg)
 
 
 def test_y_PCA():
