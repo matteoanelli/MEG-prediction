@@ -10,7 +10,8 @@ from mne.decoding import Scaler
 from mne.decoding import UnsupervisedSpatialFilter
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-
+from numpy import trapz
+from scipy.integrate import cumtrapz
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -113,13 +114,21 @@ def load_skl_model(models_path):
 def y_reshape(y, measure="mean"):
     # the y has 2 position
     if measure == 'mean':
-        y = np.sqrt(np.mean(np.power(y, 2), axis=2))
+        y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
     elif measure == 'movement':
-        y = np.sum(np.abs(y), axis=2)
+        y = np.sum(np.abs(y), axis=-1)
+    elif measure == 'velocity':
+        y = trapz(y, axis=-1)
+        print(y.shape)
+        print(y)
     elif measure == 'position':
-        pass
+        vel = cumtrapz(y, axis=-1)
+        print('vel shape: {}'.format(vel.shape))
+        y = trapz(vel, axis=-1)
+        print(y.shape)
+        print(y)
     else:
-        raise ValueError("measure should be one of: mean, movement, position")
+        raise ValueError("measure should be one of: mean, movement, velocity, position")
 
     return y.squeeze()
 

@@ -28,7 +28,7 @@ def test_import():
     pass
 
 def test_y_reshaping():
-
+    # TODO test position and velocity
     y_before = np.ones([10, 1, 1001])
 
     y = y_reshape(y_before)
@@ -48,6 +48,9 @@ def test_y_reshaping():
 
     assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
                        "expected {}, got {}".format(y, y_neg)
+
+    y_pos = y_reshape(y_before, measure="position")
+
 
 
 def test_y_PCA():

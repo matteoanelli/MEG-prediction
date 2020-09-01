@@ -4,6 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 import mlflow
 import mlflow.pytorch
+import argparse
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
@@ -19,35 +20,16 @@ from MEG.dl.params import Params
 # TODO maybe better implementation
 from  MEG.Utils.utils import *
 
-def usage():
-    print('\SPoC_MEG.py -i <data_dir> -f <figure_fir> -m <model_dir>')
-
-def main(argv):
+def main(args):
     #TODO use arg.parse instead
-    try:
-        opts, args = getopt.getopt(argv, "i:f:m:h")
 
-    except getopt.GetoptError as err:
-        print(err)
-        usage()
-        sys.exit(2)
+    data_dir = args.data_dir
+    figure_path = args.figure_dir
+    model_path = args.model_dir
 
-    data_dir = 'Z:\Desktop\\'
-    figure_path = 'MEG\Figures'
-    model_path = 'MEG\Models'
 
-    for opt, arg in opts:
-        if opt == '-h':
-            print('\SPoC_MEG.py -i <data_dir> -f <figure_fir> -m <model_dir>')
-            sys.exit()
-        elif opt in "-i":
-            data_dir = arg
-        elif opt in "-f":
-            figure_path = arg
-        elif opt in "-m":
-            model_path = arg
 
-    subj_n = 8
+    subj_n = args.sub
     subj_id = "/sub"+str(subj_n)+"/ball"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
@@ -59,11 +41,19 @@ def main(argv):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    parameters = Params(batch_size=100, valid_batch_size=50, test_batch_size=10, epochs=2,
-                        lr=0.00001, duration=1., overlap=0., patient=20, device=device)
+    parameters = Params(subject_n=args.sub,
+                        batch_size=args.batch_size,
+                        valid_batch_size=args.batch_size_valid,
+                        test_batch_size=args.batch_size_test,
+                        epochs=args.epochs,
+                        lr=args.learning_rate,
+                        duration=args.duration,
+                        overlap=args.overlap,
+                        patient=args.patient,
+                        device=device,
+                        y_measure=args.y_measure)
 
-
-    dataset = MEG_Dataset(raw_fnames, parameters.duration, parameters.overlap, normalize_input=True)
+    dataset = MEG_Dataset(raw_fnames, args.duration, args.overlap, normalize_input=True)
 
     print(len(dataset))
     print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
@@ -71,7 +61,7 @@ def main(argv):
     train_dataset, valid_test, test_dataset = random_split(dataset,
                                                            [
                                                                round(len(dataset)*0.7),
-                                                               round(len(dataset)*0.15+1),
+                                                               round(len(dataset)*0.15-1),
                                                                round(len(dataset)*0.15)
                                                            ])
 
@@ -190,7 +180,45 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    # main(sys.argv[1:])
+
+    parser = argparse.ArgumentParser()
+
+    # subject
+    parser.add_argument('--sub', type=int, default='8',
+                        help="Input data directory (default= 8)")
+
+    # Directories
+    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
+                        help="Input data directory (default= Z:\Desktop\\)")
+    parser.add_argument('--figure_dir', type=str, default='MEG\Figures',
+                        help="Figure data directory (default= MEG\Figures)")
+    parser.add_argument('--model_dir', type=str, default='MEG\Models',
+                        help="Model data directory (default= MEG\Models\)")
+
+    # Model Parameters
+    parser.add_argument('--batch_size', type=int, default=100, metavar='N',
+                        help='input batch size for training (default: 100)')
+    parser.add_argument('--batch_size_valid', type=int, default=30, metavar='N',
+                        help='input batch size for validation (default: 100)')
+    parser.add_argument('--batch_size_test', type=int, default=30, metavar='N',
+                        help='input batch size for  (default: 100)')
+    parser.add_argument('--epochs', type=int, default=200, metavar='N',
+                        help='number of epochs to train (default: 200)')
+    parser.add_argument('--learning_rate', type=int, default=1e-5, metavar='lr',
+                        help='Learning rate (default: 1e-5),')
+    parser.add_argument('--duration', type=float, default=1., metavar='N',
+                        help='Duration of the time window  (default: 1s)')
+    parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
+                        help='overlap of time window (default: 0.8s)')
+    parser.add_argument('--patient', type=int, default=20, metavar='N',
+                        help='Early stopping patient (default: 20')
+    parser.add_argument('--y_measure', type=str, default="movement",
+                        help='Y type reshaping (default: movement')
+
+    args = parser.parse_args()
+
+    main(args)
 
 # TODO y normalization
 # TODO early stopping
