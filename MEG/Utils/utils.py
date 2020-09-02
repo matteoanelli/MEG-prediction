@@ -188,6 +188,34 @@ def standard_scaling(data, scalings="mean", log=True):
 
     return data
 
+def transform_data():
+    pass
+
+def len_split(len):
+
+    if len * 0.7 - int(len*0.7) >= 0.5:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15) - 1
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+    else:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15) + 1
+            test = round(len * 0.15)
+
+    return train, valid, test
+
+
+
 
 
 # TODO add notch filter

@@ -55,15 +55,8 @@ def main(args):
 
     dataset = MEG_Dataset(raw_fnames, args.duration, args.overlap, normalize_input=True)
 
-    print(len(dataset))
-    print('{} {} {}'.format(round(len(dataset)*0.7), round(len(dataset)*0.15-1), round(len(dataset)*0.15)))
-    # TODO make it general
-    train_dataset, valid_test, test_dataset = random_split(dataset,
-                                                           [
-                                                               round(len(dataset)*0.7),
-                                                               round(len(dataset)*0.15-1),
-                                                               round(len(dataset)*0.15)
-                                                           ])
+    train_len, valid_len, test_len = len_split(len(dataset))
+    train_dataset, valid_test, test_dataset = random_split(dataset,[train_len, valid_len, test_len])
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=False, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=False, num_workers=1)

@@ -5,7 +5,7 @@ from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
 
@@ -67,23 +67,21 @@ def test_MEG_dataset_shape():
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
 
     dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
-    # test_dataset = MEG_Dataset(dataset_path, train=False, duration=1., overlap=0., test_size=0.3)
 
-    train_dataset, valid_test, test_dataset = random_split(dataset,
-                                               [
-                                                    round(len(dataset)*0.5)+1,
-                                                    round(len(dataset)*0.25),
-                                                    round(len(dataset)*0.25)
-                                                ]
-                                               )
+    train_len, valid_len, test_len = len_split(len(dataset))
 
-    assert train_dataset.__len__() == 375, "Bad split, train set length expected = 375, got {}"\
+    print(len(dataset))
+    print('{} {} {}'.format(train_len, valid_len, test_len))
+
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    assert train_dataset.__len__() == 524, "Bad split, train set length expected = 524, got {}"\
         .format(train_dataset.__len__())
 
-    assert test_dataset.__len__() == 187, "Bad split, validation set length expected = 187 , got {}" \
+    assert valid_test.__len__() == 113, "Bad split, validation set length expected = 113 , got {}" \
         .format(valid_test.__len__()
                 )
-    assert test_dataset.__len__() == 187, "Bad split, test set length expected = 187 , got {}" \
+    assert test_dataset.__len__() == 112, "Bad split, test set length expected = 112 , got {}" \
         .format(test_dataset.__len__()
                 )
 
@@ -175,6 +173,14 @@ def test_windowing_shape():
     assert 2*len(dataset) == len(windowed_dataset), \
         "Something went wrong during the augmentation process, len expected: {}, got: {}".\
             format(2*len(dataset), len(windowed_dataset))
+
+def test_len_split():
+    for len in [749, 11, 12,  27]:
+
+        train, valid, test = len_split(len)
+
+        assert len == train+valid+test, 'Splitting of the dataset wrong, total len expected: {}, got {}'\
+            .format(train+valid+test, len)
 
 
 def test_parameters_class():
