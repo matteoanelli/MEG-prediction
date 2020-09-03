@@ -3,10 +3,15 @@ import os
 import pickle
 import sys
 
-import numpy as np
 import mne
-from sklearn.model_selection import train_test_split
+import numpy as np
 import torch
+from mne.decoding import Scaler
+from mne.decoding import UnsupervisedSpatialFilter
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from numpy import trapz
+from scipy.integrate import cumtrapz
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -17,7 +22,7 @@ def window_stack(x, window, overlap, sample_rate):
     return torch.cat([x[:, i : min(x.shape[1], i + window_size)] for i in range(0, x.shape[1], stride)], dim=1,)
 
 
-def import_MEG(raw_fnames, duration, overlap):
+def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
@@ -43,50 +48,33 @@ def import_MEG(raw_fnames, duration, overlap):
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 
-    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :])
-    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :])
+    if normalize_input:
+        X = standard_scaling(X, scalings="mean", log=True)
+
+    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]))
+    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]))
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {},"\
-        "the corresponding y_right shape is:".format(
-            X.shape, y_left.shape
+        "the corresponding y_right shape is: {}".format(
+            X.shape, y_left.shape, y_right.shape
         )
     )
     return X, y_left, y_right
 
-# def import_EEG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1000, overlap=0.0):
-#     # TODO add finger choice dict
-#     # TODO refactor reshaping of X (for instance add the mean)
-#     path = os.path.join(datadir, filename)
-#     if os.path.exists(path):
-#         dataset = sio.loadmat(os.path.join(datadir, filename))
-#         X = torch.from_numpy(dataset["train_data"].astype(np.float32).T)
-#         y = torch.from_numpy(dataset["train_dg"][:, finger].astype(np.float32))
-#
-#         if overlap != 0.0:
-#             X = window_stack(X, 0.5, 0.25, sample_rate)
-#             y = window_stack(y.unsqueeze(0), 0.5, 0.25, sample_rate).squeeze()
-#
-#         module = X.shape[1] % int(window_size * sample_rate)
-#         if module != 0:
-#             X = X[:, :-module]  # Discard some of the last time points to allow the reshape
-#         X = torch.reshape(X, (-1, X.shape[0], int(window_size * sample_rate)))
-#         assert 0 <= finger < 5, "Finger input not valid, range value from 0 to 4."
-#
-#         if module != 0:
-#             y = y[:-module]
-#         # y = y_resampling(y, X.shape[2])
-#
-#         print(
-#             "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(
-#                 X.shape, y.shape
-#             )
-#         )
-#
-#         return X, y
-#     else:
-#         print("No such file '{}'".format(path), file=sys.stderr)
-#         return None, None
+
+def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True):
+
+    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input)
+
+    X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+
+    y_left = torch.from_numpy(y_left.astype(np.float32))
+    y_right = torch.from_numpy(y_right.astype(np.float32))
+
+
+    return X, torch.stack([y_left, y_right], dim=1)
+
 
 def filter_data(X, sampling_rate):
     # TODO appropriate filtering and generalize function
@@ -100,6 +88,7 @@ def filter_data(X, sampling_rate):
         )
 
     return X_filtered
+
 
 def split_data(X, y, test_size=0.3, random_state=0):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
@@ -121,10 +110,117 @@ def load_skl_model(models_path):
         print("Model loaded successfully.")
         return model
 
-def y_reshape(y):
+
+def y_reshape(y, measure="mean"):
     # the y has 2 position
-    y = np.mean(np.sqrt(np.power(y[:, 0, :], 2)), axis=1)
-    return y
+    if measure == 'mean':
+        y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
+    elif measure == 'movement':
+        y = np.sum(np.abs(y), axis=-1)
+    elif measure == 'velocity':
+        y = trapz(y, axis=-1)
+        print(y.shape)
+        print(y)
+    elif measure == 'position':
+        vel = cumtrapz(y, axis=-1)
+        print('vel shape: {}'.format(vel.shape))
+        y = trapz(vel, axis=-1)
+        print(y.shape)
+        print(y)
+    else:
+        raise ValueError("measure should be one of: mean, movement, velocity, position")
+
+    return y.squeeze()
+
+
+def y_PCA(y):
+
+    pca = UnsupervisedSpatialFilter(PCA(1), average=False)
+
+    return pca.fit_transform(y)
+
+
+def save_pytorch_model(model, path, filename):
+
+    if os.path.exists(path):
+        # do_save = input("Do you want to save the model (type yes to confirm)? ").lower()
+        do_save = 'y'
+        if do_save == "yes" or do_save == "y":
+            torch.save(model.state_dict(), os.path.join(path, filename))
+            print("Model saved to {}.".format(os.path.join(path, filename)))
+        else:
+            print("Model not saved.")
+    else:
+        raise Exception("The path does not exist, path: {}".format(path))
+
+
+def load_pytorch_model(model, path, device):
+    # model.load_state_dict(torch.load(path, map_location=lambda storage, loc: storage))
+    model.load_state_dict(torch.load(path))
+    print("Model loaded from {}.".format(path))
+    model.to(device)
+    model.eval()
+    return model
+
+
+def normalize(data):
+
+    # linear rescale to range [0, 1]
+    min = torch.min(data.view(data.shape[2], -1), dim=1, keepdim=True)[0]
+    data -= min.view(1, 1, min.shape[0], 1)
+    max = torch.max(data.view(data.shape[2], -1), dim=1, keepdim=True)[0]
+    data /= max.view(1, 1, max.shape[0], 1)
+
+    # Linear rescale to range [-1, 1]
+    return 2 * data - 1
+
+def standard_scaling(data, scalings="mean", log=True):
+
+    if log:
+        data = np.log(data + np.finfo(np.float32).eps)
+
+    if scalings in ["mean", "median"]:
+        scaler = Scaler(scalings=scalings)
+        data = scaler.fit_transform(data)
+    else:
+        raise ValueError("scalings should be mean or median")
+
+    return data
+
+def transform_data():
+    pass
+
+def len_split(len):
+
+    if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
+        train = round(len * 0.7)
+        valid = round(len * 0.15)
+        test = round(len * 0.15)
+
+    elif len * 0.7 - int(len*0.7) >= 0.5:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15) - 1
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+
+    else:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15) + 1
+            test = round(len * 0.15)
+
+    return train, valid, test
+
+
+
 
 
 # TODO add notch filter

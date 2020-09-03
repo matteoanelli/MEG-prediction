@@ -1,0 +1,14 @@
+matplotlib==3.2.2
+numpy==1.19.0
+scikit-learn==0.23.1
+scipy==1.4.1
+sklearn==0.0
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.5.1+cu101
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torchvision==0.6.1+cu101
+pytest
+pylint
+tqdm
+mne==0.20.7
+mlflow

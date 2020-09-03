@@ -39,6 +39,7 @@ def filter_data(X, sampling_rate):
         X_filtered[:, X.shape[1] * index : X.shape[1] * (index + 1)] = mne.filter.filter_data(
             X, sampling_rate, band[0], band[1], method="fir"
         )
+    mne.filter.notch_filter(X_filtered, sampling_rate, [50, 100])
 
     return X_filtered
 

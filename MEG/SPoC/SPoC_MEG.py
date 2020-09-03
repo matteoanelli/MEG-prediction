@@ -1,3 +1,4 @@
+#%%
 import time
 import sys, getopt
 
@@ -26,7 +27,7 @@ def main(argv):
         usage()
         sys.exit(2)
 
-    data_dir = 'Z:\Desktop'
+    data_dir = 'Z:\Desktop\\'
     figure_path = 'MEG\Figures'
     model_path = 'MEG\Models'
 
@@ -48,17 +49,18 @@ def main(argv):
     X, y, _ = import_MEG(raw_fnames, duration=1., overlap=0.)   # concentrate the analysis only on the left hand
 
     print('X shape {}, y shape {}'.format(X.shape, y.shape))
+    exit(0)
     X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
 
     pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full')),
                          ('Ridge', Ridge())])
 
-
+    # %%
     cv = KFold(n_splits=10, shuffle=False)
     tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=2, cv=cv, verbose=2)
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=2)
     #%%
     start = time.time()
     print('Start Fitting model ...')
@@ -70,15 +72,15 @@ def main(argv):
 
     print(clf.best_score_)
     print(clf.best_params_['Spoc__n_components'])
-
+    #%%
     y_new_train = clf.predict(X_train)
     y_new = clf.predict(X_test)
     MSE = mean_squared_error(y_test, y_new)
     print('mean squared error {}'.format(MSE))
     print('mean absolute error {}'.format(mean_absolute_error(y_test, y_new)))
-
+    #%%
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(y_new.shape[0][100:200])
+    times = np.arange(100)
     ax.plot(times, y_new[100:200], color='b', label='Predicted')
     ax.plot(times, y_test[100:200], color='r', label='True')
     ax.set_xlabel('Epoch')
