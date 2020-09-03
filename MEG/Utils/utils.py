@@ -135,9 +135,8 @@ def y_reshape(y, measure="mean"):
 
 def y_PCA(y):
 
-    print('y.shape: {}'.format(y.shape))
     pca = UnsupervisedSpatialFilter(PCA(1), average=False)
-    print(pca.fit_transform(y).shape)
+
     return pca.fit_transform(y)
 
 
@@ -193,7 +192,12 @@ def transform_data():
 
 def len_split(len):
 
-    if len * 0.7 - int(len*0.7) >= 0.5:
+    if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
+        train = round(len * 0.7)
+        valid = round(len * 0.15)
+        test = round(len * 0.15)
+
+    elif len * 0.7 - int(len*0.7) >= 0.5:
         if len * 0.15 - int(len*0.15) >= 0.5:
             train = round(len * 0.7)
             valid = round(len * 0.15)
@@ -202,6 +206,7 @@ def len_split(len):
             train = round(len * 0.7)
             valid = round(len * 0.15)
             test = round(len * 0.15)
+
     else:
         if len * 0.15 - int(len*0.15) >= 0.5:
             train = round(len * 0.7)

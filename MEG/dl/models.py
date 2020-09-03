@@ -1,5 +1,4 @@
 import sys
-# TODO maybe better implementation
 
 import torch.nn as nn
 import torch

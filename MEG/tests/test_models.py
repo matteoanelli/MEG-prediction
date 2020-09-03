@@ -175,7 +175,7 @@ def test_windowing_shape():
             format(2*len(dataset), len(windowed_dataset))
 
 def test_len_split():
-    for len in [749, 11, 12,  27]:
+    for len in [749, 11, 12,  27, 400]:
 
         train, valid, test = len_split(len)
 

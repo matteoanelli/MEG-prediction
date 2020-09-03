@@ -28,9 +28,7 @@ def main(args):
     model_path = args.model_dir
 
 
-
-    subj_n = args.sub
-    subj_id = "/sub"+str(subj_n)+"/ball"
+    subj_id = "/sub"+str(args.sub)+"/ball"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
@@ -49,14 +47,14 @@ def main(args):
                         lr=args.learning_rate,
                         duration=args.duration,
                         overlap=args.overlap,
-                        patient=args.patient,
+                        patience=args.patience,
                         device=device,
                         y_measure=args.y_measure)
 
-    dataset = MEG_Dataset(raw_fnames, args.duration, args.overlap, normalize_input=True)
+    dataset = MEG_Dataset(raw_fnames, parameters.duration, parameters.overlap, normalize_input=True)
 
     train_len, valid_len, test_len = len_split(len(dataset))
-    train_dataset, valid_test, test_dataset = random_split(dataset,[train_len, valid_len, test_len])
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=False, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=False, num_workers=1)
@@ -75,17 +73,17 @@ def main(args):
     # net = LeNet5(in_channel=204, n_times=1001)
     net = Sample()
     print(net)
-    # net = net.to(device)
 
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
+
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         loss_function = torch.nn.MSELoss()
 
 
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
-                                            parameters.device, parameters.epochs, parameters.patient)
+                                            parameters.device, parameters.epochs, parameters.patience, model_path)
 
 
 
@@ -126,9 +124,8 @@ def main(args):
     y = []
     with torch.no_grad():
         for data, labels in testloader:
-            data, labels = data.to(device), labels.to(device)
+            data, labels = data.to(parameters.device), labels.to(parameters.device)
             y.extend(list(labels[:, 0]))
-            # print(net(data))
             y_pred.extend((list(net(data))))
 
     print('SCNN_swap...')
@@ -139,8 +136,6 @@ def main(args):
     print("mean squared error {}".format(mse))
     print("mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
-
-    print(y_pred[:10])
 
     # plot y_new against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -204,10 +199,10 @@ if __name__ == "__main__":
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
                         help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--patient', type=int, default=20, metavar='N',
-                        help='Early stopping patient (default: 20')
+    parser.add_argument('--patience', type=int, default=20, metavar='N',
+                        help='Early stopping patience (default: 20)')
     parser.add_argument('--y_measure', type=str, default="movement",
-                        help='Y type reshaping (default: movement')
+                        help='Y type reshaping (default: movement)')
 
     args = parser.parse_args()
 

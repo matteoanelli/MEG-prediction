@@ -1,7 +1,7 @@
 import torch
 import pytest
-from dl.DL_utils import window_stack, downsampling
-from dl.Models import LeNet5
+from ECoG.dl.DL_utils import window_stack, downsampling
+from ECoG.dl.Models import LeNet5
 
 
 @pytest.mark.skip(reason="This function needs the input data")

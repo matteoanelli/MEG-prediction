@@ -78,7 +78,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
             # Fit the network
             out = net(data)
             # Loss function
-            train_loss = loss_function(out, labels[:, 0])
+            train_loss = loss_function(out, labels)
             train_losses.append(train_loss.item())
             # Backpropagation and weights update
             train_loss.backward()
@@ -93,7 +93,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data)
                 # calculate the loss
-                valid_loss = loss_function(output, labels[:, 0])
+                valid_loss = loss_function(output, labels)
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
