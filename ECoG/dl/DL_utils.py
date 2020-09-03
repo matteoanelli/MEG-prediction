@@ -27,9 +27,9 @@ def import_ECoG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1
         X = torch.from_numpy(dataset["train_data"].astype(np.float32).T)
         y = torch.from_numpy(dataset["train_dg"][:, finger].astype(np.float32))
 
-        if overlap != 0.0:
-            X = window_stack(X, 0.5, 0.25, sample_rate)
-            y = window_stack(y.unsqueeze(0), 0.5, 0.25, sample_rate).squeeze()
+        if overlap != 0.:
+            X = window_stack(X, window_size, overlap, sample_rate)
+            y = window_stack(y.unsqueeze(0), window_size, overlap, sample_rate).squeeze()
 
         module = X.shape[1] % int(window_size * sample_rate)
         if module != 0:
@@ -64,7 +64,8 @@ def y_resampling(y, n_chunks):
 def save_pytorch_model(model, path, filename):
 
     if os.path.exists(path):
-        do_save = input("Do you want to save the model (type yes to confirm)? ").lower()
+        # do_save = input("Do you want to save the model (type yes to confirm)? ").lower()
+        do_save = "yes"
         if do_save == "yes" or do_save == "y":
             torch.save(model.state_dict(), os.path.join(path, filename))
             print("Model saved to {}.".format(os.path.join(path, filename)))
@@ -95,7 +96,7 @@ def downsampling(
     # TODO check padding and window choices
 
     return torch.from_numpy(
-        mne.filter.resample(
+        filter.resample(
             x.numpy().astype("float64"),
             down=down,
             npad=npad,
@@ -129,3 +130,33 @@ def filtering(
 ):
 
     return filter.filter_data(x, sfreq, l_freq, h_freq)
+
+def len_split(len):
+
+    if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
+        train = round(len * 0.7)
+        valid = round(len * 0.15)
+        test = round(len * 0.15)
+
+    elif len * 0.7 - int(len*0.7) >= 0.5:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15) - 1
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+
+    else:
+        if len * 0.15 - int(len*0.15) >= 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15) + 1
+            test = round(len * 0.15)
+
+    return train, valid, test
+

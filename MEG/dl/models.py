@@ -63,11 +63,11 @@ class LeNet5(nn.Module):
             nn.Conv1d(in_channel, 16, 3, padding=1),
             nn.ReLU(),
             nn.MaxPool1d(2),
-            nn.BatchNorm1d(16),
+            # nn.BatchNorm1d(16),
             nn.Conv1d(16, 32, 3, padding=1, bias=False),
             nn.ReLU(),
             nn.MaxPool1d(2),
-            nn.BatchNorm1d(32),
+            # nn.BatchNorm1d(32),
             Flatten_MEG(),
             nn.Linear(32 * round(n_times / 4), 2048),
             # nn.Linear(204 * 1001, 2048),
@@ -87,7 +87,7 @@ class SCNN_swap(nn.Module):
     def __init__(self):
         super(SCNN_swap, self).__init__()
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[62, 32], bias=False),
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[204, 32], bias=False),
                                      nn.ReLU(),
                                      nn.Conv2d(32, 64, kernel_size=[1, 32], bias=False),
                                      nn.ReLU(),
@@ -116,6 +116,8 @@ class SCNN_swap(nn.Module):
                                       nn.ReLU()
                                       )
 
+        self.concatenate = nn.Sequential()
+
         self.flatten = Flatten_MEG()
 
         self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
@@ -125,7 +127,7 @@ class SCNN_swap(nn.Module):
                                 nn.Linear(512, 1))
 
     def forward(self, x):
-        x = self.spatial(x.unsqueeze(1))
+        x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
         x = self.flatten(x)

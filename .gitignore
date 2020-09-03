@@ -5,5 +5,7 @@ ECoG/Figures
 ECoG/Models
 .pytest_cache
 /.venv/
-MEG/Figures
-MEG/Modelsca
+MEG/Figures/
+MEG/strokemotor_import.py
+/MEG/Models/
+/mlruns/
