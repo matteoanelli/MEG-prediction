@@ -151,7 +151,7 @@ def main(args):
 
 
     # log the model
-    with mlflow.start_run() as run:
+    with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)
 
@@ -162,7 +162,7 @@ def main(args):
         mlflow.log_artifact(os.path.join(figure_path, "Accelerometer_prediction_SCNN_swap_half_01_{:.4f}.pdf"
                                          .format(mse)))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.png"))
-        mlflow.pytorch.log_model(net, model_path)
+        mlflow.pytorch.log_model(net, "models")
 
 
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
                         help='input batch size for  (default: 100)')
     parser.add_argument('--epochs', type=int, default=200, metavar='N',
                         help='number of epochs to train (default: 200)')
-    parser.add_argument('--learning_rate', type=int, default=1e-5, metavar='lr',
+    parser.add_argument('--learning_rate', type=float, default=1e-5, metavar='lr',
                         help='Learning rate (default: 1e-5),')
     parser.add_argument('--duration', type=float, default=1., metavar='N',
                         help='Duration of the time window  (default: 1s)')
@@ -203,6 +203,8 @@ if __name__ == "__main__":
                         help='Early stopping patience (default: 20)')
     parser.add_argument('--y_measure', type=str, default="movement",
                         help='Y type reshaping (default: movement)')
+    parser.add_argument('--experiment', type=int, default=0, metavar='N',
+                        help='Mlflow experiments id (default: 0)')
 
     args = parser.parse_args()
 
