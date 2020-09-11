@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import pytest
 import torch
+import time
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
@@ -186,5 +188,16 @@ def test_len_split():
 def test_parameters_class():
     pass
 
+@pytest.mark.skip(reason="Test import file")
+def test_import_from_file():
+    file_dir = 'Z:\Desktop\sub8\X.dat'
+
+    print(os.path.exists(file_dir))
+
+    start_time = time.time()
+    X = np.fromfile(file_dir, dtype=float)
+
+    print(X.shape)
+    print('the X import takes: {}'.format(time.time() - start_time))
 
 # TODO tests
