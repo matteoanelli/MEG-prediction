@@ -30,6 +30,7 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
+
     def __call__(self, val_loss, model):
 
         score = -val_loss
@@ -54,7 +55,7 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, model_path):
+def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
 
     net = net.to(device) # TODO probably to remove
     avg_train_losses = []
@@ -78,7 +79,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
             # Fit the network
             out = net(data)
             # Loss function
-            train_loss = loss_function(out, labels[:, 0])
+            train_loss = loss_function(out, labels[:, hand])
             train_losses.append(train_loss.item())
             # Backpropagation and weights update
             train_loss.backward()
@@ -90,10 +91,12 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         net.eval()  # prep model for evaluation
         with torch.no_grad():
             for data, labels in validloader:
+                # Set data to appropiate device
+                data, labels = data.to(device), labels.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data)
                 # calculate the loss
-                valid_loss = loss_function(output, labels[:, 0])
+                valid_loss = loss_function(output, labels[:, hand])
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 

@@ -60,6 +60,8 @@ if __name__ == "__main__":
                         help='overlap of time window (default: 0.8s)')
     parser.add_argument('--patience', type=int, default=20, metavar='N',
                         help='Early stopping patience (default: 20)')
+    parser.add_argument('--experiment', type=int, default=0, metavar='N',
+                        help='Mlflow experiments id (default: 0)')
 
     args = parser.parse_args()
 
@@ -178,7 +180,7 @@ if __name__ == "__main__":
     plt.show()
 
     # log the model
-    with mlflow.start_run() as run:
+    with mlflow.start_run(experiment_id=args.experimet) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)
 
@@ -189,7 +191,7 @@ if __name__ == "__main__":
         mlflow.log_artifact(os.path.join(figure_path, "DL_Finger_Prediction_LeNet5.pdf"
                                          .format(mse)))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.png"))
-        mlflow.pytorch.log_model(net, model_path)
+        mlflow.pytorch.log_model(net, "models")
 
 
 

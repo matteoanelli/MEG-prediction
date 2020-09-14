@@ -1,10 +1,10 @@
 from torch.utils.data import Dataset
 
-from MEG.Utils.utils import import_MEG_Tensor
+from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file
 
 
 class MEG_Dataset(Dataset):
-    def __init__(self, raw_fnames, duration=1., overlap=0.0, transform=None, normalize_input=True):
+    def __init__(self, raw_fnames, duration=1., overlap=0.0, y_measure="mean", transform=None, normalize_input=True, data_dir=None):
         """
         Args:
 
@@ -16,12 +16,20 @@ class MEG_Dataset(Dataset):
         #     )
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
+
+
         self.raw_fnames = raw_fnames
         self.duration = duration
         self.overlap = overlap
         self.normalize_input = normalize_input
+        self.data_dir = data_dir
 
-        self.data, self.target = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap, normalize_input=self.normalize_input)
+        if duration == 1. and overlap == 0.8 and data_dir is not None:
+            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
+                                                                 y_measure=y_measure)
+        else:
+            self.data, self.target = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
+                                                       normalize_input=self.normalize_input, y_measure=y_measure)
 
         self.transform = transform
 

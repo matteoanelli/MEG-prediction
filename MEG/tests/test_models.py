@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import pytest
 import torch
+import time
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
@@ -49,8 +51,18 @@ def test_y_reshaping():
     assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
                        "expected {}, got {}".format(y, y_neg)
 
-    y_pos = y_reshape(y_before, measure="position")
 
+    y_before2 = np.random.rand(10, 1, 1001)
+
+    y_mean = y_reshape(y_before2, measure="mean")
+    y_movement = y_reshape(y_before2, measure="movement")
+    y_vel = y_reshape(y_before2, measure="velocity")
+    y_pos = y_reshape(y_before2, measure="position")
+
+    print("y mean : {} ".format(y_mean))
+    print("y movement : {} ".format(y_movement))
+    print("y vel : {} ".format(y_vel))
+    print("y position : {} ".format(y_pos))
 
 
 def test_y_PCA():
@@ -186,5 +198,16 @@ def test_len_split():
 def test_parameters_class():
     pass
 
+@pytest.mark.skip(reason="Test import file")
+def test_import_from_file():
+    file_dir = 'Z:\Desktop\sub8\X.dat'
+
+    print(os.path.exists(file_dir))
+
+    start_time = time.time()
+    X = np.fromfile(file_dir, dtype=float)
+
+    print(X.shape)
+    print('the X import takes: {}'.format(time.time() - start_time))
 
 # TODO tests

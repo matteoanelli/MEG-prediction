@@ -1,7 +1,8 @@
 class Params(object):
-    def __init__(self, subject_n, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
+    def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
                  patience, device, y_measure):
         self.subject_n = subject_n
+        self.hand = hand
         self.batch_size = batch_size
         self.valid_batch_size = valid_batch_size
         self.test_batch_size = test_batch_size
@@ -15,6 +16,7 @@ class Params(object):
 
     def __str__(self):
         return "_" + str(self.subject_n) + \
+               "_" + str(self.hand) + \
                "_" + str(self.batch_size) + \
                "_" + str(self.epochs) + \
                "_" + str(self.lr) + \

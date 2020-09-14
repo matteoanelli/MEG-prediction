@@ -49,9 +49,10 @@ def main(argv):
     X, y, _ = import_MEG(raw_fnames, duration=1., overlap=0.)   # concentrate the analysis only on the left hand
 
     print('X shape {}, y shape {}'.format(X.shape, y.shape))
-    exit(0)
+
     X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
-    print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape, X_test.shape, y_test.shape))
+    print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
+                                                                                          X_test.shape, y_test.shape))
 
     pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full')),
                          ('Ridge', Ridge())])

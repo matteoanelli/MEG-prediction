@@ -122,8 +122,10 @@ class SCNN_swap(nn.Module):
 
         self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
                                 nn.ReLU(),
+                                nn.Dropout(0.2),
                                 nn.Linear(1024, 512),
                                 nn.ReLU(),
+                                nn.Dropout(0.2),
                                 nn.Linear(512, 1))
 
     def forward(self, x):
