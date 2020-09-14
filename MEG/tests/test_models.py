@@ -51,8 +51,18 @@ def test_y_reshaping():
     assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
                        "expected {}, got {}".format(y, y_neg)
 
-    y_pos = y_reshape(y_before, measure="position")
 
+    y_before2 = np.random.rand(10, 1, 1001)
+
+    y_mean = y_reshape(y_before2, measure="mean")
+    y_movement = y_reshape(y_before2, measure="movement")
+    y_vel = y_reshape(y_before2, measure="velocity")
+    y_pos = y_reshape(y_before2, measure="position")
+
+    print("y mean : {} ".format(y_mean))
+    print("y movement : {} ".format(y_movement))
+    print("y vel : {} ".format(y_vel))
+    print("y position : {} ".format(y_pos))
 
 
 def test_y_PCA():

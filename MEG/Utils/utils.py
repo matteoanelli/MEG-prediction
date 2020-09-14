@@ -138,22 +138,22 @@ def load_skl_model(models_path):
         return model
 
 
-def y_reshape(y, measure="mean"):
+def  y_reshape(y, measure="mean"):
     # the y has 2 position
     if measure == 'mean':
         y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
+
     elif measure == 'movement':
         y = np.sum(np.abs(y), axis=-1)
+
     elif measure == 'velocity':
-        y = trapz(y, axis=-1)
-        print(y.shape)
-        print(y)
+        print(y.shape[-1])
+        y = trapz(y, axis=-1)/y.shape[-1]
+
     elif measure == 'position':
         vel = cumtrapz(y, axis=-1)
-        print('vel shape: {}'.format(vel.shape))
-        y = trapz(vel, axis=-1)
-        print(y.shape)
-        print(y)
+        y = trapz(vel, axis=-1)/y.shape[-1]
+
     else:
         raise ValueError("measure should be one of: mean, movement, velocity, position")
 

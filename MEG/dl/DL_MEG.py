@@ -20,6 +20,8 @@ from MEG.dl.params import Params
 # TODO maybe better implementation
 from  MEG.Utils.utils import *
 
+mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
+
 def main(args):
     #TODO use arg.parse instead
 
@@ -29,7 +31,7 @@ def main(args):
 
 
     subj_id = "/sub"+str(args.sub)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -65,7 +67,7 @@ def main(args):
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=True, num_workers=1)
 
-    # data, _ = iter(trainloader).next()
+    # data, _ = iter(trainloader).nexcd t()
     # print('trainloader : {}'.format(data))
     #
     # data, _ = iter(testloader).next()
@@ -76,7 +78,7 @@ def main(args):
 
 
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = Sample()
+    net = SCNN_swap()
     print(net)
 
     # Training loop or model loading
@@ -97,7 +99,7 @@ def main(args):
         # visualize the loss as the network trained
         fig = plt.figure(figsize=(10, 4))
         plt.plot(range(1, len(train_loss)+1), train_loss, label='Training Loss')
-        plt.plot(range(1, len(valid_loss)+1), valid_loss,label='Validation Loss')
+        plt.plot(range(1, len(valid_loss)+1), valid_loss, label='Validation Loss')
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss))+1
@@ -223,7 +225,7 @@ if __name__ == "__main__":
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
                         help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--patience', type=int, default=20, metavar='N',
+    parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
     parser.add_argument('--y_measure', type=str, default="movement",
                         help='Y type reshaping (default: movement)')
@@ -233,8 +235,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args)
-
-# TODO y normalization
-# TODO early stopping
-# TODO Validation set
-
