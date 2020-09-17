@@ -24,3 +24,18 @@ class Params(object):
                "_" + str(self.overlap) + \
                "_" + str(self.device) + \
                "_" + str(self.y_measure)
+
+class SPoC_params(object):
+    def __init__(self, subject_n, hand, duration, overlap, y_measure):
+        self.subject_n = subject_n
+        self.hand = hand
+        self.duration = duration
+        self.overlap = overlap
+        self.y_measure = y_measure
+
+    def __str__(self):
+        return "_" + str(self.subject_n) + \
+               "_" + str(self.hand) + \
+               "_" + str(self.duration) + \
+               "_" + str(self.overlap) + \
+               "_" + str(self.y_measure)

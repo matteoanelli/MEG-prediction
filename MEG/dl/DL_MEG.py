@@ -31,7 +31,7 @@ def main(args):
 
 
     subj_id = "/sub"+str(args.sub)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub is not 3 else 2, 4)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -61,7 +61,10 @@ def main(args):
                           normalize_input=True)
 
     train_len, valid_len, test_len = len_split(len(dataset))
+    print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    exit(0)
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
@@ -219,8 +222,14 @@ if __name__ == "__main__":
                         help='input batch size for  (default: 100)')
     parser.add_argument('--epochs', type=int, default=200, metavar='N',
                         help='number of epochs to train (default: 200)')
-    parser.add_argument('--learning_rate', type=float, default=1e-5, metavar='lr',
-                        help='Learning rate (default: 1e-5),')
+    parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
+                        help='Learning rate (default: 1e-3),')
+    parser.add_argument('--learning_rate', type=float, default=0.2, metavar='lr',
+                        help='dropout (default: 0.2),')
+    parser.add_argument('--bias', type=bool, default=False, metavar='N',
+                        help='Convolutional layers with bias(default: False)')
+
+
     parser.add_argument('--duration', type=float, default=1., metavar='N',
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',

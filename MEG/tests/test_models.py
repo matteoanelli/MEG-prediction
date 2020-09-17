@@ -33,11 +33,11 @@ def test_y_reshaping():
     # TODO test position and velocity
     y_before = np.ones([10, 1, 1001])
 
-    y = y_reshape(y_before)
+    y = y_reshape(y_before, scaling=False)
 
     assert y.shape == (10,), "Bad shape of y with mean as measure: expected y.shape={}, got {}".format(y.shape, (10,))
 
-    y = y_reshape(y_before, measure="movement")
+    y = y_reshape(y_before, measure="movement", scaling=False)
 
     y_exected = np.ones([10]) * 1001.
 
@@ -46,7 +46,7 @@ def test_y_reshaping():
 
     assert np.array_equal(y, y_exected), "Bad values of y with movement as measure: expected y: {}, got {}".format(y_exected, y)
 
-    y_neg = y_reshape(y_before * (-1), measure="movement")
+    y_neg = y_reshape(y_before * (-1), measure="movement", scaling=False)
 
     assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
                        "expected {}, got {}".format(y, y_neg)
@@ -211,3 +211,48 @@ def test_import_from_file():
     print('the X import takes: {}'.format(time.time() - start_time))
 
 # TODO tests
+
+def test_Sequential_Block():
+    n_layer = 3
+    net = models.SpatialBlock(n_layer, [[104, 1], [51, 1], [51, 1]])
+    print(net)
+
+    x = torch.zeros([10, 1, 204, 1001])
+    print(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+
+        assert y.shape == torch.Size([x.shape[0], 16*n_layer, 1, x.shape[-1]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+
+def test_Temporal_Block():
+    n_block = 1
+    input_channel = 1
+    output_channels = 64
+    kernel_size = 100
+    max_pool = 2
+
+    net = models.TemporalBlock(input_channel, output_channels, kernel_size, max_pool)
+    print(net)
+
+    x = torch.zeros([10, 32, 1, 1001])
+    x = torch.transpose(x, 1, 2)
+    print(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0],
+                                      output_channels,
+                                      x.shape[2],
+                                      int((x.shape[-1] - ((kernel_size - 1) * 2 * n_block)) /
+                                          max_pool if max_pool is not None else 1)])\
+            ,"Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
