@@ -255,4 +255,33 @@ def test_Temporal_Block():
                                           max_pool if max_pool is not None else 1)])\
             ,"Bad shape of y: y.shape={}".format(y.shape)
 
-    print("Test LeNet5 output shape: Success.")
+    print("Test Success.")
+
+
+def test_Temporal():
+    n_block = 3
+    kernel_size = [100, 100, 50]
+    max_pool = 2
+
+    x = torch.zeros([10, 32, 1, 1001])
+    x = torch.transpose(x, 1, 2)
+
+    n_times_ = x.shape[-1]
+    for i in range(n_block):
+        n_times_ = int((n_times_ - ((kernel_size[i] - 1) * 2)))
+        n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+
+    net = models.Temporal(n_block, kernel_size, x.shape[-1], max_pool)
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0],
+                                      n_block*16,
+                                      x.shape[2],
+                                      n_times_]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+

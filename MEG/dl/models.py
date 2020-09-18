@@ -178,15 +178,12 @@ class TemporalBlock(nn.Module):
 
         layers = [nn.Conv2d(self.input_channel, self.output_channel, kernel_size=[1, self.kernel_size], bias=False),
                   nn.ReLU(),
-                  Print(message="After first conv layer"),
                   nn.Conv2d(self.output_channel, self.output_channel, kernel_size=[1, self.kernel_size], bias=False),
-                  nn.BatchNorm2d(self.output_channel),
-                  Print(message="after second conv layer")
+                  nn.BatchNorm2d(self.output_channel)
                   ]
 
         if self.max_pool is not None:
             layers.append(nn.MaxPool2d(kernel_size=[1, self.max_pool]))
-            layers.append(Print(message="After max pooling"))
 
         layers.append(nn.ReLU())
 
@@ -198,84 +195,69 @@ class TemporalBlock(nn.Module):
 
 
 class Temporal(nn.Module):
-    def __init__(self, n_block, kernel_size, bias=False):
+    def __init__(self, n_block, kernel_size, n_times, max_pool=None, bias=False):
+        """
+        args:
+
+        :param n_block: (int) number of TemporalBlock the network has
+        :param kernel_size: (list) list fo value for the kernel size. Each block has is own kernel size therefore
+                                len(kernel_size must be == to n_block. es: [2, 3, 4]
+        :param n_times: (int) n_times correspond to the last dimension of the signals.
+                                It is the dimension where the convolution will apply.
+        :param max_pool: (int or None) if value, it apply max pooling 2d to each block. None there is no max-pooling.
+                        #TODO different max pooling factor
+        :param bias:  True if conv with bias, False otherwise.
+
+        Note: The parameters in input such as kernel size and max pooling will define the n_times dimensionality
+              reduction to n_times, therefore, the reduction factor cannot be higher that n_times.
+              The dimensionality reduction can be calculated as follow:
+
+                                n_times-((sum(kernel_size) - len(kernel_size)) * 2 * n_block))
+                                            / max_pool ^ n_block if max_pool is not None else 1)
+
+               The above formula take into consideration the reduction caused by convolution as well as caused by max
+               pooling. The reduction factor has to be < of n_times
+        """
         super(Temporal, self).__init__()
+
+        if len(kernel_size) != n_block:
+            raise ValueError(" The number of kernel passed has to be the same as the n of layer")
+
+        # Calculate the n_times value after forward, it has to be >= 1
+        n_times_ = n_times
+        for i in range(n_block):
+            n_times_ = int((n_times_ - ((kernel_size[i] - 1) * 2)))
+            n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+
+        if n_times_ < 1:
+            raise ValueError(" The reduction factor must be < than n_times. Got reduction to {}"
+                             " Check kernel_sizes dimension and maxpool".format(n_times_))
+
+        self.n_times = n_times
         self.kernel_size = kernel_size
         self.out_channel = [16 * (i + 1) for i in range(n_block)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_block)]
 
-        print(self.kernel_size)
-        print(self.out_channel)
-        print(self.in_channel)
-        if len(kernel_size) != n_block:
-            raise ValueError(" The number of kernel passed has to be the same as the n of layer")
-
-        self.block = nn.Sequential(*[layer for i in range(n_block)
-                                     for layer in [nn.Conv2d(self.in_channel[i],
-                                                             self.out_channel[i],
-                                                             kernel_size=kernel_size[i],
-                                                             bias=False),
-                                                   nn.ReLU(),
-                                                   nn.BatchNorm2d(self.out_channel[i]),
-                                                   ]
-                                     ])
-
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[1, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[1, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 3]),
-                                      nn.BatchNorm2d(32),
-                                      nn.Conv2d(32, 64, kernel_size=[1, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[1, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(64),
-                                      nn.Conv2d(64, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(128),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU()
-                                      )
+        self.temporal = nn.Sequential(*[TemporalBlock(self.in_channel[i],
+                                                      self.out_channel[i],
+                                                      self.kernel_size[i],
+                                                      max_pool)
+                                        for i in range(n_block)
+                                        ])
 
     def forward(self, x):
-        x = self.block(x)
+        x = self.temporal(x)
         return x
 
 
 class SCNN_tunable(nn.Module):
-    def __init__(self, n_spatial_layer, spatial_kernel_size):
+
+    def __init__(self, n_spatial_layer, spatial_kernel_size, temporal_n_block, temporal_kernel_size, n_times, max_pool=None):
         super(SCNN_tunable, self).__init__()
 
         self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size)  # TODO maybe add a the max pooling
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[1, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[1, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 3]),
-                                      nn.BatchNorm2d(32),
-                                      nn.Conv2d(32, 64, kernel_size=[1, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[1, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(64),
-                                      nn.Conv2d(64, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(128),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 5], bias=False),
-                                      nn.ReLU()
-                                      )
-
-        self.concatenate = nn.Sequential()
+        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, max_pool)
 
         self.flatten = Flatten_MEG()
 
