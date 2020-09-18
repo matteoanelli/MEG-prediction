@@ -146,9 +146,6 @@ class SpatialBlock(nn.Module):
         self.out_channel = [16 * (i + 1) for i in range(n_layer)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_layer)]
 
-        print(self.kernel_size)
-        print(self.out_channel)
-        print(self.in_channel)
         if len(kernel_size) != n_layer:
             raise ValueError(" The number of kernel passed has to be the same as the n of layer")
 
@@ -233,7 +230,7 @@ class Temporal(nn.Module):
             raise ValueError(" The reduction factor must be < than n_times. Got reduction to {}"
                              " Check kernel_sizes dimension and maxpool".format(n_times_))
 
-        self.n_times = n_times
+        self.n_times_ = n_times_
         self.kernel_size = kernel_size
         self.out_channel = [16 * (i + 1) for i in range(n_block)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_block)]
@@ -249,10 +246,38 @@ class Temporal(nn.Module):
         x = self.temporal(x)
         return x
 
+class MLP(nn.Module):
+    def __init__(self, in_channel, hidden_channel, n_layer, dropout=0.5):
+        super(MLP, self).__init__()
+
+        self.in_channel = in_channel
+        self.hidden_channel = hidden_channel
+        self.n_layer = n_layer
+        self.dropout = dropout
+
+        layers = [nn.Linear(in_channel, hidden_channel),
+                  nn.Dropout(self.dropout),
+                  nn.ReLU(),
+                  Print(),
+                  *[layer for i in range(n_layer) for layer in [nn.Linear(self.hidden_channel, self.hidden_channel),
+                                                                nn.Dropout(self.dropout),
+                                                                nn.ReLU()]],
+                  Print(),
+                  nn.Linear(hidden_channel, 1)
+                  ]
+
+        self.mlp = nn.Sequential(*layers)
+
+    def forward(self, x):
+
+        return self.mlp(x).squeeze()
 
 class SCNN_tunable(nn.Module):
 
-    def __init__(self, n_spatial_layer, spatial_kernel_size, temporal_n_block, temporal_kernel_size, n_times, max_pool=None):
+    def __init__(self, n_spatial_layer, spatial_kernel_size,
+                 temporal_n_block, temporal_kernel_size, n_times,
+                 mlp_n_layer, mlp_hidden, mlp_dropout,
+                 max_pool=None):
         super(SCNN_tunable, self).__init__()
 
         self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size)  # TODO maybe add a the max pooling
@@ -261,13 +286,8 @@ class SCNN_tunable(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
-                                nn.ReLU(),
-                                nn.Dropout(0.2),
-                                nn.Linear(1024, 512),
-                                nn.ReLU(),
-                                nn.Dropout(0.2),
-                                nn.Linear(512, 1))
+        in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
+        self.ff = MLP(in_channel, mlp_hidden, mlp_n_layer, mlp_dropout)
 
     def forward(self, x):
         x = self.spatial(x)

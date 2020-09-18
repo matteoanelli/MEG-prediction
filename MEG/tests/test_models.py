@@ -186,6 +186,7 @@ def test_windowing_shape():
         "Something went wrong during the augmentation process, len expected: {}, got: {}".\
             format(2*len(dataset), len(windowed_dataset))
 
+
 def test_len_split():
     for len in [749, 11, 12,  27, 400]:
 
@@ -197,6 +198,7 @@ def test_len_split():
 
 def test_parameters_class():
     pass
+
 
 @pytest.mark.skip(reason="Test import file")
 def test_import_from_file():
@@ -211,6 +213,7 @@ def test_import_from_file():
     print('the X import takes: {}'.format(time.time() - start_time))
 
 # TODO tests
+
 
 def test_Sequential_Block():
     n_layer = 3
@@ -284,4 +287,37 @@ def test_Temporal():
                                       n_times_]), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test Success.")
+
+
+def test_MLP():
+    n_times_ = 101
+    n_layer = 4
+
+    temporal_n_block = 2
+    spatial_n_layer = 2
+    t = temporal_n_block * 16
+    c = spatial_n_layer * 16
+
+    x = torch.zeros([10, t, c, n_times_])
+    in_channel = t * c * n_times_
+    print("in_channels {}".format(in_channel))
+
+    net = models.MLP(in_channel, 516, n_layer, 0.2)
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x.view([x.shape[0], -1]))
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+
+def test_SCNN_tunable():
+
+    pass
+
+
+
 
