@@ -215,9 +215,9 @@ def test_import_from_file():
 # TODO tests
 
 
-def test_Sequential_Block():
+def test_Spatial_Block():
     n_layer = 3
-    net = models.SpatialBlock(n_layer, [[104, 1], [51, 1], [51, 1]])
+    net = models.SpatialBlock(n_layer, [104, 51, 51])
     print(net)
 
     x = torch.zeros([10, 1, 204, 1001])
@@ -315,8 +315,35 @@ def test_MLP():
 
 
 def test_SCNN_tunable():
+    x = torch.zeros([10, 1, 204, 2001])
 
-    pass
+    n_spatial_layer = 3
+    spatial_kernel_size = [104, 51, 51]
+
+    temporal_n_block = 4
+    temporal_kernel_size = [100, 50, 50, 5]
+    max_pool = 2
+
+    mlp_n_layer = 3
+    mlp_hidden = 248
+    mlp_dropout = 0.2
+
+
+    net = models.SCNN_tunable(n_spatial_layer, spatial_kernel_size,
+                              temporal_n_block, temporal_kernel_size, x.shape[-1],
+                              mlp_n_layer, mlp_hidden, mlp_dropout,
+                              max_pool=max_pool)
+
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
 
 
 

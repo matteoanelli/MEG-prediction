@@ -14,7 +14,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample
+from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable
 from MEG.dl.params import Params
 
 # TODO maybe better implementation
@@ -32,6 +32,7 @@ def main(args):
 
     subj_id = "/sub"+str(args.sub)+"/ball"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub is not 3 else 2, 4)]
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -81,7 +82,7 @@ def main(args):
 
 
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_swap()
+    net = SCNN_tunable(3, [104, 51, 51], 4, [100, 50, 50, 5], 3, 248, 0.2, 2)
     print(net)
 
     # Training loop or model loading

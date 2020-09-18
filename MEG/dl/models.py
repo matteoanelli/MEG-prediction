@@ -152,7 +152,7 @@ class SpatialBlock(nn.Module):
         self.block = nn.Sequential(*[layer for i in range(n_layer)
                                      for layer in [nn.Conv2d(self.in_channel[i],
                                                              self.out_channel[i],
-                                                             kernel_size=kernel_size[i],
+                                                             kernel_size=[kernel_size[i], 1],
                                                              bias=False),
                                                    nn.ReLU(),
                                                    nn.BatchNorm2d(self.out_channel[i])
@@ -258,11 +258,9 @@ class MLP(nn.Module):
         layers = [nn.Linear(in_channel, hidden_channel),
                   nn.Dropout(self.dropout),
                   nn.ReLU(),
-                  Print(),
                   *[layer for i in range(n_layer) for layer in [nn.Linear(self.hidden_channel, self.hidden_channel),
                                                                 nn.Dropout(self.dropout),
                                                                 nn.ReLU()]],
-                  Print(),
                   nn.Linear(hidden_channel, 1)
                   ]
 
@@ -296,4 +294,4 @@ class SCNN_tunable(nn.Module):
         x = self.flatten(x)
         x = self.ff(x)
 
-        return x.squeeze(1)
+        return x
