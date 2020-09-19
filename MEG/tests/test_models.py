@@ -315,18 +315,18 @@ def test_MLP():
 
 
 def test_SCNN_tunable():
-    x = torch.zeros([10, 1, 204, 2001])
+    x = torch.zeros([10, 1, 204, 1001])
 
-    n_spatial_layer = 3
-    spatial_kernel_size = [104, 51, 51]
+    n_spatial_layer = 4
+    spatial_kernel_size = [54, 51, 51, 51]
 
-    temporal_n_block = 4
-    temporal_kernel_size = [100, 50, 50, 5]
+    temporal_n_block = 6
+    temporal_kernel_size = [20, 10, 10, 8, 8, 5]
     max_pool = 2
 
-    mlp_n_layer = 3
-    mlp_hidden = 248
-    mlp_dropout = 0.2
+    mlp_n_layer = 4
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
 
 
     net = models.SCNN_tunable(n_spatial_layer, spatial_kernel_size,

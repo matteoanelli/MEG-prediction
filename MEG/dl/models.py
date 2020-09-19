@@ -255,13 +255,13 @@ class MLP(nn.Module):
         self.n_layer = n_layer
         self.dropout = dropout
 
-        layers = [nn.Linear(in_channel, hidden_channel),
+        layers = [nn.Linear(self.in_channel, self.hidden_channel),
                   nn.Dropout(self.dropout),
                   nn.ReLU(),
                   *[layer for i in range(n_layer) for layer in [nn.Linear(self.hidden_channel, self.hidden_channel),
                                                                 nn.Dropout(self.dropout),
                                                                 nn.ReLU()]],
-                  nn.Linear(hidden_channel, 1)
+                  nn.Linear(self.hidden_channel, 1)
                   ]
 
         self.mlp = nn.Sequential(*layers)
@@ -284,8 +284,8 @@ class SCNN_tunable(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
-        self.ff = MLP(in_channel, mlp_hidden, mlp_n_layer, mlp_dropout)
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
+        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout)
 
     def forward(self, x):
         x = self.spatial(x)

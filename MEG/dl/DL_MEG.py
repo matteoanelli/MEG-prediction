@@ -65,8 +65,6 @@ def main(args):
     print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
-    exit(0)
-
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=True, num_workers=1)
@@ -79,11 +77,13 @@ def main(args):
     #
     # data, _ = iter(validloader).next()
     # print('validloader : {}'.format(data))
-
-
+    with torch.no_grad():
+        x, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(3, [104, 51, 51], 4, [100, 50, 50, 5], 3, 248, 0.2, 2)
+    net = SCNN_tunable(3, [104, 51, 51], 7, [20, 10, 10, 8, 8, 5], n_times, 3, 1024, 0.5, 2)
     print(net)
+
 
     # Training loop or model loading
     if not skip_training:
@@ -92,12 +92,9 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         loss_function = torch.nn.MSELoss()
 
-
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
                                             parameters.device, parameters.epochs, parameters.patience,
                                             parameters.hand, model_path)
-
-
 
 
         # visualize the loss as the network trained
@@ -225,7 +222,7 @@ if __name__ == "__main__":
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
                         help='Learning rate (default: 1e-3),')
-    parser.add_argument('--learning_rate', type=float, default=0.2, metavar='lr',
+    parser.add_argument('--dropout', type=float, default=0.2, metavar='lr',
                         help='dropout (default: 0.2),')
     parser.add_argument('--bias', type=bool, default=False, metavar='N',
                         help='Convolutional layers with bias(default: False)')
