@@ -344,6 +344,20 @@ def test_SCNN_tunable():
 
     print("Test Success.")
 
+def test_activation():
+
+    x = torch.arange(10, 204, 1001, dtype=float)
+
+    act = torch.nn.ReLU()
+
+    y = act(x)
+
+    act_ = models.Activation("relu")
+
+    y_ = act_(x)
+
+    assert y.allclose(y_), "Something happen with the activation function wrapper"
+
 
 
 

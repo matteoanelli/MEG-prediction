@@ -15,7 +15,7 @@ sys.path.insert(1, r'')
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable
-from MEG.dl.params import Params
+from MEG.dl.params import Params_tunable
 
 # TODO maybe better implementation
 from  MEG.Utils.utils import *
@@ -31,8 +31,8 @@ def main(args):
 
 
     subj_id = "/sub"+str(args.sub)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub is not 3 else 2, 4)]
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -42,18 +42,28 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    parameters = Params(subject_n=args.sub,
-                        hand=args.hand,
-                        batch_size=args.batch_size,
-                        valid_batch_size=args.batch_size_valid,
-                        test_batch_size=args.batch_size_test,
-                        epochs=args.epochs,
-                        lr=args.learning_rate,
-                        duration=args.duration,
-                        overlap=args.overlap,
-                        patience=args.patience,
-                        device=device,
-                        y_measure=args.y_measure)
+    parameters = Params_tunable(subject_n=args.sub,
+                                hand=args.hand,
+                                batch_size=args.batch_size,
+                                valid_batch_size=args.batch_size_valid,
+                                test_batch_size=args.batch_size_test,
+                                epochs=args.epochs,
+                                lr=args.learning_rate,
+                                duration=args.duration,
+                                overlap=args.overlap,
+                                patience=args.patience,
+                                device=device,
+                                y_measure=args.y_measure,
+                                s_n_layer=args.s_n_layer,
+                                s_kernel_size=args.s_kernel_size,
+                                t_n_layer=args.t_n_layer,
+                                t_kernel_size=args.t_kernel_size,
+                                max_pooling=args.max_pooling,
+                                ff_n_layer=args.ff_n_layer,
+                                ff_hidden_channels=args.ff_hidden_channels,
+                                dropout=args.dropout,
+                                activation=args.activation
+                                )
 
     dataset = MEG_Dataset(raw_fnames,
                           parameters.duration,
@@ -81,9 +91,18 @@ def main(args):
         x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(3, [104, 51, 51], 7, [20, 10, 10, 8, 8, 5], n_times, 3, 1024, 0.5, 2)
-    print(net)
+    net = SCNN_tunable(parameters.s_n_layer,
+                       parameters.s_kernel_size,
+                       parameters.t_n_layer,
+                       parameters.t_kernel_size,
+                       n_times,
+                       parameters.ff_n_layer,
+                       parameters.ff_hidden_channels,
+                       parameters.dropout,
+                       parameters.max_pooling,
+                       parameters.activation)
 
+    print(net)
 
     # Training loop or model loading
     if not skip_training:
@@ -222,8 +241,6 @@ if __name__ == "__main__":
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
                         help='Learning rate (default: 1e-3),')
-    parser.add_argument('--dropout', type=float, default=0.2, metavar='lr',
-                        help='dropout (default: 0.2),')
     parser.add_argument('--bias', type=bool, default=False, metavar='N',
                         help='Convolutional layers with bias(default: False)')
 
@@ -238,6 +255,34 @@ if __name__ == "__main__":
                         help='Y type reshaping (default: movement)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
+
+    # Model architecture parameters
+    # Spatial sub-net
+    parser.add_argument('--s_n_layer', type=int, default=2, metavar='N',
+                        help='Spatial sub-net number of layer (default: 2)')
+    parser.add_argument('--s_kernel_size', type=list, default=[104, 101], metavar='N',
+                        help='Spatial sub-net kernel sizes (default: [104, 101])')
+    # Temporal sub-net
+    parser.add_argument('--t_n_layer', type=int, default=6, metavar='N',
+                        help='Temporal sub-net number of layer (default: 6)')
+    parser.add_argument('--t_kernel_size', type=list, default=[20, 10, 10, 8, 8, 5], metavar='N',
+                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])')
+    parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
+                        help='Spatial sub-net max-pooling (default: 2)')
+
+    # MLP
+    parser.add_argument('--ff_n_layer', type=int, default=3, metavar='N',
+                        help='MLP sub-net number of layer (default: 3)')
+    parser.add_argument('--ff_hidden_channels', type=int, default=1024, metavar='N',
+                        help='MLP sub-net number of hidden channels (default: 1024)')
+    parser.add_argument('--dropout', type=float, default=0.5, metavar='d',
+                        help='MLP dropout (default: 0.5),')
+
+    # Activation
+    parser.add_argument('--activation', type=str, default="relu", metavar='N',
+                        help='Activation function ti apply (default: relu)')
+
+
 
     args = parser.parse_args()
 

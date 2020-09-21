@@ -37,6 +37,28 @@ class Sample(nn.Module):
         return self.net(x).squeeze(1)
 
 
+class Activation(nn.Module):
+    def __init__(self, activation="relu"):
+        super(Activation, self).__init__()
+
+        if activation == "relu":
+            self.activation = nn.ReLU()
+
+        elif activation == "selu":
+            self.activation = nn.SELU()
+
+        elif activation == "elu":
+            self.activation = nn.ELU()
+
+        else:
+            raise ValueError("activetion should be one between relu, selu or elu, got instead {}".format(activation))
+
+    def forward(self, x):
+
+        return self.activation(x)
+
+
+
 class DNN(nn.Module):
     def __init__(self):
         super(DNN, self).__init__()
@@ -140,11 +162,12 @@ class SCNN_swap(nn.Module):
 
 
 class SpatialBlock(nn.Module):
-    def __init__(self, n_layer, kernel_size, bias=False):
+    def __init__(self, n_layer, kernel_size, activation, bias=False):
         super(SpatialBlock, self).__init__()
         self.kernel_size = kernel_size
         self.out_channel = [16 * (i + 1) for i in range(n_layer)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_layer)]
+        self.activation = activation
 
         if len(kernel_size) != n_layer:
             raise ValueError(" The number of kernel passed has to be the same as the n of layer")
@@ -154,7 +177,7 @@ class SpatialBlock(nn.Module):
                                                              self.out_channel[i],
                                                              kernel_size=[kernel_size[i], 1],
                                                              bias=False),
-                                                   nn.ReLU(),
+                                                   Activation(self.activation),
                                                    nn.BatchNorm2d(self.out_channel[i])
                                                    ]
                                      ])
@@ -165,16 +188,17 @@ class SpatialBlock(nn.Module):
 
 
 class TemporalBlock(nn.Module):
-    def __init__(self, input_channel, output_channel, kernel_size, max_pool=None):
+    def __init__(self, input_channel, output_channel, kernel_size, max_pool=None, activation="relu"):
         super(TemporalBlock, self).__init__()
 
         self.kernel_size = kernel_size
         self.input_channel = input_channel
         self.output_channel = output_channel
         self.max_pool = max_pool
+        self.activation = activation
 
         layers = [nn.Conv2d(self.input_channel, self.output_channel, kernel_size=[1, self.kernel_size], bias=False),
-                  nn.ReLU(),
+                  Activation(self.activation),
                   nn.Conv2d(self.output_channel, self.output_channel, kernel_size=[1, self.kernel_size], bias=False),
                   nn.BatchNorm2d(self.output_channel)
                   ]
@@ -182,7 +206,7 @@ class TemporalBlock(nn.Module):
         if self.max_pool is not None:
             layers.append(nn.MaxPool2d(kernel_size=[1, self.max_pool]))
 
-        layers.append(nn.ReLU())
+        layers.append(Activation(self.activation))
 
         self.block = nn.Sequential(*layers)
 
@@ -192,7 +216,7 @@ class TemporalBlock(nn.Module):
 
 
 class Temporal(nn.Module):
-    def __init__(self, n_block, kernel_size, n_times, max_pool=None, bias=False):
+    def __init__(self, n_block, kernel_size, n_times, activation, max_pool=None, bias=False):
         """
         args:
 
@@ -234,11 +258,13 @@ class Temporal(nn.Module):
         self.kernel_size = kernel_size
         self.out_channel = [16 * (i + 1) for i in range(n_block)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_block)]
+        self.activation = activation
 
         self.temporal = nn.Sequential(*[TemporalBlock(self.in_channel[i],
                                                       self.out_channel[i],
                                                       self.kernel_size[i],
-                                                      max_pool)
+                                                      max_pool,
+                                                      self.activation)
                                         for i in range(n_block)
                                         ])
 
@@ -247,20 +273,21 @@ class Temporal(nn.Module):
         return x
 
 class MLP(nn.Module):
-    def __init__(self, in_channel, hidden_channel, n_layer, dropout=0.5):
+    def __init__(self, in_channel, hidden_channel, n_layer, dropout=0.5, activation="relu"):
         super(MLP, self).__init__()
 
         self.in_channel = in_channel
         self.hidden_channel = hidden_channel
         self.n_layer = n_layer
         self.dropout = dropout
+        self.activation = activation
 
         layers = [nn.Linear(self.in_channel, self.hidden_channel),
                   nn.Dropout(self.dropout),
-                  nn.ReLU(),
+                  Activation(self.activation),
                   *[layer for i in range(n_layer) for layer in [nn.Linear(self.hidden_channel, self.hidden_channel),
                                                                 nn.Dropout(self.dropout),
-                                                                nn.ReLU()]],
+                                                                Activation(self.activation)]],
                   nn.Linear(self.hidden_channel, 1)
                   ]
 
@@ -275,17 +302,17 @@ class SCNN_tunable(nn.Module):
     def __init__(self, n_spatial_layer, spatial_kernel_size,
                  temporal_n_block, temporal_kernel_size, n_times,
                  mlp_n_layer, mlp_hidden, mlp_dropout,
-                 max_pool=None):
+                 max_pool=None, activation="relu"):
         super(SCNN_tunable, self).__init__()
 
-        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size)  # TODO maybe add a the max pooling
+        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)  # TODO maybe add a the max pooling
 
-        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, max_pool)
+        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
 
         self.flatten = Flatten_MEG()
 
         self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
-        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout)
+        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
     def forward(self, x):
         x = self.spatial(x)
