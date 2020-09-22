@@ -10,6 +10,7 @@ import MEG.dl.models as models
 from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
+from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
 
 
 def test_SCNN_swap():
@@ -317,8 +318,8 @@ def test_MLP():
 def test_SCNN_tunable():
     x = torch.zeros([10, 1, 204, 1001])
 
-    n_spatial_layer = 4
-    spatial_kernel_size = [54, 51, 51, 51]
+    n_spatial_layer = 3
+    spatial_kernel_size = [104, 51, 51]
 
     temporal_n_block = 6
     temporal_kernel_size = [20, 10, 10, 8, 8, 5]
@@ -357,6 +358,45 @@ def test_activation():
     y_ = act_(x)
 
     assert y.allclose(y_), "Something happen with the activation function wrapper"
+
+
+def test_generate_parameters():
+
+    param_grid = {
+        "sub": [8],
+        "hand": [0, 1],
+        "batch_size": [80, 100, 120],
+        "learning_rate": [3e-3, 4e-4],
+        "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2), (0.8, 0.6), (0.6, 0.4)],
+        "s_kernel_size": [[204], [54, 51, 51, 51], [104, 101], [154, 51], [104, 51, 51]],
+        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]],
+        "ff_n_layer": [1, 2, 3, 4, 5],
+        "ff_hidden_channels": [1024, 516, 248],
+        "dropout": [0.2, 0.3, 0.4, 0.5],
+        "activation": ["relu", "selu", "elu"]
+    }
+
+    data_dir = "data"
+    model_dir = "model"
+    figure_dir = "figure"
+
+    param_sampled = generate_parameters(param_grid, 10, {"sub": 5, "activation": "relu"}, data_dir, figure_dir, model_dir)
+
+    print(param_sampled)
+
+def test_test_parameter():
+
+    params= {
+        "duration": 1.,
+        "t_n_layer": 2,
+        "t_kernel_size": [200, 50],
+        "max_pool": 3
+    }
+
+    if test_parameter(params):
+        print(" the parameters are ok ")
+    else:
+        print("Recalcolate the parameters")
 
 
 

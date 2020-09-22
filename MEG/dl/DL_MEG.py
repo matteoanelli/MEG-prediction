@@ -8,6 +8,7 @@ import argparse
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
+from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
@@ -31,8 +32,8 @@ def main(args):
 
 
     subj_id = "/sub"+str(args.sub)+"/ball"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -216,12 +217,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    # subject
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
-    parser.add_argument('--hand', type=int, default='0',
-                        help="Patient hands: 0 for sx, 1 for dx (default= 0)")
-
     # Directories
     parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
                         help="Input data directory (default= Z:\Desktop\\)")
@@ -229,6 +224,12 @@ if __name__ == "__main__":
                         help="Figure data directory (default= MEG\Figures)")
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
+
+    # subject
+    parser.add_argument('--sub', type=int, default='8',
+                        help="Input data directory (default= 8)")
+    parser.add_argument('--hand', type=int, default='0',
+                        help="Patient hands: 0 for sx, 1 for dx (default= 0)")
 
     # Model Parameters
     parser.add_argument('--batch_size', type=int, default=100, metavar='N',
