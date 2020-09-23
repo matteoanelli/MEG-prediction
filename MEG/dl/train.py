@@ -62,7 +62,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path="checkpoint.pt")
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -114,6 +114,6 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
             print("Early stopping!")
             break
 
-    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+    net.load_state_dict(torch.load("checkpoint.pt"))
 
     return net, avg_train_losses, avg_valid_losses

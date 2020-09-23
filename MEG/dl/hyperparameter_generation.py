@@ -1,20 +1,16 @@
-from hyperopt import hp
-import hyperopt.pyll.stochastic as sample
-
-import random
-import torch
 import argparse
+import random
+
 import pandas as pd
 
-import numpy as np
 
-from MEG.dl.models import SCNN_tunable
 def test_parameter(params):
 
-    n_times = params["duration"] * 1000 + 1
+    # n_times = params["duration"] * 1000 + 1
+    n_times = 801
 
-    temporal_n_block = params["t_n_layer"]
     temporal_kernel_size = params["t_kernel_size"]
+    temporal_n_block = len(temporal_kernel_size)
     max_pool = params["max_pooling"]
     # max_pool = 2
 
@@ -128,9 +124,10 @@ if __name__ == '__main__':
         "patience": 10,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 0
+        "experiment": 0,
+        "t_kernel_size": [200],
     }
-    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',

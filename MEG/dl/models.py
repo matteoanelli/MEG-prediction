@@ -312,6 +312,7 @@ class SCNN_tunable(nn.Module):
         self.flatten = Flatten_MEG()
 
         self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
+        print(self.in_channel)
         self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
     def forward(self, x):

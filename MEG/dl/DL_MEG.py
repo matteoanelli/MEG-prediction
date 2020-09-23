@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import mlflow
 import mlflow.pytorch
 import argparse
+import time as timer
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
-from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
@@ -111,10 +111,13 @@ def main(args):
 
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         loss_function = torch.nn.MSELoss()
-
+        start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
                                             parameters.device, parameters.epochs, parameters.patience,
                                             parameters.hand, model_path)
+
+        train_time = timer.time() - start_time
+        print("Training done in {:.4f}".format(train_time))
 
 
         # visualize the loss as the network trained
@@ -199,6 +202,8 @@ def main(args):
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)
+
+        mlflow.log_param("Time", train_time)
 
         mlflow.log_metric('MSE', mse)
         mlflow.log_metric('RMSE', rmse)

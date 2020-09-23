@@ -316,13 +316,13 @@ def test_MLP():
 
 
 def test_SCNN_tunable():
-    x = torch.zeros([10, 1, 204, 1001])
+    x = torch.zeros([10, 1, 204, 801])
 
-    n_spatial_layer = 3
-    spatial_kernel_size = [104, 51, 51]
+    n_spatial_layer = 2
+    spatial_kernel_size = [154, 51]
 
-    temporal_n_block = 6
-    temporal_kernel_size = [20, 10, 10, 8, 8, 5]
+    temporal_n_block = 1
+    temporal_kernel_size = [200]
     max_pool = 2
 
     mlp_n_layer = 4
@@ -387,10 +387,10 @@ def test_generate_parameters():
 def test_test_parameter():
 
     params= {
-        "duration": 1.,
+        "duration": 0.8,
         "t_n_layer": 2,
-        "t_kernel_size": [200, 50],
-        "max_pool": 3
+        "t_kernel_size": [200],
+        "max_pooling": 3
     }
 
     if test_parameter(params):
