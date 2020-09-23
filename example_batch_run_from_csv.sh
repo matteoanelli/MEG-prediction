@@ -4,7 +4,7 @@
 #SBATCH --mem-per-cpu=30000M
 #SBATCH --cpus-per-task=1
 #SBATCH --array=1-4
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/out_%j.log
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/t1_out_%A_%a.log
 #SBATCH --gres=gpu:1
 
 n=$(($SLURM_ARRAY_TASK_ID + 1))

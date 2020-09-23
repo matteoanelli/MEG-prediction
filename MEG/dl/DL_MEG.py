@@ -6,6 +6,7 @@ import mlflow
 import mlflow.pytorch
 import argparse
 import time as timer
+import json
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
@@ -43,6 +44,8 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
+
+
     parameters = Params_tunable(subject_n=args.sub,
                                 hand=args.hand,
                                 batch_size=args.batch_size,
@@ -56,9 +59,9 @@ def main(args):
                                 device=device,
                                 y_measure=args.y_measure,
                                 s_n_layer=args.s_n_layer,
-                                s_kernel_size=args.s_kernel_size,
+                                s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
                                 t_n_layer=args.t_n_layer,
-                                t_kernel_size=args.t_kernel_size,
+                                t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
                                 max_pooling=args.max_pooling,
                                 ff_n_layer=args.ff_n_layer,
                                 ff_hidden_channels=args.ff_hidden_channels,
@@ -266,12 +269,12 @@ if __name__ == "__main__":
     # Spatial sub-net
     parser.add_argument('--s_n_layer', type=int, default=2, metavar='N',
                         help='Spatial sub-net number of layer (default: 2)')
-    parser.add_argument('--s_kernel_size', type=list, default=[104, 101], metavar='N',
+    parser.add_argument('--s_kernel_size', type=str, default=[104, 101], metavar='N', nargs='+',
                         help='Spatial sub-net kernel sizes (default: [104, 101])')
     # Temporal sub-net
     parser.add_argument('--t_n_layer', type=int, default=6, metavar='N',
                         help='Temporal sub-net number of layer (default: 6)')
-    parser.add_argument('--t_kernel_size', type=list, default=[20, 10, 10, 8, 8, 5], metavar='N',
+    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 8, 5], metavar='N', nargs='+',
                         help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])')
     parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
                         help='Spatial sub-net max-pooling (default: 2)')

@@ -6,8 +6,7 @@ import pandas as pd
 
 def test_parameter(params):
 
-    # n_times = params["duration"] * 1000 + 1
-    n_times = 801
+    n_times = params["duration"] * 1000 + 1
 
     temporal_kernel_size = params["t_kernel_size"]
     temporal_n_block = len(temporal_kernel_size)
@@ -125,7 +124,6 @@ if __name__ == '__main__':
         "y_measure": "movement",
         "max_pooling": 2,
         "experiment": 0,
-        "t_kernel_size": [200],
     }
     random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
