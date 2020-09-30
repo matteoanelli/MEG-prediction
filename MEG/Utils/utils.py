@@ -19,10 +19,10 @@ def window_stack(x, window, overlap, sample_rate):
     print(x.shape)
     print("window {}, stride {}, x.shape {}".format(window_size, stride, x.shape))
 
-    return torch.cat([x[:, i : min(x.shape[1], i + window_size)] for i in range(0, x.shape[1], stride)], dim=1,)
+    return torch.cat([x[:, i: min(x.shape[1], i + window_size)] for i in range(0, x.shape[1], stride)], dim=1,)
 
 
-def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
+def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
@@ -51,8 +51,8 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]))
-    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]))
+    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {},"\
@@ -63,9 +63,37 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True):
     return X, y_left, y_right
 
 
-def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True):
+def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
 
-    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input)
+    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input, y_measure=y_measure)
+
+    X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+
+    y_left = torch.from_numpy(y_left.astype(np.float32))
+    y_right = torch.from_numpy(y_right.astype(np.float32))
+
+    return X, torch.stack([y_left, y_right], dim=1)
+
+def import_MEG_Tensor_form_file(data_dir, normalize_input=True, y_measure="movement"):
+
+    print("Using saved epoched data, loading...")
+    X = np.fromfile(os.path.join(data_dir, "X.dat"), dtype=float)
+    y_left = np.fromfile(os.path.join(data_dir, "y_left.dat"), dtype=float)
+    y_right = np.fromfile(os.path.join(data_dir, "y_right.dat"), dtype=float)
+    print("Data loaded!")
+
+    if normalize_input:
+        X = standard_scaling(X, scalings="mean", log=True)
+
+    y_left = y_reshape(y_PCA(y_left), measure=y_measure)
+    y_right = y_reshape(y_PCA(y_right), measure=y_measure)
+
+    print(
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"\
+        "the corresponding y_right shape is: {}".format(
+            X.shape, y_left.shape, y_right.shape
+        )
+    )
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
 
@@ -74,7 +102,6 @@ def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True):
 
 
     return X, torch.stack([y_left, y_right], dim=1)
-
 
 def filter_data(X, sampling_rate):
     # TODO appropriate filtering and generalize function
@@ -111,22 +138,27 @@ def load_skl_model(models_path):
         return model
 
 
-def y_reshape(y, measure="mean"):
+def y_reshape(y, measure="mean", scaling=True):
     # the y has 2 position
     if measure == 'mean':
         y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
+
     elif measure == 'movement':
         y = np.sum(np.abs(y), axis=-1)
+        if scaling:
+            y = standard_scaling(y, log=False)
+
     elif measure == 'velocity':
-        y = trapz(y, axis=-1)
-        print(y.shape)
-        print(y)
+        y = trapz(y, axis=-1)/y.shape[-1]
+        if scaling:
+            y = standard_scaling(y, log=False)
+
     elif measure == 'position':
         vel = cumtrapz(y, axis=-1)
-        print('vel shape: {}'.format(vel.shape))
-        y = trapz(vel, axis=-1)
-        print(y.shape)
-        print(y)
+        y = trapz(vel, axis=-1)/y.shape[-1]
+        if scaling:
+            y = standard_scaling(y, log=False)
+
     else:
         raise ValueError("measure should be one of: mean, movement, velocity, position")
 

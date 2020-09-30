@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import pytest
 import torch
+import time
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
@@ -8,6 +10,7 @@ import MEG.dl.models as models
 from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
+from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
 
 
 def test_SCNN_swap():
@@ -31,11 +34,11 @@ def test_y_reshaping():
     # TODO test position and velocity
     y_before = np.ones([10, 1, 1001])
 
-    y = y_reshape(y_before)
+    y = y_reshape(y_before, scaling=False)
 
     assert y.shape == (10,), "Bad shape of y with mean as measure: expected y.shape={}, got {}".format(y.shape, (10,))
 
-    y = y_reshape(y_before, measure="movement")
+    y = y_reshape(y_before, measure="movement", scaling=False)
 
     y_exected = np.ones([10]) * 1001.
 
@@ -44,13 +47,23 @@ def test_y_reshaping():
 
     assert np.array_equal(y, y_exected), "Bad values of y with movement as measure: expected y: {}, got {}".format(y_exected, y)
 
-    y_neg = y_reshape(y_before * (-1), measure="movement")
+    y_neg = y_reshape(y_before * (-1), measure="movement", scaling=False)
 
     assert np.array_equal(y_neg, y), "Bad values of y with movement as measure, the negative values should give the same y: " \
                        "expected {}, got {}".format(y, y_neg)
 
-    y_pos = y_reshape(y_before, measure="position")
 
+    y_before2 = np.random.rand(10, 1, 1001)
+
+    y_mean = y_reshape(y_before2, measure="mean")
+    y_movement = y_reshape(y_before2, measure="movement")
+    y_vel = y_reshape(y_before2, measure="velocity")
+    y_pos = y_reshape(y_before2, measure="position")
+
+    print("y mean : {} ".format(y_mean))
+    print("y movement : {} ".format(y_movement))
+    print("y vel : {} ".format(y_vel))
+    print("y position : {} ".format(y_pos))
 
 
 def test_y_PCA():
@@ -174,6 +187,7 @@ def test_windowing_shape():
         "Something went wrong during the augmentation process, len expected: {}, got: {}".\
             format(2*len(dataset), len(windowed_dataset))
 
+
 def test_len_split():
     for len in [749, 11, 12,  27, 400]:
 
@@ -187,4 +201,204 @@ def test_parameters_class():
     pass
 
 
+@pytest.mark.skip(reason="Test import file")
+def test_import_from_file():
+    file_dir = 'Z:\Desktop\sub8\X.dat'
+
+    print(os.path.exists(file_dir))
+
+    start_time = time.time()
+    X = np.fromfile(file_dir, dtype=float)
+
+    print(X.shape)
+    print('the X import takes: {}'.format(time.time() - start_time))
+
 # TODO tests
+
+
+def test_Spatial_Block():
+    n_layer = 3
+    net = models.SpatialBlock(n_layer, [104, 51, 51])
+    print(net)
+
+    x = torch.zeros([10, 1, 204, 1001])
+    print(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+
+        assert y.shape == torch.Size([x.shape[0], 16*n_layer, 1, x.shape[-1]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+
+def test_Temporal_Block():
+    n_block = 1
+    input_channel = 1
+    output_channels = 64
+    kernel_size = 100
+    max_pool = 2
+
+    net = models.TemporalBlock(input_channel, output_channels, kernel_size, max_pool)
+    print(net)
+
+    x = torch.zeros([10, 32, 1, 1001])
+    x = torch.transpose(x, 1, 2)
+    print(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0],
+                                      output_channels,
+                                      x.shape[2],
+                                      int((x.shape[-1] - ((kernel_size - 1) * 2 * n_block)) /
+                                          max_pool if max_pool is not None else 1)])\
+            ,"Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+
+def test_Temporal():
+    n_block = 3
+    kernel_size = [100, 100, 50]
+    max_pool = 2
+
+    x = torch.zeros([10, 32, 1, 1001])
+    x = torch.transpose(x, 1, 2)
+
+    n_times_ = x.shape[-1]
+    for i in range(n_block):
+        n_times_ = int((n_times_ - ((kernel_size[i] - 1) * 2)))
+        n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+
+    net = models.Temporal(n_block, kernel_size, x.shape[-1], max_pool)
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0],
+                                      n_block*16,
+                                      x.shape[2],
+                                      n_times_]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+
+def test_MLP():
+    n_times_ = 101
+    n_layer = 4
+
+    temporal_n_block = 2
+    spatial_n_layer = 2
+    t = temporal_n_block * 16
+    c = spatial_n_layer * 16
+
+    x = torch.zeros([10, t, c, n_times_])
+    in_channel = t * c * n_times_
+    print("in_channels {}".format(in_channel))
+
+    net = models.MLP(in_channel, 516, n_layer, 0.2)
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x.view([x.shape[0], -1]))
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+
+def test_SCNN_tunable():
+    x = torch.zeros([10, 1, 204, 801])
+
+    n_spatial_layer = 2
+    spatial_kernel_size = [154, 51]
+
+    temporal_n_block = 1
+    temporal_kernel_size = [200]
+    max_pool = 2
+
+    mlp_n_layer = 4
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
+
+
+    net = models.SCNN_tunable(n_spatial_layer, spatial_kernel_size,
+                              temporal_n_block, temporal_kernel_size, x.shape[-1],
+                              mlp_n_layer, mlp_hidden, mlp_dropout,
+                              max_pool=max_pool)
+
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+def test_activation():
+
+    x = torch.arange(10, 204, 1001, dtype=float)
+
+    act = torch.nn.ReLU()
+
+    y = act(x)
+
+    act_ = models.Activation("relu")
+
+    y_ = act_(x)
+
+    assert y.allclose(y_), "Something happen with the activation function wrapper"
+
+
+def test_generate_parameters():
+
+    param_grid = {
+        "sub": [8],
+        "hand": [0, 1],
+        "batch_size": [80, 100, 120],
+        "learning_rate": [3e-3, 4e-4],
+        "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2), (0.8, 0.6), (0.6, 0.4)],
+        "s_kernel_size": [[204], [54, 51, 51, 51], [104, 101], [154, 51], [104, 51, 51]],
+        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]],
+        "ff_n_layer": [1, 2, 3, 4, 5],
+        "ff_hidden_channels": [1024, 516, 248],
+        "dropout": [0.2, 0.3, 0.4, 0.5],
+        "activation": ["relu", "selu", "elu"]
+    }
+
+    data_dir = "data"
+    model_dir = "model"
+    figure_dir = "figure"
+
+    param_sampled = generate_parameters(param_grid, 10, {"sub": 5, "activation": "relu"}, data_dir, figure_dir, model_dir)
+
+    print(param_sampled)
+
+def test_test_parameter():
+
+    params= {
+        "duration": 0.8,
+        "t_n_layer": 2,
+        "t_kernel_size": [200],
+        "max_pooling": 3
+    }
+
+    if test_parameter(params):
+        print(" the parameters are ok ")
+    else:
+        print("Recalcolate the parameters")
+
+
+
+
+
