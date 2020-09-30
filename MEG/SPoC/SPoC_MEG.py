@@ -14,7 +14,6 @@ from sklearn.pipeline import Pipeline
 from mne import viz
 
 import matplotlib.pyplot as plt
-# TODO maybe better implementation
 sys.path.insert(1, r'')
 from  MEG.Utils.utils import *
 from MEG.dl.params import SPoC_params
@@ -146,7 +145,7 @@ if __name__ == "__main__":
 
     # subject
     parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
+                        help="Subject number (default= 8)")
     parser.add_argument('--hand', type=int, default='0',
                         help="Patient hands: 0 for sx, 1 for dx (default= 0)")
 

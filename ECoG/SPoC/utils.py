@@ -7,6 +7,7 @@ import mne
 import numpy as np
 import scipy.io as sio
 from sklearn.model_selection import train_test_split
+from mne.decoding import Scaler
 
 
 def import_ECoG(datadir, filename, finger):
@@ -57,9 +58,7 @@ def create_raw(X, n_channels, sampling_rate):
     return mne.io.RawArray(X, info)
 
 
-def create_epoch(
-    X, sampling_rate, duration=4.0, overlap=0.0, ds_factor=1.0, verbose=None, baseline=None,
-):
+def create_epoch(X, sampling_rate, duration=4.0, overlap=0.0, ds_factor=1.0, verbose=None, baseline=None):
     # Create Basic info data
     # X.shape to be channel, n_sample
     n_channels = X.shape[0]
@@ -100,13 +99,24 @@ def create_epoch(
 
     return epochs
 
+def standard_scaling(data, scalings="mean", log=True):
 
-def y_resampling(y, n_chunks):
-    # TODO find a way to process the y data respect to the events (discretize the y)
-    # Continuous data down sampling
-    # Simply aggregate data based on number of epochs
-    split = np.array_split(y, n_chunks)
-    y = np.array([np.mean(c) for c in split])
+    if log:
+        data = np.log(data + np.finfo(np.float32).eps)
+
+    if scalings in ["mean", "median"]:
+        scaler = Scaler(scalings=scalings)
+        data = scaler.fit_transform(data)
+    else:
+        raise ValueError("scalings should be mean or median")
+
+    return data
+
+def y_resampling(y, scaling=True):
+
+    y = np.sum(np.abs(y), axis=-1)
+    if scaling:
+        y = standard_scaling(y, log=False)
 
     return y
 
