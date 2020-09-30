@@ -102,15 +102,15 @@ if __name__ == '__main__':
     param_grid = {
         "sub": [8],
         "hand": [0, 1],
-        "batch_size": [80, 100, 120],
-        "learning_rate": [9e-4, 2e-3],
-        "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2), (0.8, 0.6), (0.6, 0.4)],
-        "s_kernel_size": [[204], [54, 51, 51, 51], [104, 101], [154, 51], [104, 51, 51]],
-        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200]],
-        "ff_n_layer": [1, 2, 3, 4, 5],
+        "batch_size": [80, 100],
+        "learning_rate": [1e-3, 3e-3],
+        "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2)],
+        "s_kernel_size": [[204], [104, 101], [154, 51]],
+        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
+        "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
-        "dropout": [0.2, 0.3, 0.4, 0.5],
-        "activation": ["relu", "selu", "elu"],
+        "dropout": [0.2, 0.3],
+        "activation": ["relu"],
         }
 
     args = parser.parse_args()
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         "patience": 10,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 0,
+        "experiment": 4,
     }
     random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
