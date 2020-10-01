@@ -1,9 +1,14 @@
-#%%
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on ...
+
+@author: Matteo Anelli
+"""
+
 import argparse
-import sys
 import time
 
-import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
 from mne import viz
@@ -13,10 +18,16 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
-sys.path.insert(1, r'')
-from  MEG.Utils.utils import *
-from MEG.dl.params import SPoC_params
+from utils import *
 
+sys.path.insert(1, r'')
+# from  ECoG.Utils.utils import *
+from ECoG.SPoC.utils import standard_scaling
+from ECoG.SPoC.SPoC_param import SPoC_params
+
+import matplotlib.pyplot as plt
+
+mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 def main(args):
 
@@ -25,22 +36,42 @@ def main(args):
     model_path = args.model_dir
 
     parameters = SPoC_params(subject_n=args.sub,
-                             hand=args.hand,
+                             finger=args.finger,
                              duration=args.duration,
-                             overlap=args.overlap,
-                             y_measure=args.y_measure)
+                             overlap=args.overlap)
 
-    subj_id = "/sub" + str(parameters.subject_n) + "/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
-    X, y, _ = import_MEG(raw_fnames, duration=parameters.duration, overlap=parameters.overlap,
-                         y_measure=parameters.y_measure, normalize_input=True)   # concentrate the analysis only on the left hand
+    #%%
 
-    print('X shape {}, y shape {}'.format(X.shape, y.shape))
+    file_name = "/sub" + str(parameters.subject_n) + "_comp.mat"
+    sampling_rate = 1000
 
+    #%%
+    # Example
+    X, y = import_ECoG(data_dir, file_name, parameters.finger)
+    X = filter_data(X, sampling_rate)
+    X = standard_scaling(X).squeeze(-1)
+
+    print("Example of fingers position : {}".format(y[0]))
+    print("epochs with events generation")
+    epochs = create_epoch(X, sampling_rate, duration=parameters.duration, overlap=parameters.overlap, ds_factor=1)
+
+    X = epochs.get_data()
+
+    #%%
+    y = y_resampling(y, X.shape[0])
+
+    print(X.shape)
+    print(y.shape)
+
+    # %%
+    print("X shape {}, y shape {}".format(X.shape, y.shape))
     X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
-    print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
-                                                                                          X_test.shape, y_test.shape))
+    print(
+        "X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}".format(
+            X_train.shape, y_train.shape, X_test.shape, y_test.shape
+        )
+    )
 
     pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full')),
                          ('Ridge', Ridge())])
@@ -51,7 +82,7 @@ def main(args):
 
     clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=2
                        )
-    #%%
+    # %%
     start = time.time()
     print('Start Fitting model ...')
     clf.fit(X_train, y_train)
@@ -62,7 +93,7 @@ def main(args):
 
     print(clf.best_score_)
     print(clf.best_params_['Spoc__n_components'])
-    #%%
+    # %%
     y_new = clf.predict(X_test)
     mse = mean_squared_error(y_test, y_new)
     rmse = mean_squared_error(y_test, y_new, squared=False)
@@ -70,19 +101,17 @@ def main(args):
     print("mean squared error {}".format(mse))
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
-    #%%
+    # %%
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(100)
     ax.plot(times, y_new[100:200], color='b', label='Predicted')
     ax.plot(times, y_test[100:200], color='r', label='True')
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("SPoC: Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_ylabel("Finger Movement")
+    ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
     plt.legend()
     viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
+    plt.savefig(os.path.join(figure_path, 'ECoG_SPoC_focus.pdf'))
     plt.show()
 
     # plot y_new against the true value
@@ -91,12 +120,10 @@ def main(args):
     ax.plot(times, y_new, color="b", label="Predicted")
     ax.plot(times, y_test, color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_ylabel("Finger Movement")
+    ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
     plt.legend()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC.pdf'))
+    plt.savefig(os.path.join(figure_path, 'ECoG_SPoC.pdf'))
     plt.show()
 
     # %%
@@ -112,11 +139,11 @@ def main(args):
     # plt.legend()
     plt.xticks(n_components, n_components)
     viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
+    plt.savefig(os.path.join(figure_path, 'ECoG_SPoC_Components_Analysis.pdf'))
     plt.show()
 
     # %%
-    name = 'MEG_SPoC.p'
+    name = 'ECoG_SPoC.p'
     save_skl_model(clf, model_path, name)
 
     # log the model
@@ -130,39 +157,34 @@ def main(args):
 
         mlflow.log_param("n_components", n_components)
 
-        mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
-        mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC.pdf'))
-        mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
+        mlflow.log_artifact(os.path.join(figure_path, 'ECoG_SPoC_focus.pdf'))
+        mlflow.log_artifact(os.path.join(figure_path, 'ECoG_SPoC.pdf'))
+        mlflow.log_artifact(os.path.join(figure_path, 'ECoG_SPoC_Components_Analysis.pdf'))
         mlflow.sklearn.log_model(clf, "models")
 
 if __name__ == "__main__":
-    # main(sys.argv[1:])
-
-    # main(sys.argv[1:])
 
     parser = argparse.ArgumentParser()
 
     # subject
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Subject number (default= 8)")
-    parser.add_argument('--hand', type=int, default='0',
-                        help="Patient hands: 0 for sx, 1 for dx (default= 0)")
+    parser.add_argument('--sub', type=int, default='1',
+                        help="Subject number (default= 1)")
+    parser.add_argument('--finger', type=int, default='0',
+                        help="Finger (default= 0)")
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--figure_dir', type=str, default='MEG\Figures',
-                        help="Figure data directory (default= MEG\Figures)")
-    parser.add_argument('--model_dir', type=str, default='MEG\Models',
-                        help="Model data directory (default= MEG\Models\)")
+    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\BCICIV_4_mat\\',
+                        help="Input data directory (default= Z:\Desktop\BCICIV_4_mat)")
+    parser.add_argument('--figure_dir', type=str, default='ECoG\Figures',
+                        help="Figure data directory (default= ECoG\Figures)")
+    parser.add_argument('--model_dir', type=str, default='ECoG\Models',
+                        help="Model data directory (default= ECoG\Models\)")
 
     # Model Parameters
     parser.add_argument('--duration', type=float, default=1., metavar='N',
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
                         help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--y_measure', type=str, default="movement",
-                        help='Y type reshaping (default: movement)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
 
