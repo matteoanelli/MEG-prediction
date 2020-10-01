@@ -1,12 +1,16 @@
 import os
 import sys
 
+import mne
 from mne import filter
 import numpy as np
 import scipy.io as sio
 import torch
 from sklearn.model_selection import train_test_split
 
+sys.path.insert(1, r'')
+
+from ECoG.SPoC.utils import import_ECoG, filter_data, standard_scaling, create_epoch, y_resampling
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -18,48 +22,59 @@ def window_stack(x, window, overlap, sample_rate):
     # return [x[:, i:min(x.shape[1], i+window_size)] for i in range(0, x.shape[1], stride)]
 
 
-def import_ECoG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1000, overlap=0.0):
-    # TODO add finger choice dict
-    # TODO refactor reshaping of X (for instance add the mean)
-    path = os.path.join(datadir, filename)
-    if os.path.exists(path):
-        dataset = sio.loadmat(os.path.join(datadir, filename))
-        X = torch.from_numpy(dataset["train_data"].astype(np.float32).T)
-        y = torch.from_numpy(dataset["train_dg"][:, finger].astype(np.float32))
+def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, overlap=0.0):
 
-        if overlap != 0.:
-            X = window_stack(X, window_size, overlap, sample_rate)
-            y = window_stack(y.unsqueeze(0), window_size, overlap, sample_rate).squeeze()
+    X, y = import_ECoG(datadir, filename, finger)
 
-        module = X.shape[1] % int(window_size * sample_rate)
-        if module != 0:
-            X = X[:, :-module]  # Discard some of the last time points to allow the reshape
-        X = torch.reshape(X, (-1, X.shape[0], int(window_size * sample_rate)))
-        assert 0 <= finger < 5, "Finger input not valid, range value from 0 to 4."
+    X = filter_data(X, sample_rate)
+    X = standard_scaling(X).squeeze()
 
-        if module != 0:
-            y = y[:-module]
-        y = y_resampling(y, X.shape[2])
+    epochs = create_epoch(X, sample_rate, duration=duration, overlap=overlap, ds_factor=1)
 
-        print(
-            "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(
-                X.shape, y.shape
-            )
-        )
+    X = epochs.get_data()
 
-        return X, y
-    else:
-        print("No such file '{}'".format(path), file=sys.stderr)
-        return None, None
+    y = y_resampling(y, X.shape[0])
+
+    X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+
+    y = torch.from_numpy(y.astype(np.float32))
+
+    return X, y
 
 
-def y_resampling(y, n_chunks):
-
-    split = list(torch.split(y, n_chunks))
-    y = torch.stack([torch.mean(s) for s in split])
-
-    return y
-
+# def import_ECoG_Tensor(datadir, filename, finger, window_size=0.5, sample_rate=1000, overlap=0.0):
+#     # TODO add finger choice dict
+#     # TODO refactor reshaping of X (for instance add the mean)
+#     path = os.path.join(datadir, filename)
+#     if os.path.exists(path):
+#         dataset = sio.loadmat(os.path.join(datadir, filename))
+#         X = torch.from_numpy(dataset["train_data"].astype(np.float32).T)
+#         y = torch.from_numpy(dataset["train_dg"][:, finger].astype(np.float32))
+#
+#         if overlap != 0.:
+#             X = window_stack(X, window_size, overlap, sample_rate)
+#             y = window_stack(y.unsqueeze(0), window_size, overlap, sample_rate).squeeze()
+#
+#         module = X.shape[1] % int(window_size * sample_rate)
+#         if module != 0:
+#             X = X[:, :-module]  # Discard some of the last time points to allow the reshape
+#         X = torch.reshape(X, (-1, X.shape[0], int(window_size * sample_rate)))
+#         assert 0 <= finger < 5, "Finger input not valid, range value from 0 to 4."
+#
+#         if module != 0:
+#             y = y[:-module]
+#         y = y_resampling(y, X.shape[2])
+#
+#         print(
+#             "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(
+#                 X.shape, y.shape
+#             )
+#         )
+#
+#         return X, y
+#     else:
+#         print("No such file '{}'".format(path), file=sys.stderr)
+#         return None, None
 
 def save_pytorch_model(model, path, filename):
 

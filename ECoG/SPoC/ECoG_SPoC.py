@@ -61,9 +61,6 @@ def main(args):
     #%%
     y = y_resampling(y, X.shape[0])
 
-    print(X.shape)
-    print(y.shape)
-
     # %%
     print("X shape {}, y shape {}".format(X.shape, y.shape))
     X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
@@ -155,7 +152,7 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
 
-        mlflow.log_param("n_components", n_components)
+        mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
 
         mlflow.log_artifact(os.path.join(figure_path, 'ECoG_SPoC_focus.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'ECoG_SPoC.pdf'))
