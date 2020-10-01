@@ -12,9 +12,10 @@ from mne.decoding import Scaler
 
 def import_ECoG(datadir, filename, finger):
     # TODO add finger choice dict
-    path = os.path.join(datadir, filename)
+    path = "".join([datadir, filename])
+
     if os.path.exists(path):
-        dataset = sio.loadmat(os.path.join(datadir, filename))
+        dataset = sio.loadmat(path)
         X = dataset["train_data"].astype(np.float).T
         assert finger >= 0 and finger < 5, "Finger input not valid, range value from 0 to 4."
         y = dataset["train_dg"][:, finger]  #
@@ -99,7 +100,7 @@ def create_epoch(X, sampling_rate, duration=4.0, overlap=0.0, ds_factor=1.0, ver
 
     return epochs
 
-def standard_scaling(data, scalings="mean", log=True):
+def standard_scaling(data, scalings="mean", log=False):
 
     if log:
         data = np.log(data + np.finfo(np.float32).eps)
@@ -112,13 +113,15 @@ def standard_scaling(data, scalings="mean", log=True):
 
     return data
 
-def y_resampling(y, scaling=True):
+def y_resampling(y, n_chunks, scaling=True):
 
-    y = np.sum(np.abs(y), axis=-1)
+    split = np.array_split(y, n_chunks)
+
+    # y = np.sum(np.abs(split), axis=-1)
+    y = np.expand_dims(np.array([np.sum(np.abs(c)) for c in split]), axis=1)
     if scaling:
         y = standard_scaling(y, log=False)
-
-    return y
+    return y.squeeze()
 
 
 def split_data(X, y, test_size=0.3, random_state=0):
