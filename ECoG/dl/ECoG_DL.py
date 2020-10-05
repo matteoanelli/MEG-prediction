@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # subject
-    parser.add_argument('--sub', type=int, default='1',
+    parser.add_argument('--sub', type=int, default='3',
                         help="Subject number (default= 1)")
     parser.add_argument('--finger', type=int, default='0',
                         help="Finger (default= 0)")
@@ -153,6 +153,7 @@ if __name__ == "__main__":
     # net = LeNet5(in_channel=62, n_times=1000)
     with torch.no_grad():
         x, _ = iter(trainloader).next()
+        print(x.shape)
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
     net = SCNN_tunable(parameters.s_n_layer,
@@ -166,6 +167,8 @@ if __name__ == "__main__":
                        parameters.max_pooling,
                        parameters.activation)
     print(net)
+
+    exit(0)
 
     # Training loop or model loading
     if not skip_training:
