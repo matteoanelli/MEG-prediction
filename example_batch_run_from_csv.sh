@@ -38,7 +38,7 @@ echo "MLP hidden channels is $ffhc"
 echo "dropout is $drop"
 echo "activation fun is $act"
 
-mkdir -p /tmp/$SLURM_ARRAY_TASK_ID
+mkdir -p tmp/$SLURM_ARRAY_TASK_ID
 
 
 srun python MEG/dl/DL_MEG.py --data_dir $data --figure_dir $figures --model_dir ../tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --duration $duration --overlap $overlap --patience $patience --y_measure $y --experiment $exp --s_n_layer $snl --s_kernel_size $skern --t_n_layer $tnl --t_kernel_size $tkern --max_pooling $maxp --ff_n_layer $ffnl --ff_hidden_channels $ffhc --dropout $drop --activation $act

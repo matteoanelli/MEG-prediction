@@ -25,7 +25,6 @@ from  MEG.Utils.utils import *
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 def main(args):
-    #TODO use arg.parse instead
 
     data_dir = args.data_dir
     figure_path = args.figure_dir

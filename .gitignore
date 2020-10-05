@@ -9,3 +9,5 @@ MEG/Figures/
 MEG/strokemotor_import.py
 /MEG/Models/
 /mlruns/
+parameters.csv
+parameters_ECoG.csv

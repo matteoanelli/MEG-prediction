@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # subject
     parser.add_argument('--sub', type=int, default='8',
                         help="Input data directory (default= 8)")
-    parser.add_argument('--hand', type=int, default='0',
+    parser.add_argument('--finger', type=int, default='0',
                         help="Patient hands: 0 for sx, 1 for dx (default= 0)")
 
     # Epoch
@@ -116,5 +116,3 @@ if __name__ == '__main__':
     model.build()
 
     model.train(n_epochs=1000, eval_step=500, min_delta=1e-6, early_stopping=6)
-
-    mneflow.utils.leave_one_subj_out()
