@@ -189,7 +189,7 @@ def test_windowing_shape():
 
 
 def test_len_split():
-    for len in [749, 11, 12,  27, 400]:
+    for len in range(2000):
 
         train, valid, test = len_split(len)
 

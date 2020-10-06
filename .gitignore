@@ -11,3 +11,5 @@ MEG/strokemotor_import.py
 /mlruns/
 parameters.csv
 parameters_ECoG.csv
+parameters.csv
+parameters_ECoG.csv

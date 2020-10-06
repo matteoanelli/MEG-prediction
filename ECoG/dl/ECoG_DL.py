@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # subject
-    parser.add_argument('--sub', type=int, default='3',
+    parser.add_argument('--sub', type=int, default='1',
                         help="Subject number (default= 1)")
     parser.add_argument('--finger', type=int, default='0',
                         help="Finger (default= 0)")
@@ -104,7 +104,9 @@ if __name__ == "__main__":
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    device = "cpu"
+    # Set the torch device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Device = {}".format(device))
 
     parameters = Params_tunable(subject_n=args.sub,
                                 finger=args.finger,
@@ -167,8 +169,6 @@ if __name__ == "__main__":
                        parameters.max_pooling,
                        parameters.activation)
     print(net)
-
-    exit(0)
 
     # Training loop or model loading
     if not skip_training:

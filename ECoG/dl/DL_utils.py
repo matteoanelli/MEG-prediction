@@ -39,6 +39,8 @@ def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, ov
 
     y = torch.from_numpy(y.astype(np.float32))
 
+    print(X.shape)
+
     return X, y
 
 
@@ -148,10 +150,17 @@ def filtering(
 
 def len_split(len):
 
+    # TODO adapt to strange behavior of floating point 350 * 0.7 = 245 instead is giving 244.99999999999997
+
     if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
-        train = round(len * 0.7)
-        valid = round(len * 0.15)
-        test = round(len * 0.15)
+        if len * 0.15 - int(len*0.15) == 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15 + 0.1)
+            test = round(len * 0.15 - 0.1)
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
 
     elif len * 0.7 - int(len*0.7) >= 0.5:
         if len * 0.15 - int(len*0.15) >= 0.5:
@@ -159,9 +168,15 @@ def len_split(len):
             valid = round(len * 0.15)
             test = round(len * 0.15) - 1
         else:
-            train = round(len * 0.7)
-            valid = round(len * 0.15)
-            test = round(len * 0.15)
+            # round has a particular behavior on rounding 0.5
+            if len * 0.7 - int(len*0.7) == 0.5:
+                train = round(len * 0.7 + 0.1)
+                valid = round(len * 0.15)
+                test = round(len * 0.15)
+            else:
+                train = round(len * 0.7)
+                valid = round(len * 0.15)
+                test = round(len * 0.15)
 
     else:
         if len * 0.15 - int(len*0.15) >= 0.5:
