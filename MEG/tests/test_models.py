@@ -263,19 +263,19 @@ def test_Temporal_Block():
 
 
 def test_Temporal():
-    n_block = 3
-    kernel_size = [100, 100, 50]
-    max_pool = 2
+    n_block = 4
+    kernel_size = [20, 10, 10, 8]
+    max_pool = None
 
-    x = torch.zeros([10, 32, 1, 1001])
+    x = torch.zeros([10, 32, 1, 501])
     x = torch.transpose(x, 1, 2)
 
     n_times_ = x.shape[-1]
     for i in range(n_block):
         n_times_ = int((n_times_ - ((kernel_size[i] - 1) * 2)))
-        n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+        n_times_ = int(n_times_ / (max_pool if max_pool is not None else 1))
 
-    net = models.Temporal(n_block, kernel_size, x.shape[-1], max_pool)
+    net = models.Temporal(n_block, kernel_size, x.shape[-1], "relu", max_pool)
     print(net)
 
     with torch.no_grad():
@@ -283,9 +283,14 @@ def test_Temporal():
 
         y = net(x)
         assert y.shape == torch.Size([x.shape[0],
-                                      n_block*16,
+                                      n_block * 16,
                                       x.shape[2],
-                                      n_times_]), "Bad shape of y: y.shape={}".format(y.shape)
+                                      n_times_]), "Bad shape of y: y.shape={}, expected {}"\
+                                                    .format(y.shape,
+                                                            torch.Size(
+                                                                [x.shape[0], n_block * 16, x.shape[2], n_times_]
+                                                            )
+                                                            )
 
     print("Test Success.")
 
@@ -316,16 +321,17 @@ def test_MLP():
 
 
 def test_SCNN_tunable():
-    x = torch.zeros([10, 1, 204, 801])
+    x = torch.zeros([10, 1, 204, 501])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
 
     temporal_n_block = 1
-    temporal_kernel_size = [200]
+    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
+    temporal_kernel_size = [250]
     max_pool = 2
 
-    mlp_n_layer = 4
+    mlp_n_layer = 3
     mlp_hidden = 1024
     mlp_dropout = 0.5
 
@@ -369,7 +375,7 @@ def test_generate_parameters():
         "learning_rate": [3e-3, 4e-4],
         "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2), (0.8, 0.6), (0.6, 0.4)],
         "s_kernel_size": [[204], [54, 51, 51, 51], [104, 101], [154, 51], [104, 51, 51]],
-        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]],
+        "t_kernel_size": [[20, 10, 10, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [100, 75], [250]],
         "ff_n_layer": [1, 2, 3, 4, 5],
         "ff_hidden_channels": [1024, 516, 248],
         "dropout": [0.2, 0.3, 0.4, 0.5],

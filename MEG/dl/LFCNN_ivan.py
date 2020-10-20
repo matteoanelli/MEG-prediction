@@ -66,8 +66,7 @@ if __name__ == '__main__':
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
     epochs = mne.concatenate_epochs(epochs)
-    # get indices of accelerometer channels
-
+   
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 

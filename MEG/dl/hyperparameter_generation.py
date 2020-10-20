@@ -16,7 +16,7 @@ def test_parameter(params):
     n_times_ = n_times
     for i in range(temporal_n_block):
         n_times_ = int((n_times_ - ((temporal_kernel_size[i] - 1) * 2)))
-        n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+        n_times_ = int(n_times_ / (max_pool if max_pool is not None else 1))
 
     if n_times_ < 1:
         print(" The reduction factor must be < than n_times. Got reduction to {}"
@@ -53,17 +53,17 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
 
         if "duration_overlap" not in sampled_grid:
             sampled_grid["duration_overlap"] = random.choice(param_grid.get("duration_overlap"))
-            sampled_grid["duration"] = sampled_grid["duration_overlap"][0]
-            sampled_grid["overlap"] = sampled_grid["duration_overlap"][1]
-            sampled_grid.pop("duration_overlap")
+        sampled_grid["duration"] = sampled_grid["duration_overlap"][0]
+        sampled_grid["overlap"] = sampled_grid["duration_overlap"][1]
+        sampled_grid.pop("duration_overlap")
 
         if "s_kernel_size" not in sampled_grid:
             sampled_grid["s_kernel_size"] = random.choice(param_grid.get("s_kernel_size"))
-            sampled_grid["s_n_layer"] = len(sampled_grid["s_kernel_size"])
+        sampled_grid["s_n_layer"] = len(sampled_grid["s_kernel_size"])
 
         if "t_kernel_size" not in sampled_grid:
             sampled_grid["t_kernel_size"] = random.choice(param_grid.get("t_kernel_size"))
-            sampled_grid["t_n_layer"] = len(sampled_grid["t_kernel_size"])
+        sampled_grid["t_n_layer"] = len(sampled_grid["t_kernel_size"])
 
         if "ff_n_layer" not in sampled_grid:
             sampled_grid["ff_n_layer"] = random.choice(param_grid.get("ff_n_layer"))
@@ -98,20 +98,19 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-
     param_grid = {
         "sub": [8],
         "hand": [0, 1],
-        "batch_size": [80, 100],
-        "learning_rate": [1e-3, 3e-3],
+        "batch_size": [80, 100, 120],
+        "learning_rate": [3e-3, 1e-4],
         "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2)],
-        "s_kernel_size": [[204], [104, 101], [154, 51]],
-        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
+        "s_kernel_size": [[204], [54, 51, 51, 51], [104, 101], [154, 51], [104, 51, 51]],
+        "t_kernel_size": [[20, 10, 10, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [100, 75], [250]],
         "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
-        "dropout": [0.2, 0.3],
-        "activation": ["relu"],
-        }
+        "dropout": [0.2, 0.3, 0.4, 0.5],
+        "activation": ["relu", "selu", "elu"]
+    }
 
     args = parser.parse_args()
 
@@ -125,7 +124,7 @@ if __name__ == '__main__':
         "max_pooling": 2,
         "experiment": 4,
     }
-    random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',

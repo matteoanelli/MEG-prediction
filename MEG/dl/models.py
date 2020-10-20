@@ -248,7 +248,7 @@ class Temporal(nn.Module):
         n_times_ = n_times
         for i in range(n_block):
             n_times_ = int((n_times_ - ((kernel_size[i] - 1) * 2)))
-            n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
+            n_times_ = int(n_times_ / (max_pool if max_pool is not None else 1))
 
         if n_times_ < 1:
             raise ValueError(" The reduction factor must be < than n_times. Got reduction to {}"
@@ -259,11 +259,12 @@ class Temporal(nn.Module):
         self.out_channel = [16 * (i + 1) for i in range(n_block)]
         self.in_channel = [1 if i == 0 else 16 * i for i in range(n_block)]
         self.activation = activation
+        self.max_pool = max_pool
 
         self.temporal = nn.Sequential(*[TemporalBlock(self.in_channel[i],
                                                       self.out_channel[i],
                                                       self.kernel_size[i],
-                                                      max_pool,
+                                                      self.max_pool,
                                                       self.activation)
                                         for i in range(n_block)
                                         ])
@@ -317,6 +318,7 @@ class SCNN_tunable(nn.Module):
     def forward(self, x):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
+
         x = self.temporal(x)
         x = self.flatten(x)
         x = self.ff(x)

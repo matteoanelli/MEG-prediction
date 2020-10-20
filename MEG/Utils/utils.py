@@ -26,7 +26,7 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
-            raw = mne.io.Raw(raw_fnames[0], preload=True)
+            raw = mne.io.Raw(fname, preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
             events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
             raw.pick_types(meg='grad', misc=True)
@@ -38,10 +38,12 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
                                                          include=["MISC001", "MISC002"])
             accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
                                                           include=["MISC003", "MISC004"])
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0)))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
+    for e in epochs:
+        e.info['dev_head_t'] = None
     epochs = mne.concatenate_epochs(epochs)
     # get indices of accelerometer channels
 

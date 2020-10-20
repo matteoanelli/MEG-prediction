@@ -13,3 +13,7 @@ parameters.csv
 parameters_ECoG.csv
 parameters.csv
 parameters_ECoG.csv
+MEG/dl/dataAnalysis.ipynb
+/MEG/IDA_figures/
+/ECoG/dl/ECoG_IDA.ipynb
+/ECoG/Figures_IDA/

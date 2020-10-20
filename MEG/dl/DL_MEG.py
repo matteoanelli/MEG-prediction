@@ -58,9 +58,11 @@ def main(args):
                                 device=device,
                                 y_measure=args.y_measure,
                                 s_n_layer=args.s_n_layer,
-                                s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+                                s_kernel_size=args.s_kernel_size,
+                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
                                 t_n_layer=args.t_n_layer,
-                                t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+                                t_kernel_size=args.t_kernel_size,
+                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
                                 max_pooling=args.max_pooling,
                                 ff_n_layer=args.ff_n_layer,
                                 ff_hidden_channels=args.ff_hidden_channels,
@@ -106,7 +108,6 @@ def main(args):
                        parameters.activation)
 
     print(net)
-
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
