@@ -1,7 +1,10 @@
-from tqdm import tqdm
+import os
+import random
+
 import numpy as np
 import torch
-import os
+from tqdm import tqdm
+
 
 # TODO proper citation
 
@@ -73,6 +76,8 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         valid_losses = []
         for data, labels in trainloader:
             # Set data to appropiate device
+            if random.uniform(0, 1) <= 0.2:
+                data = data + torch.randn(data.size()) * 0.1 + 0 # multiply std add mean
             data, labels = data.to(device), labels.to(device)
             # Clear the gradients
             optimizer.zero_grad()

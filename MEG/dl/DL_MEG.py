@@ -31,8 +31,8 @@ def main(args):
     model_path = args.model_dir
 
 
-    subj_id = "/sub"+str(args.sub)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    subj_id = "/sub"+str(args.sub)+"/ball0"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
     # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
@@ -58,11 +58,11 @@ def main(args):
                                 device=device,
                                 y_measure=args.y_measure,
                                 s_n_layer=args.s_n_layer,
-                                s_kernel_size=args.s_kernel_size,
-                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+                                # s_kernel_size=args.s_kernel_size,
+                                s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
                                 t_n_layer=args.t_n_layer,
-                                t_kernel_size=args.t_kernel_size,
-                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+                                # t_kernel_size=args.t_kernel_size,
+                                t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
                                 max_pooling=args.max_pooling,
                                 ff_n_layer=args.ff_n_layer,
                                 ff_hidden_channels=args.ff_hidden_channels,
@@ -112,7 +112,7 @@ def main(args):
     if not skip_training:
         print("Begin training....")
 
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=2e-4)
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
@@ -272,10 +272,10 @@ if __name__ == "__main__":
     parser.add_argument('--s_kernel_size', type=str, default=[104, 101], metavar='N', nargs='+',
                         help='Spatial sub-net kernel sizes (default: [104, 101])')
     # Temporal sub-net
-    parser.add_argument('--t_n_layer', type=int, default=6, metavar='N',
-                        help='Temporal sub-net number of layer (default: 6)')
-    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 8, 5], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])')
+    parser.add_argument('--t_n_layer', type=int, default=5, metavar='N',
+                        help='Temporal sub-net number of layer (default: 5)')
+    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 5], metavar='N', nargs='+',
+                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])')
     parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
                         help='Spatial sub-net max-pooling (default: 2)')
 

@@ -146,7 +146,7 @@ def test_standard_scaling():
     assert np.allclose(data_mean, expected), "Wrong normalization!"
 
 
-@pytest.mark.skip(reason="Development porposes test")
+# @pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
     train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
@@ -161,14 +161,14 @@ def test_train_no_error():
 
     validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
 
-    epochs = 2
+    epochs = 3
 
     net = models.DNN()
     optimizer = Adam(net.parameters(), lr=0.00001)
     loss_function = torch.nn.MSELoss()
 
     print("begin training...")
-    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs)
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print('Training do not rise error')
 

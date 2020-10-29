@@ -30,9 +30,8 @@ def main(args):
                              overlap=args.overlap,
                              y_measure=args.y_measure)
 
-    subj_id = "/sub" + str(parameters.subject_n) + "/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    subj_id = "/sub"+str(args.sub)+"/ball0"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     X, y, _ = import_MEG(raw_fnames, duration=parameters.duration, overlap=parameters.overlap,
                          y_measure=parameters.y_measure, normalize_input=True)   # concentrate the analysis only on the left hand
@@ -50,7 +49,7 @@ def main(args):
     cv = KFold(n_splits=10, shuffle=False)
     tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=2
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3
                        )
     #%%
     start = time.time()
@@ -129,7 +128,7 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
 
-        mlflow.log_param("n_components", n_components)
+        mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
 
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC.pdf'))
