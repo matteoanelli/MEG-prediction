@@ -1,10 +1,13 @@
-import os
+import os, sys
 import random
 
 import numpy as np
 import torch
 from tqdm import tqdm
 
+sys.path.insert(1, r'')
+
+from MEG.Utils.utils import bandpower
 
 # TODO proper citation
 
@@ -58,7 +61,7 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, fs=500):
 
     net = net.to(device) # TODO probably to remove
     avg_train_losses = []
@@ -74,15 +77,13 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         net.train()
         train_losses = []
         valid_losses = []
-        for data, labels in trainloader:
+        for data, labels, bp in trainloader:
             # Set data to appropiate device
-            if random.uniform(0, 1) <= 0.2:
-                data = data + torch.randn(data.size()) * 0.1 + 0 # multiply std add mean
-            data, labels = data.to(device), labels.to(device)
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
-            out = net(data)
+            out = net(data, bp)
             # Loss function
             train_loss = loss_function(out, labels[:, hand])
             train_losses.append(train_loss.item())
@@ -95,11 +96,11 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for data, labels in validloader:
+            for data, labels, bp in validloader:
                 # Set data to appropiate device
-                data, labels = data.to(device), labels.to(device)
+                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
-                output = net(data)
+                output = net(data, bp)
                 # calculate the loss
                 valid_loss = loss_function(output, labels[:, hand])
                 # record validation loss

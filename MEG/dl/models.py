@@ -297,6 +297,17 @@ class MLP(nn.Module):
     def forward(self, x):
 
         return self.mlp(x).squeeze()
+class Concatenate(nn.Module):
+    def __init__(self):
+        super(Concatenate, self).__init__()
+    def forward(self, x, bp):
+
+        x = x.view(x.shape[0], -1)
+        bp = bp.view(bp.shape[0], -1)
+        x = torch.cat([x, bp], -1)
+
+        return x
+
 
 class SCNN_tunable(nn.Module):
 
@@ -306,21 +317,23 @@ class SCNN_tunable(nn.Module):
                  max_pool=None, activation="relu"):
         super(SCNN_tunable, self).__init__()
 
-        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)  # TODO maybe add a the max pooling
+        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)
 
         self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
 
-        self.flatten = Flatten_MEG()
+        # self.flatten = Flatten_MEG()
 
-        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_  #TODO maybe not a proper way of getting new n_times
+        self.concatenate = Concatenate()
+
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 204 #TODO substitue the number of channel
         self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
-    def forward(self, x):
+    def forward(self, x, bp):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
 
         x = self.temporal(x)
-        x = self.flatten(x)
+        x = self.concatenate(x, bp)
         x = self.ff(x)
 
         return x

@@ -93,7 +93,7 @@ def main(args):
     # data, _ = iter(validloader).next()
     # print('validloader : {}'.format(data))
     with torch.no_grad():
-        x, _ = iter(trainloader).next()
+        x, _, _ = iter(trainloader).next()
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
     net = SCNN_tunable(parameters.s_n_layer,
@@ -112,7 +112,7 @@ def main(args):
     if not skip_training:
         print("Begin training....")
 
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=2e-4)
+        optimizer = Adam(net.parameters(), lr=parameters.lr)
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,

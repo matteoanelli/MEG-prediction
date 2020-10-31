@@ -108,7 +108,7 @@ if __name__ == '__main__':
         "t_kernel_size": [[20, 10, 10, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [100, 75], [250]],
         "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
-        "dropout": [0.2, 0.3, 0.4, 0.5],
+        "dropout": [0.2, 0.3],
         "activation": ["relu", "selu", "elu"]
     }
 
@@ -119,12 +119,18 @@ if __name__ == '__main__':
         "batch_size_test": 30,
         "epochs": 100,
         "bias": False,
-        "patience": 10,
+        "patience": 20,
         "y_measure": "movement",
         "max_pooling": 2,
         "experiment": 4,
+        "s_kernel_size": [104, 51, 51],
+        "t_kernel_size": [20, 10, 10, 8, 5],
+        "ff_n_layer": 4,
+        "ff_hidden_channels": 248,
+        "activation": "selu",
+        "learning_rate": 3e-3
     }
-    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
