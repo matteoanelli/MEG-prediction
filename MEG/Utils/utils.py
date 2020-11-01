@@ -65,18 +65,48 @@ def bandpower_1d(data, sf, band, window_sec=None, relative=False):
         bp /= simps(psd, dx=freq_res)
     return bp
 
+# def bandpower(x, fs, bands, window_sec=None, relative=True):
+#         # x shape [n_epoch, n_ channle, n_times]
+#         # bandpower [n_epoch, n_channel, 1]
+#         n_epoch, n_channel, _ = x.shape
+#         bp = np.zeros((n_epoch, n_channel, 1))
+#         for idx, b in enumerate(bands):
+#             print(b)
+#             print(idx)
+#             for epoch in range(n_epoch):
+#                 for channel in range(n_channel):
+#                     bp[epoch, channel] = bandpower_1d(x[epoch, channel, idx], fs, [fmax, fmin],
+#                                                         window_sec=window_sec, relative=relative)
+#
+#         return bp
+
+
 def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
-        # x shape [n_epoch, n_ channle, n_times]
-        # bandpower [n_epoch, n_channel, 1]
-        n_epoch, n_channel, _ = x.shape
+    # x shape [n_epoch, n_ channle, n_times]
+    # bandpower [n_epoch, n_channel, 1]
+    n_epoch, n_channel, _ = x.shape
 
-        bp = np.zeros((n_epoch, n_channel, 1))
-        for epoch in range(n_epoch):
-            for channel in range(n_channel):
-                bp[epoch, channel] = bandpower_1d(x[epoch, channel, :], fs, [fmin, fmax],
-                                                     window_sec=window_sec, relative=relative)
+    bp = np.zeros((n_epoch, n_channel, 1))
+    for epoch in range(n_epoch):
+        for channel in range(n_channel):
+            bp[epoch, channel] = bandpower_1d(x[epoch, channel, :], fs, [fmin, fmax],
+                                              window_sec=window_sec, relative=relative)
 
-        return bp
+    return bp
+
+
+def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
+
+    n_epoch, n_channel, _ = x.shape
+    bp_list = []
+    for idx, band in enumerate(bands):
+        fmin, fmax = band
+        bp_list.append(bandpower(x, fs, fmin, fmax, window_sec=window_sec, relative=relative))
+
+    bp = np.concatenate(bp_list, -1)
+
+    return bp
+
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -114,7 +144,8 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 
-    bp = bandpower(X, fs=epochs.info['sfreq'], fmin=8, fmax=13, relative=True)
+    bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 100)]
+    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
 
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)

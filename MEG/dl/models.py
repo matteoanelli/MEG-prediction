@@ -325,7 +325,7 @@ class SCNN_tunable(nn.Module):
 
         self.concatenate = Concatenate()
 
-        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 204 #TODO substitue the number of channel
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 204 * 5 #TODO substitue the number of channel
         self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
     def forward(self, x, bp):

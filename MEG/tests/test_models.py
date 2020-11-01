@@ -7,7 +7,7 @@ from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, bandpower_multi
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
 from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
@@ -109,8 +109,8 @@ def test_MEG_dataset_shape():
     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
         .format(torch.Size([50, 2]), sample_target.shape)
 
-    assert sample_bp.shape == torch.Size([50, 204, 1]), 'wrong target shape, data shape expected = {}, got {}' \
-        .format(torch.Size([50, 204, 1]), sample_target.shape)
+    assert sample_bp.shape == torch.Size([50, 204, 5]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 204, 5]), sample_target.shape)
 
 
 
@@ -373,7 +373,7 @@ def test_MLP():
 
 def test_SCNN_tunable():
     x = torch.zeros([10, 1, 204, 501])
-    bp = torch.zeros([10, 204, 1])
+    bp = torch.zeros([10, 204, 5])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
@@ -480,15 +480,30 @@ def test_bandpower_shape():
 
     print("Test succeeded!")
 
+
+def test_bandpower_multi_shape():
+
+    x = np.random.randn(10, 204, 500)
+    sf = 500
+    bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 100)]
+
+    bp = bandpower_multi(x, sf, bands)
+
+    assert bp.shape == np.shape(np.zeros((10, 204, len(bands)))),\
+        "Wrong shape. Expected {}, got {}".format(np.shape(np.zeros((10, 204, len(bands)))), bp.shape)
+
+    print("Test succeeded!")
+
+
 def test_concatenate():
 
     x = torch.zeros(10, 5, 5)
-    bp = torch.zeros(10, 204, 1)
+    bp = torch.zeros(10, 204, 5)
 
     concatenate = models.Concatenate()
 
     out = concatenate(x, bp)
-    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 1])
+    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 5])
     assert out.shape == expected, \
         "Wrong shape! Expected {}, got {} ".format(expected, out.shape)
 

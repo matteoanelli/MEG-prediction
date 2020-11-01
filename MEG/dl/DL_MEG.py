@@ -148,7 +148,7 @@ def main(args):
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
         # Load the model
-        net = SCNN_swap()
+        net = SCNN_tunable()
         net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
 
 
@@ -158,10 +158,10 @@ def main(args):
     y_pred = []
     y = []
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
             y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data))))
+            y_pred.extend((list(net(data, bp))))
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
