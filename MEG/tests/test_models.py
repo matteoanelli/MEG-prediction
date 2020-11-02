@@ -4,6 +4,7 @@ import pytest
 import torch
 import time
 from torch.optim.adam import Adam
+from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
@@ -15,9 +16,9 @@ from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
 
 def test_SCNN_swap():
 
-    net = models.SCNN_swap()
 
-    x = torch.zeros([10, 1, 204, 1001])
+    x = torch.zeros([10, 1, 204, 501])
+    net = models.SCNN_swap(x.shape[-1])
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
@@ -171,6 +172,39 @@ def test_train_no_error():
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print('Training do not rise error')
+
+
+# @pytest.mark.skip(reason="Development porposes test")
+def test_train_MEG():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.SCNN_swap(n_times)
+
+    optimizer = SGD(net.parameters(), lr=0.0001, weight_decay=5e-4)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
 
 
 def test_windowing_shape():

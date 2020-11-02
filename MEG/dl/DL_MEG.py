@@ -10,6 +10,7 @@ import json
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
+from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
@@ -96,23 +97,15 @@ def main(args):
         x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+    net = SCNN_swap(n_times)
 
     print(net)
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
 
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=2e-4)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=2e-4)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
