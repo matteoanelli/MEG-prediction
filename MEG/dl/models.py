@@ -10,6 +10,18 @@ class Flatten_MEG(nn.Module):
         return x.view(x.size()[0], -1)
 
 
+class Concatenate(nn.Module):
+    def __init__(self):
+        super(Concatenate, self).__init__()
+    def forward(self, x, bp):
+
+        x = x.view(x.shape[0], -1)
+        bp = bp.view(bp.shape[0], -1)
+        x = torch.cat([x, bp], -1)
+
+        return x
+
+
 class Print(nn.Module):
     def __init__(self, message="Inside print layer"):
         super(Print, self).__init__()
@@ -56,7 +68,6 @@ class Activation(nn.Module):
     def forward(self, x):
 
         return self.activation(x)
-
 
 
 class DNN(nn.Module):
@@ -145,7 +156,7 @@ class SCNN_swap(nn.Module):
                                       nn.ReLU(),
                                       )
 
-        self.concatenate = nn.Sequential()
+        self.concatenate = Concatenate()
 
         self.flatten = Flatten_MEG()
 
@@ -159,11 +170,11 @@ class SCNN_swap(nn.Module):
                                 nn.Dropout(0.5),
                                 nn.Linear(1024, 1))
 
-    def forward(self, x):
+    def forward(self, x, pb):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = self.flatten(x)
+        x = self.concatenate(x, pb)
         x = self.ff(x)
 
         return x.squeeze(1)
@@ -305,16 +316,7 @@ class MLP(nn.Module):
     def forward(self, x):
 
         return self.mlp(x).squeeze()
-class Concatenate(nn.Module):
-    def __init__(self):
-        super(Concatenate, self).__init__()
-    def forward(self, x, bp):
 
-        x = x.view(x.shape[0], -1)
-        bp = bp.view(bp.shape[0], -1)
-        x = torch.cat([x, bp], -1)
-
-        return x
 
 
 class SCNN_tunable(nn.Module):

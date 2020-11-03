@@ -110,8 +110,8 @@ def test_MEG_dataset_shape():
     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
         .format(torch.Size([50, 2]), sample_target.shape)
 
-    assert sample_bp.shape == torch.Size([50, 204, 5]), 'wrong target shape, data shape expected = {}, got {}' \
-        .format(torch.Size([50, 204, 5]), sample_target.shape)
+    assert sample_bp.shape == torch.Size([50, 204, 6]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 204, 6]), sample_target.shape)
 
 
 
@@ -226,7 +226,7 @@ def test_train_MEG():
     print("Test succeeded!")
 
 # @pytest.mark.skip(reason="Development porposes test")
-def test_train_MEG():
+def test_train_MEG_swap():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
 
@@ -245,7 +245,7 @@ def test_train_MEG():
     epochs = 1
 
     with torch.no_grad():
-        x, _ = iter(trainloader).next()
+        x, _, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
     net = models.SCNN_swap(n_times)
