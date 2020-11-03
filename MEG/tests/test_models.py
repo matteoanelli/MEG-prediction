@@ -8,10 +8,11 @@ from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, bandpower_multi
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
 from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
+
 
 
 def test_SCNN_swap():
@@ -101,13 +102,17 @@ def test_MEG_dataset_shape():
 
     trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
 
-    sample_data, sample_target = iter(trainloader).next()
+    sample_data, sample_target, sample_bp = iter(trainloader).next()
 
-    assert sample_data.shape == torch.Size([50, 1, 204, 1001]), 'wrong data shape, data shape expected = {}, got {}'\
-        .format(torch.Size([50, 1, 204, 1001]), sample_data.shape)
+    assert sample_data.shape == torch.Size([50, 1, 204, 501]), 'wrong data shape, data shape expected = {}, got {}'\
+        .format(torch.Size([50, 1, 204, 501]), sample_data.shape)
 
     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
         .format(torch.Size([50, 2]), sample_target.shape)
+
+    assert sample_bp.shape == torch.Size([50, 204, 5]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 204, 5]), sample_target.shape)
+
 
 
 
@@ -147,7 +152,7 @@ def test_standard_scaling():
     assert np.allclose(data_mean, expected), "Wrong normalization!"
 
 
-# @pytest.mark.skip(reason="Development porposes test")
+@pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
     train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
@@ -162,9 +167,9 @@ def test_train_no_error():
 
     validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
 
-    epochs = 3
+    epochs = 2
 
-    net = models.DNN()
+    net = models.SCNN_tunable()
     optimizer = Adam(net.parameters(), lr=0.00001)
     loss_function = torch.nn.MSELoss()
 
@@ -173,6 +178,52 @@ def test_train_no_error():
 
     print('Training do not rise error')
 
+# @pytest.mark.skip(reason="Development porposes test")
+def test_train_MEG():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    n_spatial_layer = 2
+    spatial_kernel_size = [154, 51]
+
+    temporal_n_block = 1
+    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
+    temporal_kernel_size = [250]
+    max_pool = 2
+
+    mlp_n_layer = 3
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
+
+    with torch.no_grad():
+        x, _, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.SCNN_tunable(n_spatial_layer, spatial_kernel_size,
+                              temporal_n_block, temporal_kernel_size, n_times,
+                              mlp_n_layer, mlp_hidden, mlp_dropout,
+                              max_pool=max_pool)
+
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
 
 # @pytest.mark.skip(reason="Development porposes test")
 def test_train_MEG():
@@ -356,6 +407,7 @@ def test_MLP():
 
 def test_SCNN_tunable():
     x = torch.zeros([10, 1, 204, 501])
+    bp = torch.zeros([10, 204, 5])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
@@ -380,7 +432,7 @@ def test_SCNN_tunable():
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
 
-        y = net(x)
+        y = net(x, bp)
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test Success.")
@@ -437,6 +489,59 @@ def test_test_parameter():
         print(" the parameters are ok ")
     else:
         print("Recalcolate the parameters")
+
+def test_bandpower_1d():
+    data = np.arange(500)
+    sf = 500
+    band = [8, 13]
+
+    bp = bandpower_1d(data, sf, band, relative=True)
+
+    assert isinstance(bp, np.float64), "Something went wrong"
+    print("test succeeded!")
+
+def test_bandpower_shape():
+
+    x = np.random.randn(10, 204, 500)
+    sf = 500
+    fmin = 8
+    fmax = 13
+
+    bp = bandpower(x, sf, fmin, fmax)
+
+    assert bp.shape == np.shape(np.zeros((10, 204, 1))),\
+        "Wrong shape. Expected {}, got {}".format(np.shape(np.zeros((10, 204, 1))), bp.shape)
+
+    print("Test succeeded!")
+
+
+def test_bandpower_multi_shape():
+
+    x = np.random.randn(10, 204, 500)
+    sf = 500
+    bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 100)]
+
+    bp = bandpower_multi(x, sf, bands)
+
+    assert bp.shape == np.shape(np.zeros((10, 204, len(bands)))),\
+        "Wrong shape. Expected {}, got {}".format(np.shape(np.zeros((10, 204, len(bands)))), bp.shape)
+
+    print("Test succeeded!")
+
+
+def test_concatenate():
+
+    x = torch.zeros(10, 5, 5)
+    bp = torch.zeros(10, 204, 5)
+
+    concatenate = models.Concatenate()
+
+    out = concatenate(x, bp)
+    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 5])
+    assert out.shape == expected, \
+        "Wrong shape! Expected {}, got {} ".format(expected, out.shape)
+
+    print("Test suceeeded")
 
 
 

@@ -119,7 +119,7 @@ if __name__ == '__main__':
         "batch_size_test": 30,
         "epochs": 100,
         "bias": False,
-        "patience": 10,
+        "patience": 20,
         "y_measure": "movement",
         "max_pooling": None,
         "experiment": 8,

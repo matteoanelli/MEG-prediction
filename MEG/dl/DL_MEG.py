@@ -94,7 +94,7 @@ def main(args):
     # data, _ = iter(validloader).next()
     # print('validloader : {}'.format(data))
     with torch.no_grad():
-        x, _ = iter(trainloader).next()
+        x, _, _ = iter(trainloader).next()
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
     net = SCNN_swap(n_times)
@@ -151,10 +151,10 @@ def main(args):
     y_pred = []
     y = []
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
             y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data))))
+            y_pred.extend((list(net(data, bp))))
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
