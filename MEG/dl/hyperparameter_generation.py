@@ -121,7 +121,7 @@ if __name__ == '__main__':
         "bias": False,
         "patience": 20,
         "y_measure": "movement",
-        "max_pooling": None,
+        "max_pooling": 2,
         "experiment": 8,
         "hand": 0,
         "s_kernel_size": [204],

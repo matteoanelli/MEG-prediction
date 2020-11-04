@@ -158,9 +158,9 @@ class SCNN_swap(nn.Module):
 
         self.concatenate = Concatenate()
 
-        self.flatten = Flatten_MEG()
+        # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times + 204 * 6, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
                                 nn.Dropout(0.5),
