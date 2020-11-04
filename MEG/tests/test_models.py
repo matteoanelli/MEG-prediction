@@ -373,7 +373,7 @@ def test_MLP():
 
 def test_SCNN_tunable():
     x = torch.zeros([10, 1, 204, 501])
-    bp = torch.zeros([10, 204, 5])
+    bp = torch.zeros([10, 204, 6])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
@@ -498,12 +498,12 @@ def test_bandpower_multi_shape():
 def test_concatenate():
 
     x = torch.zeros(10, 5, 5)
-    bp = torch.zeros(10, 204, 5)
+    bp = torch.zeros(10, 204, 6)
 
     concatenate = models.Concatenate()
 
     out = concatenate(x, bp)
-    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 5])
+    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 6])
     assert out.shape == expected, \
         "Wrong shape! Expected {}, got {} ".format(expected, out.shape)
 
