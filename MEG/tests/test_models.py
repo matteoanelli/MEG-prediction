@@ -13,6 +13,19 @@ from MEG.dl.train import train
 from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
 
 
+def test_LeNet_shape():
+
+    x = torch.zeros([10, 1, 204, 701])
+    net = models.LeNet5(x.shape[-1])
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
 def test_SCNN_swap():
 
     net = models.SCNN_swap()
@@ -149,9 +162,9 @@ def test_standard_scaling():
 # @pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
-    train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
+    train_set = TensorDataset(torch.ones([50, 1, 204, 501]), torch.zeros([50, 2]))
 
-    valid_set = TensorDataset(torch.ones([10, 1, 204, 1001]), torch.zeros([10, 2]))
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2]))
 
     print(len(train_set))
 
@@ -163,7 +176,7 @@ def test_train_no_error():
 
     epochs = 3
 
-    net = models.DNN()
+    net = models.LeNet5(501)
     optimizer = Adam(net.parameters(), lr=0.00001)
     loss_function = torch.nn.MSELoss()
 

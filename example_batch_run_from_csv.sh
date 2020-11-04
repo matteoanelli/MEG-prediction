@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --time=03:30:00
+#SBATCH --time=01:00:00
 #SBATCH --mem-per-cpu=30000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-4
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/t1_out_%A_%a.log
+#SBATCH --array=1
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/LeNet_out_%A_%a.log
 #SBATCH --gres=gpu:1
 
 n=$(($SLURM_ARRAY_TASK_ID + 1))
@@ -41,4 +41,4 @@ echo "activation fun is $act"
 mkdir -p tmp/$SLURM_ARRAY_TASK_ID
 
 
-srun python MEG/dl/DL_MEG.py --data_dir $data --figure_dir $figures --model_dir ../tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --duration $duration --overlap $overlap --patience $patience --y_measure $y --experiment $exp --s_n_layer $snl --s_kernel_size $skern --t_n_layer $tnl --t_kernel_size $tkern --max_pooling $maxp --ff_n_layer $ffnl --ff_hidden_channels $ffhc --dropout $drop --activation $act
+srun python MEG/dl/DL_MEG.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --duration $duration --overlap $overlap --patience $patience --y_measure $y --experiment $exp --s_n_layer $snl --s_kernel_size $skern --t_n_layer $tnl --t_kernel_size $tkern --max_pooling $maxp --ff_n_layer $ffnl --ff_hidden_channels $ffhc --dropout $drop --activation $act
