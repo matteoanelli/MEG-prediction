@@ -146,7 +146,7 @@ def test_standard_scaling():
     assert np.allclose(data_mean, expected), "Wrong normalization!"
 
 
-# @pytest.mark.skip(reason="Development porposes test")
+@pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
     train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
@@ -171,7 +171,6 @@ def test_train_no_error():
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print('Training do not rise error')
-
 
 def test_windowing_shape():
 
@@ -404,7 +403,87 @@ def test_test_parameter():
     else:
         print("Recalcolate the parameters")
 
+def test_Block_shapes():
+
+    # The number of channels and resolution do not change
+    batch_size = 10
+
+    x = torch.zeros(batch_size, 1, 204, 501)
+    block = models.Block(in_channels=1, out_channels=1)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 1, 204, 501]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Increase the number of channels
+    block = models.Block(in_channels=1, out_channels=32)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 32, 204, 501]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Decrease the resolution
+    block = models.Block(in_channels=1, out_channels=1, stride=2)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 1, 102, 251]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Increase the number of channels and decrease the resolution
+    block = models.Block(in_channels=1, out_channels=32, stride=2)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 32, 102, 251]), "Bad shape of y: y.shape={}".format(y.shape)
 
 
+def test_ResNet_shapes():
+
+    # Create a network with 2 block in each of the three groups
+    device = "cpu"
+    n_blocks = [2, 2, 2] # number of blocks in the three groups
+    net = models.ResNet(n_blocks, n_channels=10, n_times=701)
+    net.to(device)
+
+    print(net)
 
 
+    train_set = TensorDataset(torch.ones([10, 1, 204, 701]), torch.zeros([10, 2]))
+    trainloader = DataLoader(train_set, batch_size=5, shuffle=False, num_workers=1)
+
+    with torch.no_grad():
+        x, labels = iter(trainloader).next()
+        x = x.to(device)
+        print('Shape of the input tensor:', x.shape)
+
+    y = net.forward(x, verbose=True)
+
+    print(y.shape)
+
+    assert y.shape == torch.Size([trainloader.batch_size, 1]), "Bad shape→of y: y.shape={}".format(y.shape)
+
+    print('Success')
+
+# @pytest.mark.skip(reason="Development porposes test")
+def test_train_ResNet():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.ResNet([2, 2, 2], 64, n_times)
+
+    optimizer = Adam(net.parameters(), lr=0.0001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")

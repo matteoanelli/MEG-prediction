@@ -122,7 +122,7 @@ if __name__ == '__main__':
         "patience": 10,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 4,
+        "experiment": 11,
     }
     random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
