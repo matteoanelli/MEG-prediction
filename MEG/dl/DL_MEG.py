@@ -82,7 +82,7 @@ def main(args):
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
-    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=True, num_workers=1)
+    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
     # data, _ = iter(trainloader).nexcd t()
     # print('trainloader : {}'.format(data))
