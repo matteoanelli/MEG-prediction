@@ -92,16 +92,17 @@ class LeNet5(nn.Module):
             raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
                              " got instead {}".format(n_times))
         self.net = nn.Sequential(
-            nn.Conv2d(1, 16, 5, stride=1),
+            nn.Conv2d(1, 16, 5, stride=1, bisa=False),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            # nn.BatchNorm1d(16),
-            nn.Conv2d(16, 32, 5, stride=1),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 32, 5, stride=1, bias=False),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            # nn.BatchNorm1d(32),
-            nn.Conv2d(32, 64, 5, stride=1),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, 5, stride=1, bias=False),
             nn.ReLU(),
+            nn.BatchNorm2d(64),
             Flatten_MEG(),
             nn.Linear(64 * self.n_times, 1024),
             # nn.Linear(204 * 1001, 2048),
