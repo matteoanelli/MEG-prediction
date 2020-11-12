@@ -129,7 +129,7 @@ if __name__ == '__main__':
         "ff_hidden_channels": 248,
         "activation": "selu",
     }
-    random_search = generate_parameters(param_grid, 5, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
