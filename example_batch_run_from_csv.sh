@@ -3,7 +3,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --mem-per-cpu=30000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=2-10
+#SBATCH --array=1-10
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/swap_out_%A_%a.log
 #SBATCH --gres=gpu:1
 

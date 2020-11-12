@@ -123,7 +123,7 @@ if __name__ == '__main__':
         "y_measure": "movement",
         "max_pooling": 2,
         "experiment": 8,
-        "hand": 0,
+        "hand": 1,
         "s_kernel_size": [204],
         "t_kernel_size": [20, 10, 10, 8, 5],
         "ff_n_layer": 3,
