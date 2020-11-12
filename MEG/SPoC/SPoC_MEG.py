@@ -30,13 +30,13 @@ def main(args):
                              overlap=args.overlap,
                              y_measure=args.y_measure)
 
-    # subj_id = "/sub"+str(args.sub)+"/ball0"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    subj_id = "/sub"+str(args.sub)+"/ball0"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     # LOCAL
-    subj_n = 8
-    subj_id = "sub" + str(subj_n) + "\\ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    # subj_n = 8
+    # subj_id = "sub" + str(subj_n) + "\\ball"
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
     X, y, _ = import_MEG(raw_fnames, duration=parameters.duration, overlap=parameters.overlap,
                          y_measure=parameters.y_measure, normalize_input=True)   # concentrate the analysis only on the left hand
