@@ -16,7 +16,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5
+from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet
 from MEG.dl.params import Params_tunable
 
 # TODO maybe better implementation
@@ -102,6 +102,7 @@ def main(args):
 
     # Initialize network
     # net = LeNet5(n_times)
+    # net = ResNet([2, 2, 2], 64, n_times)
     net = SCNN_tunable(parameters.s_n_layer,
                        parameters.s_kernel_size,
                        parameters.t_n_layer,
