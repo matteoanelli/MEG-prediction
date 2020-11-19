@@ -16,7 +16,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable
+from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5
 from MEG.dl.params import Params_tunable
 
 # TODO maybe better implementation
@@ -78,7 +78,9 @@ def main(args):
 
     train_len, valid_len, test_len = len_split(len(dataset))
     print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len], generator = torch.Generator().manual_seed(42))
+    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
@@ -96,23 +98,14 @@ def main(args):
         x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+    net = LeNet5(n_times)
 
     print(net)
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
 
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=2e-4)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
@@ -148,7 +141,7 @@ def main(args):
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
         # Load the model
-        net = SCNN_swap()
+        net = LeNet5(n_times)
         net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
 
 

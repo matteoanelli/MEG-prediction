@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --time=03:30:00
+#SBATCH --time=001:00:00
 #SBATCH --mem-per-cpu=30000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-4
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/t1_out_%A_%a.log
+#SBATCH --array=1
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/LeNet_out_%A_%a.log
 #SBATCH --gres=gpu:1
 
 n=$(($SLURM_ARRAY_TASK_ID + 1))
