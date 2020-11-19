@@ -28,7 +28,7 @@ class MEG_Dataset(Dataset):
             self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
                                                                  y_measure=y_measure)
         else:
-            self.data, self.target = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
+            self.data, self.target, self.bp = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
                                                        normalize_input=self.normalize_input, y_measure=y_measure)
 
         self.transform = transform
@@ -40,8 +40,9 @@ class MEG_Dataset(Dataset):
 
         sample_data = self.data[idx, :, :]
         sample_target = self.target[idx, :]
+        sample_bp = self.bp[idx, :, :]
 
         if self.transform:
-            sample_data, sample_target = self.transform(sample_data, sample_target)
+            sample_data, sample_target, sample_bp = self.transform(sample_data, sample_target, sample_bp)
 
-        return sample_data, sample_target
+        return sample_data, sample_target, sample_bp

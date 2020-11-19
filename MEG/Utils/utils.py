@@ -6,12 +6,107 @@ import sys
 import mne
 import numpy as np
 import torch
+import scipy
 from mne.decoding import Scaler
 from mne.decoding import UnsupervisedSpatialFilter
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from numpy import trapz
 from scipy.integrate import cumtrapz
+from scipy.signal import welch
+from scipy.integrate import simps
+
+def bandpower_1d(data, sf, band, window_sec=None, relative=False):
+    """Compute the average power of the signal x in a specific frequency band.
+
+    Parameters
+    ----------
+    data : 1d-array
+        Input signal in the time-domain.
+    sf : float
+        Sampling frequency of the data.
+    band : list
+        Lower and upper frequencies of the band of interest.
+    window_sec : float
+        Length of each window in seconds.
+        If None, window_sec = (1 / min(band)) * 2
+    relative : boolean
+        If True, return the relative power (= divided by the total power of the signal).
+        If False (default), return the absolute power.
+
+    Return
+    ------
+    bp : float
+        Absolute or relative band power.
+    """
+
+    # band = np.asarray(band)
+    low, high = band
+
+    # Define window length
+    if window_sec is not None:
+        nperseg = window_sec * sf
+    else:
+        nperseg = (2 / low) * sf
+
+    # Compute the modified periodogram (Welch)
+    freqs, psd = welch(data, sf, nperseg=nperseg)
+
+    # Frequency resolution
+    freq_res = freqs[1] - freqs[0]
+
+    # Find closest indices of band in frequency vector
+    idx_band = np.logical_and(freqs >= low, freqs <= high)
+
+    # Integral approximation of the spectrum using Simpson's rule.
+    bp = simps(psd[idx_band], dx=freq_res)
+
+    if relative:
+        bp /= simps(psd, dx=freq_res)
+    return bp
+
+# def bandpower(x, fs, bands, window_sec=None, relative=True):
+#         # x shape [n_epoch, n_ channle, n_times]
+#         # bandpower [n_epoch, n_channel, 1]
+#         n_epoch, n_channel, _ = x.shape
+#         bp = np.zeros((n_epoch, n_channel, 1))
+#         for idx, b in enumerate(bands):
+#             print(b)
+#             print(idx)
+#             for epoch in range(n_epoch):
+#                 for channel in range(n_channel):
+#                     bp[epoch, channel] = bandpower_1d(x[epoch, channel, idx], fs, [fmax, fmin],
+#                                                         window_sec=window_sec, relative=relative)
+#
+#         return bp
+
+
+def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
+    # x shape [n_epoch, n_ channle, n_times]
+    # bandpower [n_epoch, n_channel, 1]
+    n_epoch, n_channel, _ = x.shape
+
+    bp = np.zeros((n_epoch, n_channel, 1))
+    for epoch in range(n_epoch):
+        for channel in range(n_channel):
+            bp[epoch, channel] = bandpower_1d(x[epoch, channel, :], fs, [fmin, fmax],
+                                              window_sec=window_sec, relative=relative)
+
+    return bp
+
+
+def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
+
+    n_epoch, n_channel, _ = x.shape
+    bp_list = []
+    for idx, band in enumerate(bands):
+        fmin, fmax = band
+        bp_list.append(bandpower(x, fs, fmin, fmax, window_sec=window_sec, relative=relative))
+
+    bp = np.concatenate(bp_list, -1)
+
+    return bp
+
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -26,7 +121,7 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
-            raw = mne.io.Raw(raw_fnames[0], preload=True)
+            raw = mne.io.Raw(fname, preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
             events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
             raw.pick_types(meg='grad', misc=True)
@@ -38,15 +133,20 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
                                                          include=["MISC001", "MISC002"])
             accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
                                                           include=["MISC003", "MISC004"])
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0)))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
+
     epochs = mne.concatenate_epochs(epochs)
     # get indices of accelerometer channels
 
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
+
+    # bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 70)]
+    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
 
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
@@ -60,19 +160,20 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
             X.shape, y_left.shape, y_right.shape
         )
     )
-    return X, y_left, y_right
+    return X, y_left, y_right, bp
 
 
 def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
 
-    X, y_left, y_right = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input, y_measure=y_measure)
+    X, y_left, y_right, bp = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input, y_measure=y_measure)
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
 
     y_left = torch.from_numpy(y_left.astype(np.float32))
     y_right = torch.from_numpy(y_right.astype(np.float32))
 
-    return X, torch.stack([y_left, y_right], dim=1)
+    bp = torch.from_numpy(bp.astype(np.float32))
+    return X, torch.stack([y_left, y_right], dim=1), bp
 
 def import_MEG_Tensor_form_file(data_dir, normalize_input=True, y_measure="movement"):
 
@@ -138,21 +239,26 @@ def load_skl_model(models_path):
         return model
 
 
-def  y_reshape(y, measure="mean"):
+def y_reshape(y, measure="mean", scaling=True):
     # the y has 2 position
     if measure == 'mean':
         y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
 
     elif measure == 'movement':
         y = np.sum(np.abs(y), axis=-1)
+        if scaling:
+            y = standard_scaling(y, log=False)
 
     elif measure == 'velocity':
-        print(y.shape[-1])
         y = trapz(y, axis=-1)/y.shape[-1]
+        if scaling:
+            y = standard_scaling(y, log=False)
 
     elif measure == 'position':
         vel = cumtrapz(y, axis=-1)
         y = trapz(vel, axis=-1)/y.shape[-1]
+        if scaling:
+            y = standard_scaling(y, log=False)
 
     else:
         raise ValueError("measure should be one of: mean, movement, velocity, position")
@@ -219,10 +325,17 @@ def transform_data():
 
 def len_split(len):
 
+    # TODO adapt to strange behavior of floating point 350 * 0.7 = 245 instead is giving 244.99999999999997
+
     if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
-        train = round(len * 0.7)
-        valid = round(len * 0.15)
-        test = round(len * 0.15)
+        if len * 0.15 - int(len*0.15) == 0.5:
+            train = round(len * 0.7)
+            valid = round(len * 0.15 + 0.1)
+            test = round(len * 0.15 - 0.1)
+        else:
+            train = round(len * 0.7)
+            valid = round(len * 0.15)
+            test = round(len * 0.15)
 
     elif len * 0.7 - int(len*0.7) >= 0.5:
         if len * 0.15 - int(len*0.15) >= 0.5:
@@ -230,9 +343,15 @@ def len_split(len):
             valid = round(len * 0.15)
             test = round(len * 0.15) - 1
         else:
-            train = round(len * 0.7)
-            valid = round(len * 0.15)
-            test = round(len * 0.15)
+            # round has a particular behavior on rounding 0.5
+            if len * 0.7 - int(len*0.7) == 0.5:
+                train = round(len * 0.7 + 0.1)
+                valid = round(len * 0.15)
+                test = round(len * 0.15)
+            else:
+                train = round(len * 0.7)
+                valid = round(len * 0.15)
+                test = round(len * 0.15)
 
     else:
         if len * 0.15 - int(len*0.15) >= 0.5:
@@ -250,4 +369,3 @@ def len_split(len):
 
 
 
-# TODO add notch filter

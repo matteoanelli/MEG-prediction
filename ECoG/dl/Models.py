@@ -27,7 +27,7 @@ class Sample(nn.Module):
 
         self.net = nn.Sequential(
             Flatten_MEG(),
-            nn.Linear(204 * 1001, 1),
+            nn.Linear(62 * 1000, 1),
             nn.ReLU(),
             nn.Dropout(1)
         )
