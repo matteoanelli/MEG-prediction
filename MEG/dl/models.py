@@ -518,3 +518,31 @@ class ResNet(nn.Module):
         if verbose: print('out: ', x.shape)
 
         return x.squeeze()
+
+class RPS_MLP(nn.Module):
+
+    def __init__(self, in_channel=204, n_bands=6):
+        super(RPS_MLP, self).__init__()
+
+        self.flatten = Flatten_MEG()
+
+        self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
+                                nn.ReLU(),
+                                nn.Linear(1024, 1))
+
+        # self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
+        #                         nn.BatchNorm1d(num_features=1024),
+        #                         nn.ReLU(),
+        #                         nn.Dropout(0.5),
+        #                         nn.Linear(1024, 1024),
+        #                         nn.BatchNorm1d(num_features=1024),
+        #                         nn.ReLU(),
+        #                         nn.Dropout(0.5),
+        #                         nn.Linear(1024, 1))
+
+    def forward(self, x):
+        # relative power spectrum as input
+        x = self.flatten(x)
+        x = self.ff(x)
+
+        return x.squeeze(1)

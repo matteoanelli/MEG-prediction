@@ -77,13 +77,13 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         net.train()
         train_losses = []
         valid_losses = []
-        for data, labels, bp in trainloader:
+        for _, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            labels, bp = labels.to(device), bp.to(device)
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
-            out = net(data, bp)
+            out = net(bp)
             # Loss function
             train_loss = loss_function(out, labels[:, hand])
             train_losses.append(train_loss.item())
@@ -96,11 +96,11 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for data, labels, bp in validloader:
+            for _, labels, bp in validloader:
                 # Set data to appropiate device
-                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+                bp = bp.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
-                output = net(data, bp)
+                output = net(bp)
                 # calculate the loss
                 valid_loss = loss_function(output, labels[:, hand])
                 # record validation loss

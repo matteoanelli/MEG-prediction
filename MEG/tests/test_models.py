@@ -649,7 +649,7 @@ def test_ResNet_shapes():
 
     print('Success')
 
-# @pytest.mark.skip(reason="Development porposes test")
+@pytest.mark.skip(reason="Development porposes test")
 def test_train_ResNet():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
@@ -673,6 +673,49 @@ def test_train_ResNet():
     n_times = x.shape[-1]
 
     net = models.ResNet([2, 2, 2], 64, n_times)
+
+    optimizer = Adam(net.parameters(), lr=0.0001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
+
+
+
+def test_RPS_MLP_shape():
+
+    x = torch.zeros([10, 204, 6])
+    net = models.RPS_MLP()
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test RPS_MLP output shape: Success.")
+
+
+# @pytest.mark.skip(reason="Development porposes test")
+def test_RPS_MLP_training():
+
+
+    train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]), torch.ones([50, 204, 6]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 1001]), torch.zeros([10, 2]), torch.ones([10, 204, 6]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    net = models.RPS_MLP()
 
     optimizer = Adam(net.parameters(), lr=0.0001)
     loss_function = torch.nn.MSELoss()
