@@ -10,6 +10,7 @@ import json
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
+from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
@@ -103,6 +104,7 @@ def main(args):
     # Initialize network
     # net = LeNet5(n_times)
     # net = ResNet([2, 2, 2], 64, n_times)
+    # net = SCNN_swap(n_times)
     net = SCNN_tunable(parameters.s_n_layer,
                        parameters.s_kernel_size,
                        parameters.t_n_layer,
@@ -121,6 +123,8 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,

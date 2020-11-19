@@ -11,6 +11,18 @@ class Flatten_MEG(nn.Module):
         return x.view(x.size()[0], -1)
 
 
+class Concatenate(nn.Module):
+    def __init__(self):
+        super(Concatenate, self).__init__()
+    def forward(self, x, bp):
+
+        x = x.view(x.shape[0], -1)
+        bp = bp.view(bp.shape[0], -1)
+        x = torch.cat([x, bp], -1)
+
+        return x
+
+
 class Print(nn.Module):
     def __init__(self, message="Inside print layer"):
         super(Print, self).__init__()
@@ -57,7 +69,6 @@ class Activation(nn.Module):
     def forward(self, x):
 
         return self.activation(x)
-
 
 
 class DNN(nn.Module):
@@ -120,55 +131,63 @@ class LeNet5(nn.Module):
         return self.net(x).squeeze(1)
 
 class SCNN_swap(nn.Module):
-    def __init__(self):
+    def __init__(self, n_times):
         super(SCNN_swap, self).__init__()
+        if n_times == 501:  #TODO automatic n_times
+            self.n_times = 1
+        elif n_times == 601:
+            self.n_times = 2
+        elif n_times == 701:
+            self.n_times = 4
+        else:
+            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[204, 32], bias=False),
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[204, 64], bias=True),
                                      nn.ReLU(),
-                                     nn.Conv2d(32, 64, kernel_size=[1, 32], bias=False),
+                                     nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
                                      nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 2]),
-                                     nn.BatchNorm2d(64))
+                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                     )
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[16, 16], bias=False),
+        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
                                       nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[16, 16], bias=False),
+                                      nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
                                       nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 3]),
-                                      nn.BatchNorm2d(32),
-                                      nn.Conv2d(32, 64, kernel_size=[8, 8], bias=False),
+                                      nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
+                                      nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
                                       nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[8, 8], bias=False),
+                                      nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
                                       nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(64),
-                                      nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
                                       nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
+                                      nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
                                       nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[2, 2]),
-                                      nn.BatchNorm2d(128),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU()
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
                                       )
 
-        self.concatenate = nn.Sequential()
+        self.concatenate = Concatenate()
 
-        self.flatten = Flatten_MEG()
+        # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times + 204 * 6, 1024),
+                                nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
-                                nn.Dropout(0.2),
-                                nn.Linear(1024, 512),
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1024),
+                                nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
-                                nn.Dropout(0.2),
-                                nn.Linear(512, 1))
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1))
 
-    def forward(self, x):
+    def forward(self, x, pb):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = self.flatten(x)
+        x = self.concatenate(x, pb)
         x = self.ff(x)
 
         return x.squeeze(1)
@@ -310,16 +329,7 @@ class MLP(nn.Module):
     def forward(self, x):
 
         return self.mlp(x).squeeze()
-class Concatenate(nn.Module):
-    def __init__(self):
-        super(Concatenate, self).__init__()
-    def forward(self, x, bp):
 
-        x = x.view(x.shape[0], -1)
-        bp = bp.view(bp.shape[0], -1)
-        x = torch.cat([x, bp], -1)
-
-        return x
 
 
 class SCNN_tunable(nn.Module):
