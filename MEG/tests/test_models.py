@@ -4,25 +4,40 @@ import pytest
 import torch
 import time
 from torch.optim.adam import Adam
+from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, bandpower_multi
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
 from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
 
 
-def test_SCNN_swap():
+def test_LeNet_shape():
 
-    net = models.SCNN_swap()
-
-    x = torch.zeros([10, 1, 204, 1001])
+    x = torch.zeros([10, 1, 204, 701])
+    net = models.LeNet5(x.shape[-1])
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
 
         y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+def test_SCNN_swap():
+
+
+    x = torch.zeros([10, 1, 204, 501])
+    bp = torch.zeros([10, 204, 6])
+    net = models.SCNN_swap(x.shape[-1])
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x, bp)
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test LeNet5 output shape: Success.")
@@ -109,6 +124,42 @@ def test_MEG_dataset_shape():
         .format(torch.Size([50, 2]), sample_target.shape)
 
 
+def test_MEG_dataset_shape_bp():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    print(len(dataset))
+    print('{} {} {}'.format(train_len, valid_len, test_len))
+
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    assert train_dataset.__len__() == 524, "Bad split, train set length expected = 524, got {}"\
+        .format(train_dataset.__len__())
+
+    assert valid_test.__len__() == 113, "Bad split, validation set length expected = 113 , got {}" \
+        .format(valid_test.__len__()
+                )
+    assert test_dataset.__len__() == 112, "Bad split, test set length expected = 112 , got {}" \
+        .format(test_dataset.__len__()
+                )
+
+    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
+
+    sample_data, sample_target, sample_bp = iter(trainloader).next()
+
+    assert sample_data.shape == torch.Size([50, 1, 204, 501]), 'wrong data shape, data shape expected = {}, got {}'\
+        .format(torch.Size([50, 1, 204, 501]), sample_data.shape)
+
+    assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
+        .format(torch.Size([50, 2]), sample_target.shape)
+
+    assert sample_bp.shape == torch.Size([50, 204, 6]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 204, 6]), sample_target.shape)
+
 
 def test_normalize():
     # TODO fix add dimension
@@ -146,7 +197,7 @@ def test_standard_scaling():
     assert np.allclose(data_mean, expected), "Wrong normalization!"
 
 
-# @pytest.mark.skip(reason="Development porposes test")
+@pytest.mark.skip(reason="Development porposes test")
 def test_train_no_error():
 
     train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
@@ -163,7 +214,8 @@ def test_train_no_error():
 
     epochs = 3
 
-    net = models.DNN()
+    # change between different network
+    net = models.SCNN_tunable()
     optimizer = Adam(net.parameters(), lr=0.00001)
     loss_function = torch.nn.MSELoss()
 
@@ -171,6 +223,85 @@ def test_train_no_error():
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print('Training do not rise error')
+
+@pytest.mark.skip(reason="Development porposes test")
+def test_train_MEG():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    n_spatial_layer = 2
+    spatial_kernel_size = [154, 51]
+
+    temporal_n_block = 1
+    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
+    temporal_kernel_size = [250]
+    max_pool = 2
+
+    mlp_n_layer = 3
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
+
+    with torch.no_grad():
+        x, _, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.SCNN_tunable(n_spatial_layer, spatial_kernel_size,
+                              temporal_n_block, temporal_kernel_size, n_times,
+                              mlp_n_layer, mlp_hidden, mlp_dropout,
+                              max_pool=max_pool)
+
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
+
+# @pytest.mark.skip(reason="Development porposes test")
+def test_train_MEG_swap():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, _, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.SCNN_swap(n_times)
+
+    optimizer = SGD(net.parameters(), lr=0.0001, weight_decay=5e-4)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
 
 
 def test_windowing_shape():
@@ -322,6 +453,8 @@ def test_MLP():
 
 def test_SCNN_tunable():
     x = torch.zeros([10, 1, 204, 501])
+    # if RPS integration
+    # bp = torch.zeros([10, 204, 6])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
@@ -345,8 +478,10 @@ def test_SCNN_tunable():
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
-
+        # if RPS integration
+        # y = net(x, bp)
         y = net(x)
+
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test Success.")
@@ -405,6 +540,186 @@ def test_test_parameter():
         print("Recalcolate the parameters")
 
 
+def test_bandpower_1d():
+    data = np.arange(500)
+    sf = 500
+    band = [8, 13]
+
+    bp = bandpower_1d(data, sf, band, relative=True)
+
+    assert isinstance(bp, np.float64), "Something went wrong"
+    print("test succeeded!")
+
+def test_bandpower_shape():
+
+    x = np.random.randn(10, 204, 500)
+    sf = 500
+    fmin = 8
+    fmax = 13
+
+    bp = bandpower(x, sf, fmin, fmax)
+
+    assert bp.shape == np.shape(np.zeros((10, 204, 1))),\
+        "Wrong shape. Expected {}, got {}".format(np.shape(np.zeros((10, 204, 1))), bp.shape)
+
+    print("Test succeeded!")
+
+
+def test_bandpower_multi_shape():
+
+    x = np.random.randn(10, 204, 500)
+    sf = 500
+    bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 100)]
+
+    bp = bandpower_multi(x, sf, bands)
+
+    assert bp.shape == np.shape(np.zeros((10, 204, len(bands)))),\
+        "Wrong shape. Expected {}, got {}".format(np.shape(np.zeros((10, 204, len(bands)))), bp.shape)
+
+    print("Test succeeded!")
+
+
+def test_concatenate():
+
+    x = torch.zeros(10, 5, 5)
+    bp = torch.zeros(10, 204, 6)
+
+    concatenate = models.Concatenate()
+
+    out = concatenate(x, bp)
+    expected = torch.Size([x.shape[0], 5 * 5 + 204 * 6])
+    assert out.shape == expected, \
+        "Wrong shape! Expected {}, got {} ".format(expected, out.shape)
+
+    print("Test suceeeded")
 
 
 
+
+def test_Block_shapes():
+
+    # The number of channels and resolution do not change
+    batch_size = 10
+
+    x = torch.zeros(batch_size, 1, 204, 501)
+    block = models.Block(in_channels=1, out_channels=1)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 1, 204, 501]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Increase the number of channels
+    block = models.Block(in_channels=1, out_channels=32)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 32, 204, 501]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Decrease the resolution
+    block = models.Block(in_channels=1, out_channels=1, stride=2)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 1, 102, 251]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    # Increase the number of channels and decrease the resolution
+    block = models.Block(in_channels=1, out_channels=32, stride=2)
+    y = block(x)
+    assert y.shape == torch.Size([batch_size, 32, 102, 251]), "Bad shape of y: y.shape={}".format(y.shape)
+
+
+def test_ResNet_shapes():
+
+    # Create a network with 2 block in each of the three groups
+    device = "cpu"
+    n_blocks = [2, 2, 2] # number of blocks in the three groups
+    net = models.ResNet(n_blocks, n_channels=10, n_times=701)
+    net.to(device)
+
+    print(net)
+
+
+    train_set = TensorDataset(torch.ones([10, 1, 204, 701]), torch.zeros([10, 2]))
+    trainloader = DataLoader(train_set, batch_size=5, shuffle=False, num_workers=1)
+
+    with torch.no_grad():
+        x, labels = iter(trainloader).next()
+        x = x.to(device)
+        print('Shape of the input tensor:', x.shape)
+
+    y = net.forward(x, verbose=True)
+
+    print(y.shape)
+
+    assert y.shape == torch.Size([trainloader.batch_size, 1]), "Bad shape→of y: y.shape={}".format(y.shape)
+
+    print('Success')
+
+@pytest.mark.skip(reason="Development porposes test")
+def test_train_ResNet():
+
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, _ = iter(trainloader).next()
+    n_times = x.shape[-1]
+
+    net = models.ResNet([2, 2, 2], 64, n_times)
+
+    optimizer = Adam(net.parameters(), lr=0.0001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
+
+
+
+def test_RPS_MLP_shape():
+
+    x = torch.zeros([10, 204, 6])
+    net = models.RPS_MLP()
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test RPS_MLP output shape: Success.")
+
+
+# @pytest.mark.skip(reason="Development porposes test")
+def test_RPS_MLP_training():
+
+
+    train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]), torch.ones([50, 204, 6]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 1001]), torch.zeros([10, 2]), torch.ones([10, 204, 6]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    net = models.RPS_MLP()
+
+    optimizer = Adam(net.parameters(), lr=0.0001)
+    loss_function = torch.nn.MSELoss()
+
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print("Test succeeded!")
