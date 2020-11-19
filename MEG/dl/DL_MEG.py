@@ -95,16 +95,30 @@ def main(args):
     # data, _ = iter(validloader).next()
     # print('validloader : {}'.format(data))
     with torch.no_grad():
+        # Change if RPS itegration
+        # x, _, _ = iter(trainloader).next()
         x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
-    # net = LeNet5(in_channel=204, n_times=1001)
-    net = LeNet5(n_times)
+
+    # Initialize network
+    # net = LeNet5(n_times)
+    net = SCNN_tunable(parameters.s_n_layer,
+                       parameters.s_kernel_size,
+                       parameters.t_n_layer,
+                       parameters.t_kernel_size,
+                       n_times,
+                       parameters.ff_n_layer,
+                       parameters.ff_hidden_channels,
+                       parameters.dropout,
+                       parameters.max_pooling,
+                       parameters.activation)
 
     print(net)
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
 
+        # Check the optimizer before running (different from model to model)
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -140,8 +154,8 @@ def main(args):
         # Save the trained model
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
-        # Load the model
-        net = LeNet5(n_times)
+        # Load the model (properly select the model architecture)
+        net = SCNN_tunable()
         net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
 
 
@@ -150,6 +164,14 @@ def main(args):
     net.eval()
     y_pred = []
     y = []
+
+    # if RPS integration
+    # with torch.no_grad():
+    #     for data, labels, bp in testloader:
+    #         data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+    #         y.extend(list(labels[:, parameters.hand]))
+    #         y_pred.extend((list(net(data, bp))))
+
     with torch.no_grad():
         for data, labels in testloader:
             data, labels = data.to(parameters.device), labels.to(parameters.device)
