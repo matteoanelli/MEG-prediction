@@ -17,7 +17,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet
+from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet, RPS_MLP
 from MEG.dl.params import Params_tunable
 
 # TODO maybe better implementation
@@ -97,24 +97,25 @@ def main(args):
     # print('validloader : {}'.format(data))
     with torch.no_grad():
         # Change if RPS itegration
-        # x, _, _ = iter(trainloader).next()
-        x, _ = iter(trainloader).next()
+        x, _, _ = iter(trainloader).next()
+        # x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
     # Initialize network
     # net = LeNet5(n_times)
     # net = ResNet([2, 2, 2], 64, n_times)
     # net = SCNN_swap(n_times)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+    # net = SCNN_tunable(parameters.s_n_layer,
+    #                    parameters.s_kernel_size,
+    #                    parameters.t_n_layer,
+    #                    parameters.t_kernel_size,
+    #                    n_times,
+    #                    parameters.ff_n_layer,
+    #                    parameters.ff_hidden_channels,
+    #                    parameters.dropout,
+    #                    parameters.max_pooling,
+    #                    parameters.activation)
+    net = RPS_MLP()
 
     print(net)
     # Training loop or model loading
@@ -122,8 +123,8 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        optimizer = Adam(net.parameters(), lr=parameters.lr)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -171,17 +172,17 @@ def main(args):
     y = []
 
     # if RPS integration
-    # with torch.no_grad():
-    #     for data, labels, bp in testloader:
-    #         data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
-    #         y.extend(list(labels[:, parameters.hand]))
-    #         y_pred.extend((list(net(data, bp))))
-
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
+        for _, labels, bp in testloader:
+            labels, bp = labels.to(parameters.device), bp.to(parameters.device)
             y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data))))
+            y_pred.extend((list(net(bp))))
+
+    # with torch.no_grad():
+    #     for data, labels in testloader:
+    #         data, labels = data.to(parameters.device), labels.to(parameters.device)
+    #         y.extend(list(labels[:, parameters.hand]))
+    #         y_pred.extend((list(net(data))))
 
     print('SCNN_swap...')
     # Calculate Evaluation measures

@@ -528,6 +528,8 @@ class RPS_MLP(nn.Module):
 
         self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
                                 nn.ReLU(),
+                                nn.Linear(1024, 1024),
+                                nn.ReLU(),
                                 nn.Linear(1024, 1))
 
         # self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),

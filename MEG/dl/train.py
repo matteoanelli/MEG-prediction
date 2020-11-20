@@ -98,7 +98,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         with torch.no_grad():
             for _, labels, bp in validloader:
                 # Set data to appropiate device
-                bp = bp.to(device)
+                labels, bp = labels.to(device), bp.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(bp)
                 # calculate the loss

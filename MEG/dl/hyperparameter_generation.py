@@ -122,9 +122,9 @@ if __name__ == '__main__':
         "patience": 20,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 11,
+        "experiment": 12,
     }
-    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
