@@ -17,7 +17,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet
+from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet, RPS_MNet_2
 from MEG.dl.params import Params_tunable
 
 # TODO maybe better implementation
@@ -97,25 +97,25 @@ def main(args):
     # print('validloader : {}'.format(data))
     with torch.no_grad():
         # Change if RPS itegration
-        # x, _, _ = iter(trainloader).next()
-        x, _ = iter(trainloader).next()
+        x, _, _ = iter(trainloader).next()
+        # x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
     # Initialize network
     # net = LeNet5(n_times)
     # net = ResNet([2, 2, 2], 64, n_times)
     # net = SCNN_swap(n_times)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
-
+    # net = SCNN_tunable(parameters.s_n_layer,
+    #                    parameters.s_kernel_size,
+    #                    parameters.t_n_layer,
+    #                    parameters.t_kernel_size,
+    #                    n_times,
+    #                    parameters.ff_n_layer,
+    #                    parameters.ff_hidden_channels,
+    #                    parameters.dropout,
+    #                    parameters.max_pooling,
+    #                    parameters.activation)
+    net = RPS_MNet_2(n_times)
     print(net)
     # Training loop or model loading
     if not skip_training:
@@ -123,7 +123,7 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -159,7 +159,7 @@ def main(args):
         # Save the trained model
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
-        # Load the model (properly select the model architecture)
+        # Load the model
         net = SCNN_tunable()
         net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
 
@@ -169,19 +169,14 @@ def main(args):
     net.eval()
     y_pred = []
     y = []
-
-    # if RPS integration
-    # with torch.no_grad():
-    #     for data, labels, bp in testloader:
-    #         data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
-    #         y.extend(list(labels[:, parameters.hand]))
-    #         y_pred.extend((list(net(data, bp))))
-
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
-            y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data))))
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+            y.extend(list(labels[:, parameters.hand, :]))
+            y_pred.extend((list(net(data, bp))))
+
+    y = torch.stack(y).to('cpu')
+    y_pred = torch.stack(y_pred).to('cpu')
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
@@ -193,16 +188,37 @@ def main(args):
     print("mean absolute error {}".format(mae))
 
     # plot y_new against the true value focus on 100 timepoints
-    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(100)
-    ax.plot(times, y_pred[0:100], color="b", label="Predicted")
-    ax.plot(times, y[0:100], color="r", label="True")
-    ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
-    plt.legend()
+    # fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    # times = np.arange(100)
+    # ax.plot(times, y_pred[0:100], color="b", label="Predicted")
+    # ax.plot(times, y[0:100], color="r", label="True")
+    # ax.set_xlabel("Times")
+    # ax.set_ylabel("{}".format(parameters.y_measure))
+    # ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
+    #                                                      "sx" if parameters.hand == 0 else "dx",
+    #                                                      parameters.y_measure))
+    # plt.legend()
+    # plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
+    # plt.show()
+
+    fig, ax = plt.subplots(1, 2, figsize=[10, 4])
+    limit = 100
+    times = np.arange(limit)
+    ax[0].plot(times, y_pred[:limit, 0], color = "b", label = "Predicted")
+    ax[0].plot(times, y[:limit, 0], color="r", label="True")
+    ax[0].set_xlabel("Times")
+    ax[0].set_ylabel("RMSE")
+    ax[0].set_title("Sub {}, hand {} x prediction".format(str(parameters.subject_n),
+                                                          "sx" if parameters.hand == 0 else "dx"))
+    ax[0].legend()
+
+    ax[1].plot(times, y_pred[:limit, 1], color="b", label="Predicted")
+    ax[1].plot(times, y[:limit, 1], color="r", label="True")
+    ax[1].set_xlabel("Times")
+    ax[1].set_title("Sub {}, hand {} y prediction".format(str(parameters.subject_n),
+                                                          "sx" if parameters.hand == 0 else "dx"))
+    ax[1].legend()
+
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
     plt.show()
 

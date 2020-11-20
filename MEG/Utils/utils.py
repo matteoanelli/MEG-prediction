@@ -144,15 +144,17 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     # pic only with gradiometer
     X = epochs.get_data()[:, :204, :]
 
-    # bands = [(0.2, 3), (4, 7), (8, 13), (14, 31), (32, 70)]
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
     bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
 
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
-    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :], measure=y_measure)
+    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :], measure=y_measure)
+
+    # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    # y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {},"\
