@@ -81,6 +81,17 @@ def test_y_reshaping():
     print("y position : {} ".format(y_pos))
 
 
+def test_y_reshaping_2():
+
+    y_before = np.ones([10, 2, 501])
+
+    y = y_reshape(y_before, measure="movement", scaling=False)
+
+    assert y.shape == (10, 2), "Bad shape of y with movement as measure: expected y.shape={}, got {}"\
+        .format(y.shape, (10, 2))
+
+
+
 def test_y_PCA():
     # Just testing the shape
     y_before = np.ones([10, 2, 1001])
@@ -88,6 +99,40 @@ def test_y_PCA():
     y = y_PCA(y_before)
 
     assert y.shape == (10, 1, 1001), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10, 1, 1001))
+
+
+# def test_MEG_dataset_shape():
+#
+#     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+#
+#     dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+#
+#     train_len, valid_len, test_len = len_split(len(dataset))
+#
+#     print(len(dataset))
+#     print('{} {} {}'.format(train_len, valid_len, test_len))
+#
+#     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+#
+#     assert train_dataset.__len__() == 524, "Bad split, train set length expected = 524, got {}"\
+#         .format(train_dataset.__len__())
+#
+#     assert valid_test.__len__() == 113, "Bad split, validation set length expected = 113 , got {}" \
+#         .format(valid_test.__len__()
+#                 )
+#     assert test_dataset.__len__() == 112, "Bad split, test set length expected = 112 , got {}" \
+#         .format(test_dataset.__len__()
+#                 )
+#
+#     trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
+#
+#     sample_data, sample_target = iter(trainloader).next()
+#
+#     assert sample_data.shape == torch.Size([50, 1, 204, 1001]), 'wrong data shape, data shape expected = {}, got {}'\
+#         .format(torch.Size([50, 1, 204, 1001]), sample_data.shape)
+#
+#     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
+#         .format(torch.Size([50, 2]), sample_target.shape)
 
 
 def test_MEG_dataset_shape():
@@ -115,50 +160,18 @@ def test_MEG_dataset_shape():
 
     trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
 
-    sample_data, sample_target = iter(trainloader).next()
-
-    assert sample_data.shape == torch.Size([50, 1, 204, 1001]), 'wrong data shape, data shape expected = {}, got {}'\
-        .format(torch.Size([50, 1, 204, 1001]), sample_data.shape)
-
-    assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
-        .format(torch.Size([50, 2]), sample_target.shape)
-
-
-def test_MEG_dataset_shape_bp():
-
-    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
-
-    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
-
-    train_len, valid_len, test_len = len_split(len(dataset))
-
-    print(len(dataset))
-    print('{} {} {}'.format(train_len, valid_len, test_len))
-
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
-
-    assert train_dataset.__len__() == 524, "Bad split, train set length expected = 524, got {}"\
-        .format(train_dataset.__len__())
-
-    assert valid_test.__len__() == 113, "Bad split, validation set length expected = 113 , got {}" \
-        .format(valid_test.__len__()
-                )
-    assert test_dataset.__len__() == 112, "Bad split, test set length expected = 112 , got {}" \
-        .format(test_dataset.__len__()
-                )
-
-    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
-
     sample_data, sample_target, sample_bp = iter(trainloader).next()
+
+    print(sample_target.shape)
 
     assert sample_data.shape == torch.Size([50, 1, 204, 501]), 'wrong data shape, data shape expected = {}, got {}'\
         .format(torch.Size([50, 1, 204, 501]), sample_data.shape)
 
-    assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}'\
-        .format(torch.Size([50, 2]), sample_target.shape)
+    assert sample_target.shape == torch.Size([50, 2, 2]), 'wrong target shape, data shape expected = {}, got {}'\
+        .format(torch.Size([50, 2, 2]), sample_target.shape)
 
     assert sample_bp.shape == torch.Size([50, 204, 6]), 'wrong target shape, data shape expected = {}, got {}' \
-        .format(torch.Size([50, 204, 6]), sample_target.shape)
+        .format(torch.Size([50, 204, 6]), sample_bp.shape)
 
 
 def test_normalize():
@@ -680,3 +693,83 @@ def test_train_ResNet():
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print("Test succeeded!")
+
+def test_RPS_MNet_2_shape():
+
+    x = torch.zeros([10, 1, 204, 501])
+    bp = torch.zeros([10, 204, 6])
+    net = models.RPS_MNet_2(x.shape[-1])
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x, bp)
+        assert y.shape == torch.Size([x.shape[0], 2]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+
+def test_RPS_MNet_2_training():
+    train_set = TensorDataset(torch.ones([50, 1, 204, 501]), torch.zeros([50, 2, 2]), torch.ones([50, 204, 6]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2, 2]), torch.ones([10, 204, 6]))
+
+    test_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2, 2]), torch.ones([10, 204, 6]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    testloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, y, _ = iter(trainloader).next()
+        n_times = x.shape[-1]
+
+    # change between different network
+    net = models.RPS_MNet_2(n_times)
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    print("begin training...")
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    hand = 0
+    model.eval()
+    y_pred = []
+    y = []
+    with torch.no_grad():
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            y.extend(list(labels[:, hand, :]))
+            y_pred.extend((list(net(data, bp))))
+
+    y = torch.stack(y)
+    y_pred = torch.stack(y_pred)
+    print(y[:, 0].shape)
+
+
+    print('Training do not rise error.')
+
+
+def test_loss_2_param():
+
+    hand = 0
+    y_before = torch.randn([50, 2, 2])
+
+    y = torch.randn([50, 2])
+
+    loss_function = torch.nn.MSELoss()
+
+    loss = loss_function(y, y_before[:, hand, :])
+
+
+
+    assert torch.is_tensor(loss)," Something went wrong in the loss fucntion computation"
