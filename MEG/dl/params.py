@@ -1,3 +1,8 @@
+"""
+    Parameters classes used mainly for the SCNN tuning process. The are also logged using mlflow traker.
+    TODO: Different classes for each models.
+"""
+
 class Params(object):
     def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
                  patience, device, y_measure):

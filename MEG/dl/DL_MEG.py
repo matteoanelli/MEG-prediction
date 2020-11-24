@@ -1,4 +1,11 @@
-import getopt
+#!/usr/bin/env python
+"""
+    Main script to train the different models.
+
+    This script is meant to be run to train all the different architectures tested. It receives in input data and
+    architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
+    combination.
+"""
 import sys
 
 import matplotlib.pyplot as plt
@@ -17,12 +24,12 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN_swap, DNN, Sample, SCNN_tunable, LeNet5, ResNet
+from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet
 from MEG.dl.params import Params_tunable
 
-# TODO maybe better implementation
 from  MEG.Utils.utils import *
 
+# Set the MNE logging to worning only.
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 def main(args):
@@ -31,9 +38,12 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-
+    # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
     subj_id = "/sub"+str(args.sub)+"/ball0"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+
+    # local
+    # subj_id = "/sub"+str(args.sub)+"/ball"
     # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
@@ -44,8 +54,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-
-
+    # Initialize parameters
     parameters = Params_tunable(subject_n=args.sub,
                                 hand=args.hand,
                                 batch_size=args.batch_size,
@@ -71,50 +80,50 @@ def main(args):
                                 activation=args.activation
                                 )
 
+    # Generate the custom dataset
     dataset = MEG_Dataset(raw_fnames,
                           parameters.duration,
                           parameters.overlap,
                           parameters.y_measure,
                           normalize_input=True)
 
+    # split the dataset in train, test and valid sets.
     train_len, valid_len, test_len = len_split(len(dataset))
     print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
 
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len], generator = torch.Generator().manual_seed(42))
-    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
+    #                                                        generator=torch.Generator().manual_seed(42))
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
+    # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
-    # data, _ = iter(trainloader).nexcd t()
-    # print('trainloader : {}'.format(data))
-    #
-    # data, _ = iter(testloader).next()
-    # print('testloader : {}'.format(data))
-    #
-    # data, _ = iter(validloader).next()
-    # print('validloader : {}'.format(data))
+
+    # Get the n_times dimension
     with torch.no_grad():
-        # Change if RPS itegration
-        # x, _, _ = iter(trainloader).next()
-        x, _ = iter(trainloader).next()
+        # Changes if RPS integration or not
+        x, _, _ = iter(trainloader).next()
+        # x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
     # Initialize network
     # net = LeNet5(n_times)
     # net = ResNet([2, 2, 2], 64, n_times)
-    # net = SCNN_swap(n_times)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+    # net = MNet(n_times)
+    # net = RPS_SCNN(parameters.s_n_layer,
+    #                    parameters.s_kernel_size,
+    #                    parameters.t_n_layer,
+    #                    parameters.t_kernel_size,
+    #                    n_times,
+    #                    parameters.ff_n_layer,
+    #                    parameters.ff_hidden_channels,
+    #                    parameters.dropout,
+    #                    parameters.max_pooling,
+    #                    parameters.activation)
+
+    net = RPS_MNet(n_times)
 
     print(net)
     # Training loop or model loading
@@ -123,7 +132,7 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -161,7 +170,7 @@ def main(args):
     else:
         # Load the model (properly select the model architecture)
         net = SCNN_tunable()
-        net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
+        net = load_pytorch_model(net, os.path.join(model_path, "model.pth"), parameters.device)
 
 
     # Evaluation
@@ -171,17 +180,17 @@ def main(args):
     y = []
 
     # if RPS integration
-    # with torch.no_grad():
-    #     for data, labels, bp in testloader:
-    #         data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
-    #         y.extend(list(labels[:, parameters.hand]))
-    #         y_pred.extend((list(net(data, bp))))
-
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
             y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data))))
+            y_pred.extend((list(net(data, bp))))
+
+    # with torch.no_grad():
+    #     for data, labels in testloader:
+    #         data, labels = data.to(parameters.device), labels.to(parameters.device)
+    #         y.extend(list(labels[:, parameters.hand]))
+    #         y_pred.extend((list(net(data))))
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
@@ -221,7 +230,7 @@ def main(args):
     plt.show()
 
 
-    # log the model
+    # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)

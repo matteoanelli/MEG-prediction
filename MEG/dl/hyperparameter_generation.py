@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+"""
+    Hyper-parameter random search-spcae generation.
+"""
+
 import argparse
 import random
 

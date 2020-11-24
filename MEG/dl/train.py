@@ -1,5 +1,10 @@
-import os, sys
-import random
+"""
+    Training loop.
+    The early stopping class is inspired by https://github.com/Bjarten/early-stopping-pytorch
+"""
+
+import os
+import sys
 
 import numpy as np
 import torch
@@ -7,25 +12,27 @@ from tqdm import tqdm
 
 sys.path.insert(1, r'')
 
-from MEG.Utils.utils import bandpower
-
-# TODO proper citation
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
     def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
         """
         Args:
-            patience (int): How long to wait after last time validation loss improved.
-                            Default: 7
-            verbose (bool): If True, prints a message for each validation loss improvement.
-                            Default: False
-            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
-                            Default: 0
-            path (str): Path for the checkpoint to be saved to.
-                            Default: 'checkpoint.pt'
-            trace_func (function): trace print function.
-                            Default: print
+            patience (int):
+                How long to wait after last time validation loss improved.
+                Default: 7
+            verbose (bool):
+                If True, prints a message for each validation loss improvement.
+                Default: False
+            delta (float):
+                Minimum change in the monitored quantity to qualify as an improvement.
+                Default: 0
+            path (str):
+                Path for the checkpoint to be saved to.
+                Default: 'checkpoint.pt'
+            trace_func (function):
+                trace print function.
+                Default: print
         """
         self.patience = patience
         self.verbose = verbose
@@ -61,9 +68,42 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, fs=500):
+def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+    """
+    Train loop used to train all the DL solutions.
 
-    net = net.to(device) # TODO probably to remove
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        validloader (torch.utils.data.DataLoader):
+            The validation loader to load the validation set.:
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+         avg_valid_losses (list):
+            List of average validation loss per epoch as the model trains.
+
+    """
+
+    net = net.to(device)
     avg_train_losses = []
     avg_valid_losses = []
 

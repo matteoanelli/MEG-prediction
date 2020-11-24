@@ -22,3 +22,4 @@ ECoG/SPoC/BaselineModel_SPoC.ipynb
 /MEG/Models/
 /tfr/
 ECoG/dl/ECoG_Experiment.ipynb
+MEG/dl/LFCNN_ivan.py

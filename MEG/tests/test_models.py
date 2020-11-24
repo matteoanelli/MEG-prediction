@@ -7,8 +7,10 @@ from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
+from sklearn.preprocessing import StandardScaler
+
 import MEG.dl.models as models
-from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, bandpower_multi
+from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, bandpower_multi, y_reshape_final
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.train import train
 from MEG.dl.hyperparameter_generation import generate_parameters, test_parameter
@@ -90,6 +92,59 @@ def test_y_PCA():
     assert y.shape == (10, 1, 1001), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10, 1, 1001))
 
 
+def test_y_reshape_final():
+
+    # test single parts
+    # test PCA shaping
+    y_before = np.ones([10, 2, 1001])
+
+    y = y_PCA(y_before)
+
+    assert y.shape == (10, 1, 1001), "Bad shape of y: expected y.shape={}, got {}".format(y.shape, (10, 1, 1001))
+
+    # test reshapingn
+    y_before = np.ones([10, 1, 1001])
+
+    y = y_reshape(y_before, measure="movement", scaling=False)
+
+    y_exected = np.ones([10]) * 1001.
+
+    assert y.shape == (10,), "Bad shape of y with movement as measure: expected y.shape={}, got {}" \
+        .format(y.shape, (10,))
+
+    assert np.array_equal(y, y_exected), "Bad values of y with movement as measure: expected y: {}, got {}".format(
+        y_exected, y)
+
+    # Test standard scaling
+    y_before = torch.Tensor([[1, 1, 2, 2], [1, 1, 3, 3]]).repeat(2, 1, 1).numpy()
+
+    print(y_before.shape)
+    print(y_before)
+
+    y_mean = standard_scaling(y_before, log=False)
+    print(y_mean)
+
+    expected = torch.Tensor([[-1., -1., 1., 1.], [-1, -1, 1, 1]]).repeat(2, 1, 1).numpy()
+
+    print("Expected = {}".format(expected))
+    print("Stundardized = {}".format(y_mean))
+
+    assert np.allclose(y_mean, expected), "Wrong normalization!"
+
+    # Test all function shape
+
+    y_before = np.ones([10, 2, 1001])
+
+    y = y_reshape_final(y_before)
+
+    assert y.shape == (10,), "Bad shape of y with movement as measure: expected y.shape={}, got {}" \
+        .format((10,), y.shape)
+
+    print("Test passed!")
+
+
+
+
 def test_MEG_dataset_shape():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
@@ -163,7 +218,7 @@ def test_MEG_dataset_shape_bp():
 
 def test_normalize():
     # TODO fix add dimension
-    data = torch.Tensor([[1, 1, 2, 2], [1, 1, 3, 3]]).repeat(2, 1, 1).unsqueeze(1)
+    data = torch.Tensor([[1, 1, 2, 2], [1, 1, 2, 2]]).repeat(2, 1, 1).unsqueeze(1)
 
     data_ = normalize(data)
 
@@ -178,17 +233,16 @@ def test_normalize():
 
 def test_standard_scaling():
     # TODO implement better test
-    data = torch.Tensor([[1, 1, 2, 2], [1, 1, 3, 3]]).repeat(2, 1, 1).numpy()
+    data = torch.Tensor([[1, 1 , 2, 2], [1, 1, 5, 5]]).repeat(2, 1, 1).numpy()
 
     print(data.shape)
-    print(data)
+    print('data input: {}'.format(data))
 
     data_mean = standard_scaling(data, log=False)
-    print(data_mean)
 
-    data_median = standard_scaling(data, scalings="median", log=False)
+    # ata_median = standard_scaling(data, scalings="median", log=False)
 
-    expected = torch.Tensor([[-1., -1., 1., 1.], [-1, -1, 1, 1]])\
+    expected = torch.Tensor([[-1., -1., 1., 1.], [-1., -1., 1., 1.]])\
         .repeat(2, 1, 1).numpy()
 
     print("Expected = {}".format(expected))
