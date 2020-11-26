@@ -116,6 +116,7 @@ def main(args):
     #                    parameters.max_pooling,
     #                    parameters.activation)
     net = RPS_MNet_2(n_times)
+
     print(net)
     # Training loop or model loading
     if not skip_training:
@@ -202,6 +203,7 @@ def main(args):
     # plt.show()
 
     fig, ax = plt.subplots(1, 2, figsize=[10, 4])
+
     limit = 100
     times = np.arange(limit)
     ax[0].plot(times, y_pred[:limit, 0], color = "b", label = "Predicted")
