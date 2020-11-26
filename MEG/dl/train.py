@@ -218,7 +218,7 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
             # Fit the network
             out = net(data, bp)
             # Loss function
-            train_loss = loss_function(out, labels[:, hand])
+            train_loss = loss_function(out, labels[:, hand, :])
             train_losses.append(train_loss.item())
             # Backpropagation and weights update
             train_loss.backward()
@@ -235,7 +235,7 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data, bp)
                 # calculate the loss
-                valid_loss = loss_function(output, labels[:, hand])
+                valid_loss = loss_function(output, labels[:, hand, :])
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 

@@ -483,65 +483,8 @@ def test_ResNet_shape():
 
     print('Success')
 
-def test_ResNet_training():
-
-    train_set = TensorDataset(torch.ones([50, 1, 204, 501]), torch.zeros([50, 2]))
-
-    valid_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2]))
-
-    print(len(train_set))
-
-    device = 'cpu'
-
-    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
-
-    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
-
-    epochs = 1
-
-    with torch.no_grad():
-        x, _ = iter(trainloader).next()
-    n_times = x.shape[-1]
-
-    net = models.ResNet([2, 2, 2], 64, n_times)
-
-    optimizer = Adam(net.parameters(), lr=0.0001)
-    loss_function = torch.nn.MSELoss()
-
-    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
-
-    print("Test succeeded!")
-
-
-@pytest.mark.skip(reason="Development porposes test")
-def test_train_no_error():
-
-    train_set = TensorDataset(torch.ones([50, 1, 204, 1001]), torch.zeros([50, 2]))
-
-    valid_set = TensorDataset(torch.ones([10, 1, 204, 1001]), torch.zeros([10, 2]))
-
-    print(len(train_set))
-
-    device = 'cpu'
-
-    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
-
-    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
-
-    epochs = 3
-
-    # change between different network
-    net = models.SCNN()
-    optimizer = Adam(net.parameters(), lr=0.00001)
-    loss_function = torch.nn.MSELoss()
-
-    print("begin training...")
-    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
-
-    print('Training do not rise error')
-
-@pytest.mark.skip(reason="Development porposes test")
-def test_train_MEG():
+# @pytest.mark.skip(reason="Development porposes test")
+def test_train_ResNet():
 
     dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
 
@@ -700,6 +643,85 @@ def test_RPS_MLP_training():
 
     print('Training do not rise error')
 
+def test_RPS_MNet_2_shape():
+
+    x = torch.zeros([10, 1, 204, 501])
+    bp = torch.zeros([10, 204, 6])
+    net = models.RPS_MNet_2(x.shape[-1])
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x, bp)
+        assert y.shape == torch.Size([x.shape[0], 2]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+
+def test_RPS_MNet_2_training():
+    train_set = TensorDataset(torch.ones([50, 1, 204, 501]), torch.zeros([50, 2, 2]), torch.ones([50, 204, 6]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2, 2]), torch.ones([10, 204, 6]))
+
+    test_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2, 2]), torch.ones([10, 204, 6]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    testloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+
+    epochs = 1
+
+    with torch.no_grad():
+        x, y, _ = iter(trainloader).next()
+        n_times = x.shape[-1]
+
+    # change between different network
+    net = models.RPS_MNet_2(n_times)
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    print("begin training...")
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    hand = 0
+    model.eval()
+    y_pred = []
+    y = []
+    with torch.no_grad():
+        for data, labels, bp in testloader:
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            y.extend(list(labels[:, hand, :]))
+            y_pred.extend((list(net(data, bp))))
+
+    y = torch.stack(y)
+    y_pred = torch.stack(y_pred)
+    print(y[:, 0].shape)
+
+
+    print('Training do not rise error.')
+
+
+def test_loss_2_param():
+
+    hand = 0
+    y_before = torch.randn([50, 2, 2])
+
+    y = torch.randn([50, 2])
+
+    loss_function = torch.nn.MSELoss()
+
+    loss = loss_function(y, y_before[:, hand, :])
+
+
+
+    assert torch.is_tensor(loss)," Something went wrong in the loss fucntion computation"
 
 @pytest.mark.skip(reason="To implement")
 def test_parameters_class():
