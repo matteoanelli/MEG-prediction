@@ -13,7 +13,7 @@ import MEG.dl.models as models
 from MEG.Utils.utils import len_split
 from MEG.dl.MEG_Dataset import MEG_Dataset
 from MEG.dl.hyperparameter_generation import generate_parameters, parameter_test
-from MEG.dl.train import train, train_bp
+from MEG.dl.train import train, train_bp, train_bp_MLP
 
 @pytest.mark.skip(reason="To implement")
 def test_Flatten_MEG():
@@ -658,6 +658,47 @@ def test_parameter():
         print(" the parameters are ok ")
     else:
         print("Recalcolate the parameters")
+
+
+def test_RPS_MLP_shape():
+
+    bp = torch.zeros([10, 204, 6])
+    net = models.RPS_MLP()
+
+    with torch.no_grad():
+        print("Shape of the rps tensor: {}".format(bp.shape))
+
+        y = net(bp)
+        assert y.shape == torch.Size([bp.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
+
+
+def test_RPS_MLP_training():
+
+    train_set = TensorDataset(torch.zeros([50, 2]), torch.zeros([50, 204, 6]))
+
+    valid_set = TensorDataset(torch.zeros([10, 2]), torch.zeros([10, 204, 6]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    # change between different network
+    net = models.RPS_MLP()
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    print("begin training...")
+    model, _, _ = train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+
+    print('Training do not rise error')
 
 
 @pytest.mark.skip(reason="To implement")
