@@ -1,11 +1,4 @@
-#!/usr/bin/env python
-"""
-    Main script to train the different models.
-
-    This script is meant to be run to train all the different architectures tested. It receives in input data and
-    architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
-    combination.
-"""
+import getopt
 import sys
 
 import matplotlib.pyplot as plt
@@ -24,7 +17,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train
 from MEG.dl.MEG_Dataset import MEG_Dataset
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet
+from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_tunable
 
 from  MEG.Utils.utils import *
@@ -124,6 +117,7 @@ def main(args):
     #                    parameters.activation)
 
     net = RPS_MNet(n_times)
+    # net = RPS_MLP()
 
     print(net)
     # Training loop or model loading
@@ -169,7 +163,7 @@ def main(args):
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
         # Load the model (properly select the model architecture)
-        net = SCNN_tunable()
+        net = RPS_MNet()
         net = load_pytorch_model(net, os.path.join(model_path, "model.pth"), parameters.device)
 
 
