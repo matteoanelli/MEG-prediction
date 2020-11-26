@@ -735,40 +735,44 @@ def len_split(len):
 
     """
 
-    if len * 0.7 - int(len * 0.7) == 0. and len * 0.15 - int(len * 0.15) >= 0.:
-        if len * 0.15 - int(len * 0.15) == 0.5:
-            train = round(len * 0.7)
-            valid = round(len * 0.15 + 0.1)
-            test = round(len * 0.15 - 0.1)
-        else:
-            train = round(len * 0.7)
-            valid = round(len * 0.15)
-            test = round(len * 0.15)
+    train = int(len * 0.7)
+    valid = int(len * 0.15)
+    test = len - valid - train
 
-    elif len * 0.7 - int(len * 0.7) >= 0.5:
-        if len * 0.15 - int(len * 0.15) >= 0.5:
-            train = round(len * 0.7)
-            valid = round(len * 0.15)
-            test = round(len * 0.15) - 1
-        else:
-            # round has a particular behavior on rounding 0.5
-            if len * 0.7 - int(len * 0.7) == 0.5:
-                train = round(len * 0.7 + 0.1)
-                valid = round(len * 0.15)
-                test = round(len * 0.15)
-            else:
-                train = round(len * 0.7)
-                valid = round(len * 0.15)
-                test = round(len * 0.15)
-
-    else:
-        if len * 0.15 - int(len * 0.15) >= 0.5:
-            train = round(len * 0.7)
-            valid = round(len * 0.15)
-            test = round(len * 0.15)
-        else:
-            train = round(len * 0.7)
-            valid = round(len * 0.15) + 1
-            test = round(len * 0.15)
+    # if len * 0.7 - int(len * 0.7) == 0. and len * 0.15 - int(len * 0.15) >= 0.:
+    #     if len * 0.15 - int(len * 0.15) == 0.5:
+    #         train = round(len * 0.7)
+    #         valid = round(len * 0.15 + 0.1)
+    #         test = round(len * 0.15 - 0.1)
+    #     else:
+    #         train = round(len * 0.7)
+    #         valid = round(len * 0.15)
+    #         test = round(len * 0.15)
+    #
+    # elif len * 0.7 - int(len * 0.7) >= 0.5:
+    #     if len * 0.15 - int(len * 0.15) >= 0.5:
+    #         train = round(len * 0.7)
+    #         valid = round(len * 0.15)
+    #         test = round(len * 0.15) - 1
+    #     else:
+    #         # round has a particular behavior on rounding 0.5
+    #         if len * 0.7 - int(len * 0.7) == 0.5:
+    #             train = round(len * 0.7 + 0.1)
+    #             valid = round(len * 0.15)
+    #             test = round(len * 0.15)
+    #         else:
+    #             train = round(len * 0.7)
+    #             valid = round(len * 0.15)
+    #             test = round(len * 0.15)
+    #
+    # else:
+    #     if len * 0.15 - int(len * 0.15) >= 0.5:
+    #         train = round(len * 0.7)
+    #         valid = round(len * 0.15)
+    #         test = round(len * 0.15)
+    #     else:
+    #         train = round(len * 0.7)
+    #         valid = round(len * 0.15) + 1
+    #         test = round(len * 0.15)
 
     return train, valid, test

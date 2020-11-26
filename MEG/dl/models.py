@@ -199,7 +199,7 @@ class MNet(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times + 204 * 6, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
                                 nn.Dropout(0.5),
@@ -517,7 +517,7 @@ class SCNN(nn.Module):
                 List of kernel sizes. The len of it has to be the same as the number of spatial filters.
             temporal_n_block (int):
                 Number of temporal block applied. Each block applies 2 temporal stacked filters.
-            temporal_kernel_size (int):
+            temporal_kernel_size (list):
                 List of kernel sizes. The len of it has to be the same as the number of temporal filters.
             n_times (int):
                 n_times dimension of the input data.
@@ -543,7 +543,7 @@ class SCNN(nn.Module):
 
         # self.concatenate = Concatenate()
 
-        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 204 * 6 #TODO substitue the number of channel
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ #TODO substitue the number of channel
         self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
     def forward(self, x):

@@ -116,7 +116,7 @@ class MEG_Dataset_no_bp(Dataset):
                                                                  y_measure=y_measure)
         else:
             # Generate dataset from raw MEG data
-            self.data, self.target, _ = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
+            self.data, self.target = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
                                                        normalize_input=self.normalize_input, y_measure=y_measure, rps=False)
 
         self.transform = transform
