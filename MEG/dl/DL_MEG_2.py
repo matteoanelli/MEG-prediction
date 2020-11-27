@@ -4,30 +4,29 @@
     This script is meant to be run to train all the different architectures tested. It receives in input data and
     architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
 """
+
+import argparse
+import json
 import sys
+import time as timer
 
 import matplotlib.pyplot as plt
 import mlflow
 import mlflow.pytorch
-import argparse
-import time as timer
-import json
-
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
-from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
 
 from MEG.dl.train import train
-from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
+from MEG.dl.MEG_Dataset import MEG_Dataset_2
+from MEG.dl.models import RPS_MNet_2
 from MEG.dl.params import Params_tunable
 
+# TODO maybe better implementation
 from  MEG.Utils.utils import *
 
-# Set the MNE logging to worning only.
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 def main(args):
@@ -37,13 +36,12 @@ def main(args):
     model_path = args.model_dir
 
     # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
-    subj_id = "/sub"+str(args.sub)+"/ball0"
+    subj_id = "/sub" + str(args.sub) + "/ball0"
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     # local
     # subj_id = "/sub"+str(args.sub)+"/ball"
     # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
-
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -52,7 +50,8 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    # Initialize parameters
+
+
     parameters = Params_tunable(subject_n=args.sub,
                                 hand=args.hand,
                                 batch_size=args.batch_size,
@@ -78,61 +77,29 @@ def main(args):
                                 activation=args.activation
                                 )
 
-    # Set if generate with RPS values or not (check network architecture used later)
-    rps = True
-
-    # Generate the custom dataset
-    if rps:
-        dataset = MEG_Dataset(raw_fnames,
+    dataset = MEG_Dataset_2(raw_fnames,
                           parameters.duration,
                           parameters.overlap,
                           parameters.y_measure,
                           normalize_input=True)
-    else:
-        dataset = MEG_Dataset_no_bp(raw_fnames,
-                              parameters.duration,
-                              parameters.overlap,
-                              parameters.y_measure,
-                              normalize_input=True)
 
-    # split the dataset in train, test and valid sets.
     train_len, valid_len, test_len = len_split(len(dataset))
     print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
 
-    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
-    #                                                        generator=torch.Generator().manual_seed(42))
+    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len], generator = torch.Generator().manual_seed(42))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
-    # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
-
-    # Get the n_times dimension
     with torch.no_grad():
-        # Changes if RPS integration or not
+        # Change if RPS itegration
         x, _, _ = iter(trainloader).next()
         # x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
-    # Initialize network
-    # net = LeNet5(n_times)
-    # net = ResNet([2, 2, 2], 64, n_times)
-    # net = MNet(n_times)
-    # net = RPS_SCNN(parameters.s_n_layer,
-    #                    parameters.s_kernel_size,
-    #                    parameters.t_n_layer,
-    #                    parameters.t_kernel_size,
-    #                    n_times,
-    #                    parameters.ff_n_layer,
-    #                    parameters.ff_hidden_channels,
-    #                    parameters.dropout,
-    #                    parameters.max_pooling,
-    #                    parameters.activation)
-
-    net = RPS_MNet(n_times)
-    # net = RPS_MLP()
+    net = RPS_MNet_2(n_times)
 
     print(net)
     # Training loop or model loading
@@ -177,9 +144,9 @@ def main(args):
         # Save the trained model
         save_pytorch_model(net, model_path, "Baselinemodel_SCNN_swap.pth")
     else:
-        # Load the model (properly select the model architecture)
-        net = RPS_MNet()
-        net = load_pytorch_model(net, os.path.join(model_path, "model.pth"), parameters.device)
+        # Load the model
+        net = RPS_MNet_2()
+        net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
 
 
     # Evaluation
@@ -187,12 +154,10 @@ def main(args):
     net.eval()
     y_pred = []
     y = []
-
-    # if RPS integration
     with torch.no_grad():
         for data, labels, bp in testloader:
             data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
-            y.extend(list(labels[:, parameters.hand]))
+            y.extend(list(labels[:, parameters.hand, :]))
             y_pred.extend((list(net(data, bp))))
 
     # with torch.no_grad():
@@ -200,6 +165,9 @@ def main(args):
     #         data, labels = data.to(parameters.device), labels.to(parameters.device)
     #         y.extend(list(labels[:, parameters.hand]))
     #         y_pred.extend((list(net(data))))
+
+    y = torch.stack(y).to('cpu')
+    y_pred = torch.stack(y_pred).to('cpu')
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
@@ -211,16 +179,38 @@ def main(args):
     print("mean absolute error {}".format(mae))
 
     # plot y_new against the true value focus on 100 timepoints
-    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(100)
-    ax.plot(times, y_pred[0:100], color="b", label="Predicted")
-    ax.plot(times, y[0:100], color="r", label="True")
-    ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
-    plt.legend()
+    # fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    # times = np.arange(100)
+    # ax.plot(times, y_pred[0:100], color="b", label="Predicted")
+    # ax.plot(times, y[0:100], color="r", label="True")
+    # ax.set_xlabel("Times")
+    # ax.set_ylabel("{}".format(parameters.y_measure))
+    # ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
+    #                                                      "sx" if parameters.hand == 0 else "dx",
+    #                                                      parameters.y_measure))
+    # plt.legend()
+    # plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
+    # plt.show()
+
+    fig, ax = plt.subplots(1, 2, figsize=[10, 4])
+
+    limit = 100
+    times = np.arange(limit)
+    ax[0].plot(times, y_pred[:limit, 0], color = "b", label = "Predicted")
+    ax[0].plot(times, y[:limit, 0], color="r", label="True")
+    ax[0].set_xlabel("Times")
+    ax[0].set_ylabel("RMSE")
+    ax[0].set_title("Sub {}, hand {} x prediction".format(str(parameters.subject_n),
+                                                          "sx" if parameters.hand == 0 else "dx"))
+    ax[0].legend()
+
+    ax[1].plot(times, y_pred[:limit, 1], color="b", label="Predicted")
+    ax[1].plot(times, y[:limit, 1], color="r", label="True")
+    ax[1].set_xlabel("Times")
+    ax[1].set_title("Sub {}, hand {} y prediction".format(str(parameters.subject_n),
+                                                          "sx" if parameters.hand == 0 else "dx"))
+    ax[1].legend()
+
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
     plt.show()
 
@@ -239,7 +229,7 @@ def main(args):
     plt.show()
 
 
-    # log the model and parameters using mlflow tracker
+    # log the model
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)

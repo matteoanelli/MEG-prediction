@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, random_split
 
 from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, \
     bandpower_multi, y_reshape_final, window_stack
-from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp
+from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Dataset2
 
 
 def test_bandpower_1d():
@@ -160,6 +160,41 @@ def test_MEG_dataset_shape_bp():
 
     assert sample_target.shape == torch.Size([50, 2]), 'wrong target shape, data shape expected = {}, got {}' \
         .format(torch.Size([50, 2]), sample_target.shape)
+
+    assert sample_bp.shape == torch.Size([50, 204, 6]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 204, 6]), sample_target.shape)
+
+def test_MEG_dataset_shape_2():
+    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+
+    dataset = MEG_Dataset2(dataset_path, duration=1., overlap=0.)
+
+    train_len, valid_len, test_len = len_split(len(dataset))
+
+    print(len(dataset))
+    print('{} {} {}'.format(train_len, valid_len, test_len))
+
+    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    assert train_dataset.__len__() == 524, "Bad split, train set length expected = 524, got {}" \
+        .format(train_dataset.__len__())
+
+    assert valid_test.__len__() == 112, "Bad split, validation set length expected = 112 , got {}" \
+        .format(valid_test.__len__()
+                )
+    assert test_dataset.__len__() == 113, "Bad split, test set length expected = 113 , got {}" \
+        .format(test_dataset.__len__()
+                )
+
+    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=False, num_workers=1)
+
+    sample_data, sample_target, sample_bp = iter(trainloader).next()
+
+    assert sample_data.shape == torch.Size([50, 1, 204, 501]), 'wrong data shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 1, 204, 501]), sample_data.shape)
+
+    assert sample_target.shape == torch.Size([50, 2, 2]), 'wrong target shape, data shape expected = {}, got {}' \
+        .format(torch.Size([50, 2, 2]), sample_target.shape)
 
     assert sample_bp.shape == torch.Size([50, 204, 6]), 'wrong target shape, data shape expected = {}, got {}' \
         .format(torch.Size([50, 204, 6]), sample_target.shape)

@@ -11,9 +11,9 @@ from torch.utils.data import DataLoader, random_split, TensorDataset
 
 import MEG.dl.models as models
 from MEG.Utils.utils import len_split
-from MEG.dl.MEG_Dataset import MEG_Dataset
+from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp
 from MEG.dl.hyperparameter_generation import generate_parameters, parameter_test
-from MEG.dl.train import train, train_bp, train_bp_MLP
+from MEG.dl.train import train, train_bp, train_bp_MLP, train_2
 
 @pytest.mark.skip(reason="To implement")
 def test_Flatten_MEG():
@@ -484,51 +484,35 @@ def test_ResNet_shape():
     print('Success')
 
 # @pytest.mark.skip(reason="Development porposes test")
-def test_train_ResNet():
+def test_ResNet_training():
 
-    dataset_path = ['Z:\Desktop\sub8\\ball1_sss.fif']
+    train_set = TensorDataset(torch.ones([50, 1, 204, 501]), torch.zeros([50, 2]))
 
-    dataset = MEG_Dataset(dataset_path, duration=1., overlap=0.)
+    valid_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2]))
 
-    train_len, valid_len, test_len = len_split(len(dataset))
-
-    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    print(len(train_set))
 
     device = 'cpu'
 
-    trainloader = DataLoader(train_dataset, batch_size=10, shuffle=False, num_workers=1)
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
 
-    validloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=1)
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
 
     epochs = 1
 
-    n_spatial_layer = 2
-    spatial_kernel_size = [154, 51]
-
-    temporal_n_block = 1
-    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
-    temporal_kernel_size = [250]
-    max_pool = 2
-
-    mlp_n_layer = 3
-    mlp_hidden = 1024
-    mlp_dropout = 0.5
-
     with torch.no_grad():
-        x, _, _ = iter(trainloader).next()
+        x, _ = iter(trainloader).next()
     n_times = x.shape[-1]
 
-    net = models.SCNN(n_spatial_layer, spatial_kernel_size,
-                              temporal_n_block, temporal_kernel_size, n_times,
-                              mlp_n_layer, mlp_hidden, mlp_dropout,
-                              max_pool=max_pool)
+    net = models.ResNet([2, 2, 2], 64, n_times)
 
-    optimizer = Adam(net.parameters(), lr=0.00001)
+    optimizer = Adam(net.parameters(), lr=0.0001)
     loss_function = torch.nn.MSELoss()
 
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     print("Test succeeded!")
+
 
 @pytest.mark.skip(reason="Development porposes test")
 def test_train_MEG_swap():
@@ -673,7 +657,7 @@ def test_RPS_MNet_2_training():
 
     validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
 
-    testloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+    testloader = DataLoader(test_set, batch_size=2, shuffle=False, num_workers=1)
 
 
     epochs = 1
@@ -688,7 +672,7 @@ def test_RPS_MNet_2_training():
     loss_function = torch.nn.MSELoss()
 
     print("begin training...")
-    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
+    model, _, _ = train_2(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, 0, "")
 
     hand = 0
     model.eval()

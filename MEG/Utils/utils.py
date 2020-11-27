@@ -434,53 +434,6 @@ def import_MEG_Tensor_form_file(data_dir, normalize_input=True, y_measure="movem
     return X, torch.stack([y_left, y_right], dim=1)
 
 
-def import_MEG_2_param(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
-    epochs = []
-    for fname in raw_fnames:
-        if os.path.exists(fname):
-            raw = mne.io.Raw(fname, preload=True)
-            # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
-            raw.pick_types(meg='grad', misc=True)
-            raw.notch_filter([50, 100])
-            raw.filter(l_freq=1., h_freq=70)
-
-            # get indices of accelerometer channels
-            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                         include=["MISC001", "MISC002"])
-            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                          include=["MISC003", "MISC004"])
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
-            del raw
-        else:
-            print("No such file '{}'".format(fname), file=sys.stderr)
-
-    epochs = mne.concatenate_epochs(epochs)
-    # get indices of accelerometer channels
-
-    # pic only with gradiometer
-    X = epochs.get_data()[:, :204, :]
-
-    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
-
-    if normalize_input:
-        X = standard_scaling(X, scalings="mean", log=True)
-
-    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :], measure=y_measure)
-    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :], measure=y_measure)
-
-    # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
-    # y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
-
-    print(
-        "The input data are of shape: {}, the corresponding y_left shape is: {},"\
-        "the corresponding y_right shape is: {}".format(
-            X.shape, y_left.shape, y_right.shape
-        )
-    )
-    return X, y_left, y_right, bp
-
 def filter_data(X, sampling_rate):
     """
     Implement filter of the input data. Suggested to use directly the mne.function on mne.Raw or mne.Epoch.
@@ -822,3 +775,126 @@ def len_split(len):
     #         test = round(len * 0.15)
 
     return train, valid, test
+
+def import_MEG_2(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
+    """
+            Function that read the input files and epochs them using fix length overlapping windows. It returns the an
+            array-like of the raw epoched data. It generates 1 event each (duration-overlap) s. Therefore, this value
+            determine the prediction rate. The input data are downsampled to a factor of 2. Version wit 2 directions
+            as target.
+
+        Args:
+            raw_fnames [list]:
+                List of path of files to import. (The main file format used is fif, however, it accept all the files
+                 accepted by mne.io.raw().
+            duration (float):
+                Length of the windows.
+            overlap (float):
+                Length of the overlap.
+            normalize_input (bool):
+                True, if apply channel-wise standard scaling to the input data.
+                False, does not apply ay normalization.
+            y_measure (string):
+                Measure used to reshape the y. Values in [mean, movement, velocity, position]
+            rps (bool):
+                True, if generate bandpower spectrum.
+                False, otherwise.
+
+        Returns:
+            X (nd-array): [n_epochs, n_channels, n_times]
+                Output data.
+            y_left (nd-array): [n_epochs, n_direction, n_times]
+                Left hand target values. n_direction is normally 1 since the 2 original direction are combined with PCA.
+                If not, n_direction is 2.
+            y_right (nd-array): [n_epochs, , n_direction,  n_times]
+                Right hand target values. n_direction is normally 1 since the 2 original direction are combined with PCA.
+                If not, n_direction is 2.
+        """
+    epochs = []
+    for fname in raw_fnames:
+        if os.path.exists(fname):
+            raw = mne.io.Raw(fname, preload=True)
+            # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
+            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            raw.pick_types(meg='grad', misc=True)
+            raw.notch_filter([50, 100])
+            raw.filter(l_freq=1., h_freq=70)
+
+            # get indices of accelerometer channels
+            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
+                                                         include=["MISC001", "MISC002"])
+            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
+                                                          include=["MISC003", "MISC004"])
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            del raw
+        else:
+            print("No such file '{}'".format(fname), file=sys.stderr)
+
+    epochs = mne.concatenate_epochs(epochs)
+    # get indices of accelerometer channels
+
+    # pic only with gradiometer
+    X = epochs.get_data()[:, :204, :]
+
+    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
+
+    if normalize_input:
+        X = standard_scaling(X, scalings="mean", log=True)
+
+    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :], measure=y_measure)
+    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :], measure=y_measure)
+
+    # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    # y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+
+    print(
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"\
+        "the corresponding y_right shape is: {}".format(
+            X.shape, y_left.shape, y_right.shape
+        )
+    )
+    return X, y_left, y_right, bp
+
+
+def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
+    """
+        Generate the epoched data as tensor to create the custom dataset for DL processing with the 2 directions as
+        target.
+
+        Args:
+            raw_fnames [list]:
+                List of path of files to import. (The main file format used is fif, however, it accept all the files
+                 accepted by mne.io.raw().
+            duration (float):
+                Length of the windows.
+            overlap (float):
+                Length of the overlap.
+            normalize_input (bool):
+                True, if apply channel-wise standard scaling to the input data.
+                False, does not apply ay normalization.
+            y_measure (str):
+                Measure used to reshape the y. Values in [mean, movement, velocity, position]
+            rps (bool):
+                True, if generate bandpower spectrum.
+                False, otherwise.
+
+        Returns:
+            X (Tensor): [n_epochs, n_channels, n_times]
+                Output data.
+            y (Tensor): [n_epochs, n_direction*2, n_times]
+                Left hand right target values stacked in 1 structures. n_direction is normally 1 since the 2 original
+                direction are combined with PCA. If not, n_direction is 2.
+            bp (Tensor): [n_epochs, n_channel, n_bands]
+                Bandpowers values.
+        """
+
+    X, y_left, y_right, bp = import_MEG_2(raw_fnames, duration, overlap, normalize_input=normalize_input, y_measure=y_measure)
+
+    X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
+
+    y_left = torch.from_numpy(y_left.astype(np.float32))
+    y_right = torch.from_numpy(y_right.astype(np.float32))
+
+    bp = torch.from_numpy(bp.astype(np.float32))
+    return X, torch.stack([y_left, y_right], dim=1), bp

@@ -218,7 +218,7 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
             # Fit the network
             out = net(data, bp)
             # Loss function
-            train_loss = loss_function(out, labels[:, hand, :])
+            train_loss = loss_function(out, labels[:, hand])
             train_losses.append(train_loss.item())
             # Backpropagation and weights update
             train_loss.backward()
@@ -235,7 +235,7 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data, bp)
                 # calculate the loss
-                valid_loss = loss_function(output, labels[:, hand, :])
+                valid_loss = loss_function(output, labels[:, hand])
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
@@ -332,6 +332,70 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
                 output = net(bp)
                 # calculate the loss
                 valid_loss = loss_function(output, labels[:, hand])
+                # record validation loss
+                valid_losses.append(valid_loss.item())
+
+        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
+              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+
+        train_loss = np.mean(train_losses)
+        valid_loss = np.mean(valid_losses)
+        avg_train_losses.append(train_loss)
+        avg_valid_losses.append(valid_loss)
+
+        early_stopping(valid_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses, avg_valid_losses
+
+
+def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, fs=500):
+
+    net = net.to(device) # TODO probably to remove
+    avg_train_losses = []
+    avg_valid_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        valid_losses = []
+        for data, labels, bp in trainloader:
+            # Set data to appropiate device
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(data, bp)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand, :])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        ######################
+        # validate the model #
+        ######################
+        net.eval()  # prep model for evaluation
+        with torch.no_grad():
+            for data, labels, bp in validloader:
+                # Set data to appropiate device
+                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = net(data, bp)
+                # calculate the loss
+                valid_loss = loss_function(output, labels[:, hand, :])
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
