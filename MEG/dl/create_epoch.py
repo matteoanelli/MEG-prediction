@@ -1,11 +1,19 @@
-import argparse
-import sys, os
+#!/usr/bin/env python
 
-import numpy as np
+"""
+    Script to save the epoched data.
+
+    TODO: Better implementation and testing.
+"""
+
+import argparse
+import os
+import sys
+
 import mne
+import numpy as np
 
 sys.path.insert(1, r'')
-from  MEG.Utils.utils import import_MEG_Tensor
 
 if __name__ == "__main__":
     # main(sys.argv[1:])

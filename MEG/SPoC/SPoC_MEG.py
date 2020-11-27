@@ -1,4 +1,7 @@
 #%%
+"""
+    Main script to generate the SPoC results on the MEG dataset.
+"""
 import argparse
 import sys
 import time
@@ -24,26 +27,38 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
+    # Generate the parameters class.
     parameters = SPoC_params(subject_n=args.sub,
                              hand=args.hand,
                              duration=args.duration,
                              overlap=args.overlap,
                              y_measure=args.y_measure)
 
-    # subj_id = "/sub"+str(args.sub)+"/ball0"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    # Generate list of input files
+    subj_id = "/sub"+str(args.sub)+"/ball0"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     # LOCAL
-    subj_n = 8
-    subj_id = "sub" + str(subj_n) + "\\ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    # subj_n = 8
+    # subj_id = "sub" + str(subj_n) + "\\ball"
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
-    X, y, _ = import_MEG(raw_fnames, duration=parameters.duration, overlap=parameters.overlap,
-                         y_measure=parameters.y_measure, normalize_input=True)   # concentrate the analysis only on the left hand
+    # Import and epoch the MEG data
+    X, y_left, y_right = import_MEG_no_bp(raw_fnames,
+                                          duration=parameters.duration,
+                                          overlap=parameters.overlap,
+                                          y_measure=parameters.y_measure,
+                                          normalize_input=True)   # concentrate the analysis only on the left hand
 
-    print('X shape {}, y shape {}'.format(X.shape, y.shape))
+    print('X shape {}, y shape {}'.format(X.shape, y_left.shape))
 
-    X_train, X_test, y_train, y_test = split_data(X, y, 0.3)
+    # Select hand
+    if parameters.hand == 0:
+        X_train, X_test, y_train, y_test = split_data(X, y_left, 0.3)
+    else:
+        X_train, X_test, y_train, y_test = split_data(X, y_right, 0.3)
+
+    print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
                                                                                           X_test.shape, y_test.shape))
 
@@ -51,13 +66,15 @@ def main(args):
                          ('Ridge', Ridge())])
 
     # %%
+    # Initialize the cross-validation pipeline and grid search
     cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 2)))),
-                         'Ridge__alpha': [0.8, 1.0, 1.2, 2]}]
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 4)))),
+                         'Ridge__alpha': [0.8, 1.0, 5, 10]}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3
-                       )
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3)
+
     #%%
+    # Tune the pipeline
     start = time.time()
     print('Start Fitting model ...')
     clf.fit(X_train, y_train)
@@ -74,6 +91,7 @@ def main(args):
     print("Number of splits")
     print(clf.n_splits_)
     #%%
+    # Validate the pipeline
     y_new = clf.predict(X_test)
     mse = mean_squared_error(y_test, y_new)
     rmse = mean_squared_error(y_test, y_new, squared=False)
@@ -82,6 +100,7 @@ def main(args):
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
     #%%
+    # Plot the y expected vs y predicted.
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(100)
     ax.plot(times, y_new[100:200], color='b', label='Predicted')
@@ -114,7 +133,7 @@ def main(args):
     n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
     MSEs = clf.cv_results_['mean_test_score']
     # %%
-
+    # Plot the number of components.
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     ax.plot(n_components, MSEs, color='b')
     ax.set_xlabel('Number of SPoC components')
@@ -127,6 +146,7 @@ def main(args):
     plt.show()
 
     # %%
+    # Save the model.
     name = 'MEG_SPoC.p'
     save_skl_model(clf, model_path, name)
 

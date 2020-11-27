@@ -1,10 +1,16 @@
+#!/usr/bin/env python
+
+"""
+    Hyper-parameter random search-spcae generation.
+"""
+
 import argparse
 import random
 
 import pandas as pd
 
 
-def test_parameter(params):
+def parameter_test(params):
 
     n_times = params["duration"] * 1000 + 1
 
@@ -77,7 +83,10 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
         if "activation" not in sampled_grid:
             sampled_grid["activation"] = random.choice(param_grid.get("activation"))
 
-        if test_parameter(sampled_grid):
+        if "max_pooling" not in sampled_grid:
+            sampled_grid["max_pooling"] = random.choice(param_grid.get("max_pooling"))
+
+        if parameter_test(sampled_grid):
             random_grid.append(sampled_grid)
             count += 1
         i += 1
@@ -122,9 +131,9 @@ if __name__ == '__main__':
         "patience": 20,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 11,
+        "experiment": 12,
     }
-    random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
