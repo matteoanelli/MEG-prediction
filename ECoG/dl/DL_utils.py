@@ -8,9 +8,10 @@ import scipy.io as sio
 import torch
 from sklearn.model_selection import train_test_split
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 from ECoG.SPoC.utils import import_ECoG, filter_data, standard_scaling, create_epoch, y_resampling
+
 
 def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
@@ -77,6 +78,7 @@ def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, ov
 #     else:
 #         print("No such file '{}'".format(path), file=sys.stderr)
 #         return None, None
+
 
 def save_pytorch_model(model, path, filename):
 
@@ -148,12 +150,13 @@ def filtering(
 
     return filter.filter_data(x, sfreq, l_freq, h_freq)
 
+
 def len_split(len):
 
     # TODO adapt to strange behavior of floating point 350 * 0.7 = 245 instead is giving 244.99999999999997
 
-    if len * 0.7 - int(len*0.7) == 0. and len * 0.15 - int(len*0.15) >= 0.:
-        if len * 0.15 - int(len*0.15) == 0.5:
+    if len * 0.7 - int(len * 0.7) == 0.0 and len * 0.15 - int(len * 0.15) >= 0.0:
+        if len * 0.15 - int(len * 0.15) == 0.5:
             train = round(len * 0.7)
             valid = round(len * 0.15 + 0.1)
             test = round(len * 0.15 - 0.1)
@@ -162,14 +165,14 @@ def len_split(len):
             valid = round(len * 0.15)
             test = round(len * 0.15)
 
-    elif len * 0.7 - int(len*0.7) >= 0.5:
-        if len * 0.15 - int(len*0.15) >= 0.5:
+    elif len * 0.7 - int(len * 0.7) >= 0.5:
+        if len * 0.15 - int(len * 0.15) >= 0.5:
             train = round(len * 0.7)
             valid = round(len * 0.15)
             test = round(len * 0.15) - 1
         else:
             # round has a particular behavior on rounding 0.5
-            if len * 0.7 - int(len*0.7) == 0.5:
+            if len * 0.7 - int(len * 0.7) == 0.5:
                 train = round(len * 0.7 + 0.1)
                 valid = round(len * 0.15)
                 test = round(len * 0.15)
@@ -179,7 +182,7 @@ def len_split(len):
                 test = round(len * 0.15)
 
     else:
-        if len * 0.15 - int(len*0.15) >= 0.5:
+        if len * 0.15 - int(len * 0.15) >= 0.5:
             train = round(len * 0.7)
             valid = round(len * 0.15)
             test = round(len * 0.15)
@@ -189,4 +192,3 @@ def len_split(len):
             test = round(len * 0.15)
 
     return train, valid, test
-

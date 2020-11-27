@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, random_split
 from mne import viz
 import json
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 from Dataset import ECoG_Dataset
 from ECoG.dl.DL_utils import *
@@ -34,69 +34,97 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # subject
-    parser.add_argument('--sub', type=int, default='1',
-                        help="Subject number (default= 1)")
-    parser.add_argument('--finger', type=int, default='0',
-                        help="Finger (default= 0)")
+    parser.add_argument("--sub", type=int, default="1", help="Subject number (default= 1)")
+    parser.add_argument("--finger", type=int, default="0", help="Finger (default= 0)")
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\BCICIV_4_mat\\',
-                        help="Input data directory (default= Z:\Desktop\BCICIV_4_mat)")
-    parser.add_argument('--figure_dir', type=str, default='ECoG\Figures',
-                        help="Figure data directory (default= ECoG\Figures)")
-    parser.add_argument('--model_dir', type=str, default='ECoG\Models',
-                        help="Model data directory (default= ECoG\Models\)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\BCICIV_4_mat\\",
+        help="Input data directory (default= Z:\Desktop\BCICIV_4_mat)",
+    )
+    parser.add_argument(
+        "--figure_dir", type=str, default="ECoG\Figures", help="Figure data directory (default= ECoG\Figures)"
+    )
+    parser.add_argument(
+        "--model_dir", type=str, default="ECoG\Models", help="Model data directory (default= ECoG\Models\)"
+    )
 
     # Model Parameters
-    parser.add_argument('--batch_size', type=int, default=80, metavar='N',
-                        help='input batch size for training (default: 100)')
-    parser.add_argument('--batch_size_valid', type=int, default=30, metavar='N',
-                        help='input batch size for validation (default: 100)')
-    parser.add_argument('--batch_size_test', type=int, default=30, metavar='N',
-                        help='input batch size for  (default: 100)')
-    parser.add_argument('--epochs', type=int, default=100, metavar='N',
-                        help='number of epochs to train (default: 200)')
-    parser.add_argument('--learning_rate', type=float, default=14e-4, metavar='lr',
-                        help='Learning rate (default: 1e-3),')
-    parser.add_argument('--bias', type=bool, default=False, metavar='N',
-                        help='Convolutional layers with bias(default: False)')
+    parser.add_argument(
+        "--batch_size", type=int, default=80, metavar="N", help="input batch size for training (default: 100)"
+    )
+    parser.add_argument(
+        "--batch_size_valid", type=int, default=30, metavar="N", help="input batch size for validation (default: 100)"
+    )
+    parser.add_argument(
+        "--batch_size_test", type=int, default=30, metavar="N", help="input batch size for  (default: 100)"
+    )
+    parser.add_argument("--epochs", type=int, default=100, metavar="N", help="number of epochs to train (default: 200)")
+    parser.add_argument(
+        "--learning_rate", type=float, default=14e-4, metavar="lr", help="Learning rate (default: 1e-3),"
+    )
+    parser.add_argument(
+        "--bias", type=bool, default=False, metavar="N", help="Convolutional layers with bias(default: False)"
+    )
 
-    parser.add_argument('--duration', type=float, default=1., metavar='N',
-                        help='Duration of the time window  (default: 1s)')
-    parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
-                        help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--patience', type=int, default=20, metavar='N',
-                        help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="movement",
-                        help='Y type reshaping (default: movement)')
-    parser.add_argument('--experiment', type=int, default=0, metavar='N',
-                        help='Mlflow experiments id (default: 0)')
+    parser.add_argument(
+        "--duration", type=float, default=1.0, metavar="N", help="Duration of the time window  (default: 1s)"
+    )
+    parser.add_argument(
+        "--overlap", type=float, default=0.8, metavar="N", help="overlap of time window (default: 0.8s)"
+    )
+    parser.add_argument("--patience", type=int, default=20, metavar="N", help="Early stopping patience (default: 20)")
+    parser.add_argument("--y_measure", type=str, default="movement", help="Y type reshaping (default: movement)")
+    parser.add_argument("--experiment", type=int, default=0, metavar="N", help="Mlflow experiments id (default: 0)")
 
     # Model architecture parameters
     # Spatial sub-net
-    parser.add_argument('--s_n_layer', type=int, default=1, metavar='N',
-                        help='Spatial sub-net number of layer (default: 2)')
-    parser.add_argument('--s_kernel_size', type=str, default=[62], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [104, 101])')
+    parser.add_argument(
+        "--s_n_layer", type=int, default=1, metavar="N", help="Spatial sub-net number of layer (default: 2)"
+    )
+    parser.add_argument(
+        "--s_kernel_size",
+        type=str,
+        default=[62],
+        metavar="N",
+        nargs="+",
+        help="Spatial sub-net kernel sizes (default: [104, 101])",
+    )
     # Temporal sub-net
-    parser.add_argument('--t_n_layer', type=int, default=6, metavar='N',
-                        help='Temporal sub-net number of layer (default: 6)')
-    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 8, 5], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])')
-    parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
-                        help='Spatial sub-net max-pooling (default: 2)')
+    parser.add_argument(
+        "--t_n_layer", type=int, default=6, metavar="N", help="Temporal sub-net number of layer (default: 6)"
+    )
+    parser.add_argument(
+        "--t_kernel_size",
+        type=str,
+        default=[20, 10, 10, 8, 8, 5],
+        metavar="N",
+        nargs="+",
+        help="Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])",
+    )
+    parser.add_argument(
+        "--max_pooling", type=int, default=2, metavar="lr", help="Spatial sub-net max-pooling (default: 2)"
+    )
 
     # MLP
-    parser.add_argument('--ff_n_layer', type=int, default=3, metavar='N',
-                        help='MLP sub-net number of layer (default: 3)')
-    parser.add_argument('--ff_hidden_channels', type=int, default=516, metavar='N',
-                        help='MLP sub-net number of hidden channels (default: 1024)')
-    parser.add_argument('--dropout', type=float, default=0.3, metavar='d',
-                        help='MLP dropout (default: 0.5),')
+    parser.add_argument(
+        "--ff_n_layer", type=int, default=3, metavar="N", help="MLP sub-net number of layer (default: 3)"
+    )
+    parser.add_argument(
+        "--ff_hidden_channels",
+        type=int,
+        default=516,
+        metavar="N",
+        help="MLP sub-net number of hidden channels (default: 1024)",
+    )
+    parser.add_argument("--dropout", type=float, default=0.3, metavar="d", help="MLP dropout (default: 0.5),")
 
     # Activation
-    parser.add_argument('--activation', type=str, default="relu", metavar='N',
-                        help='Activation function ti apply (default: relu)')
+    parser.add_argument(
+        "--activation", type=str, default="relu", metavar="N", help="Activation function ti apply (default: relu)"
+    )
 
     args = parser.parse_args()
 
@@ -108,30 +136,31 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device = {}".format(device))
 
-    parameters = Params_tunable(subject_n=args.sub,
-                                finger=args.finger,
-                                batch_size=args.batch_size,
-                                valid_batch_size=args.batch_size_valid,
-                                test_batch_size=args.batch_size_test,
-                                epochs=args.epochs,
-                                lr=args.learning_rate,
-                                duration=args.duration,
-                                overlap=args.overlap,
-                                patience=args.patience,
-                                device=device,
-                                y_measure=args.y_measure,
-                                s_n_layer=args.s_n_layer,
-                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
-                                s_kernel_size=args.s_kernel_size,
-                                t_n_layer=args.t_n_layer,
-                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
-                                t_kernel_size=args.t_kernel_size,
-                                max_pooling=args.max_pooling,
-                                ff_n_layer=args.ff_n_layer,
-                                ff_hidden_channels=args.ff_hidden_channels,
-                                dropout=args.dropout,
-                                activation=args.activation
-                                )
+    parameters = Params_tunable(
+        subject_n=args.sub,
+        finger=args.finger,
+        batch_size=args.batch_size,
+        valid_batch_size=args.batch_size_valid,
+        test_batch_size=args.batch_size_test,
+        epochs=args.epochs,
+        lr=args.learning_rate,
+        duration=args.duration,
+        overlap=args.overlap,
+        patience=args.patience,
+        device=device,
+        y_measure=args.y_measure,
+        s_n_layer=args.s_n_layer,
+        # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+        s_kernel_size=args.s_kernel_size,
+        t_n_layer=args.t_n_layer,
+        # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+        t_kernel_size=args.t_kernel_size,
+        max_pooling=args.max_pooling,
+        ff_n_layer=args.ff_n_layer,
+        ff_hidden_channels=args.ff_hidden_channels,
+        dropout=args.dropout,
+        activation=args.activation,
+    )
 
     # data_dir  = os.environ['DATA_PATH']
     # Define data, model and figure path
@@ -142,8 +171,9 @@ if __name__ == "__main__":
     skip_training = False
 
     # Import dataset, split in train and tests
-    dataset = ECoG_Dataset(data_dir, file_name, parameters.finger, parameters.duration, sampling_rate,
-                           parameters.overlap)
+    dataset = ECoG_Dataset(
+        data_dir, file_name, parameters.finger, parameters.duration, sampling_rate, parameters.overlap
+    )
 
     train_len, valid_len, test_len = len_split(len(dataset))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
@@ -158,16 +188,18 @@ if __name__ == "__main__":
         print(x.shape)
     n_times = x.shape[-1]
     # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+    net = SCNN_tunable(
+        parameters.s_n_layer,
+        parameters.s_kernel_size,
+        parameters.t_n_layer,
+        parameters.t_kernel_size,
+        n_times,
+        parameters.ff_n_layer,
+        parameters.ff_hidden_channels,
+        parameters.dropout,
+        parameters.max_pooling,
+        parameters.activation,
+    )
     print(net)
 
     # Training loop or model loading
@@ -178,23 +210,32 @@ if __name__ == "__main__":
         loss_function = torch.nn.MSELoss()
 
         start_time = timer.time()
-        net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
-                                            parameters.device, parameters.epochs, parameters.patience, model_path)
+        net, train_loss, valid_loss = train(
+            net,
+            trainloader,
+            validloader,
+            optimizer,
+            loss_function,
+            parameters.device,
+            parameters.epochs,
+            parameters.patience,
+            model_path,
+        )
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
 
         # visualize the loss as the network trained
         fig = plt.figure(figsize=(10, 4))
-        plt.plot(range(1, len(train_loss) + 1), train_loss, label='Training Loss')
-        plt.plot(range(1, len(valid_loss) + 1), valid_loss, label='Validation Loss')
+        plt.plot(range(1, len(train_loss) + 1), train_loss, label="Training Loss")
+        plt.plot(range(1, len(valid_loss) + 1), valid_loss, label="Validation Loss")
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss)) + 1
-        plt.axvline(minposs, linestyle='--', color='r', label='Early Stopping Checkpoint')
+        plt.axvline(minposs, linestyle="--", color="r", label="Early Stopping Checkpoint")
 
-        plt.xlabel('epochs')
-        plt.ylabel('loss')
+        plt.xlabel("epochs")
+        plt.ylabel("loss")
         # plt.ylim(0, 0.5) # consistent scale
         # plt.xlim(0, len(train_loss)+1) # consistent scale
         plt.grid(True)
@@ -233,14 +274,14 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(100)
-    ax.plot(times, y_pred[100:200], color='b', label='Predicted')
-    ax.plot(times, y[100:200], color='r', label='True')
+    ax.plot(times, y_pred[100:200], color="b", label="Predicted")
+    ax.plot(times, y[100:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("Finger Movement")
     ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
     plt.legend()
     viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'ECoG_DL_focus.pdf'))
+    plt.savefig(os.path.join(figure_path, "ECoG_DL_focus.pdf"))
     plt.show()
 
     # plot y_new against the true value
@@ -252,7 +293,7 @@ if __name__ == "__main__":
     ax.set_ylabel("Finger Movement")
     ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
     plt.legend()
-    plt.savefig(os.path.join(figure_path, 'ECoG_DL.pdf'))
+    plt.savefig(os.path.join(figure_path, "ECoG_DL.pdf"))
     plt.show()
 
     # log the model
@@ -262,14 +303,11 @@ if __name__ == "__main__":
 
         mlflow.log_param("Time", train_time)
 
-        mlflow.log_metric('MSE', mse)
-        mlflow.log_metric('RMSE', rmse)
-        mlflow.log_metric('MAE', mae)
+        mlflow.log_metric("MSE", mse)
+        mlflow.log_metric("RMSE", rmse)
+        mlflow.log_metric("MAE", mae)
 
-        mlflow.log_artifact(os.path.join(figure_path, 'ECoG_DL_focus.pdf'))
-        mlflow.log_artifact(os.path.join(figure_path, 'ECoG_DL.pdf'))
-        mlflow.log_artifact(os.path.join(figure_path, 'loss_plot.pdf'))
+        mlflow.log_artifact(os.path.join(figure_path, "ECoG_DL_focus.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "ECoG_DL.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.pytorch.log_model(net, "models")
-
-
-

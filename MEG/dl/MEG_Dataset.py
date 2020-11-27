@@ -10,8 +10,16 @@ from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file, impo
 
 
 class MEG_Dataset(Dataset):
-    def __init__(self, raw_fnames, duration=1., overlap=0.0, y_measure="movement", transform=None, normalize_input=True,
-                 data_dir=None):
+    def __init__(
+        self,
+        raw_fnames,
+        duration=1.0,
+        overlap=0.0,
+        y_measure="movement",
+        transform=None,
+        normalize_input=True,
+        data_dir=None,
+    ):
         """
 
         Args:
@@ -40,21 +48,22 @@ class MEG_Dataset(Dataset):
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
 
-
         self.raw_fnames = raw_fnames
         self.duration = duration
         self.overlap = overlap
         self.normalize_input = normalize_input
         self.data_dir = data_dir
 
-        if duration == 1. and overlap == 0.8 and data_dir is not None:
+        if duration == 1.0 and overlap == 0.8 and data_dir is not None:
             # Import already epoched MEG data from file
-            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
-                                                                 y_measure=y_measure)
+            self.data, self.target = import_MEG_Tensor_form_file(
+                data_dir, normalize_input=self.normalize_input, y_measure=y_measure
+            )
         else:
             # Generate dataset from raw MEG data
-            self.data, self.target, self.bp = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
-                                                       normalize_input=self.normalize_input, y_measure=y_measure)
+            self.data, self.target, self.bp = import_MEG_Tensor(
+                self.raw_fnames, self.duration, self.overlap, normalize_input=self.normalize_input, y_measure=y_measure
+            )
 
         self.transform = transform
 
@@ -72,9 +81,18 @@ class MEG_Dataset(Dataset):
 
         return sample_data, sample_target, sample_bp
 
+
 class MEG_Dataset_no_bp(Dataset):
-    def __init__(self, raw_fnames, duration=1., overlap=0.0, y_measure="movement", transform=None, normalize_input=True,
-                 data_dir=None):
+    def __init__(
+        self,
+        raw_fnames,
+        duration=1.0,
+        overlap=0.0,
+        y_measure="movement",
+        transform=None,
+        normalize_input=True,
+        data_dir=None,
+    ):
         """
 
         Args:
@@ -103,22 +121,27 @@ class MEG_Dataset_no_bp(Dataset):
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
 
-
         self.raw_fnames = raw_fnames
         self.duration = duration
         self.overlap = overlap
         self.normalize_input = normalize_input
         self.data_dir = data_dir
 
-        if duration == 1. and overlap == 0.8 and data_dir is not None:
+        if duration == 1.0 and overlap == 0.8 and data_dir is not None:
             # Import already epoched MEG data from file
-            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
-                                                                 y_measure=y_measure)
+            self.data, self.target = import_MEG_Tensor_form_file(
+                data_dir, normalize_input=self.normalize_input, y_measure=y_measure
+            )
         else:
             # Generate dataset from raw MEG data
-            self.data, self.target = import_MEG_Tensor(self.raw_fnames, self.duration, self.overlap,
-                                                       normalize_input=self.normalize_input, y_measure=y_measure,
-                                                       rps=False)
+            self.data, self.target = import_MEG_Tensor(
+                self.raw_fnames,
+                self.duration,
+                self.overlap,
+                normalize_input=self.normalize_input,
+                y_measure=y_measure,
+                rps=False,
+            )
 
         self.transform = transform
 
@@ -137,8 +160,16 @@ class MEG_Dataset_no_bp(Dataset):
 
 
 class MEG_Dataset2(Dataset):
-    def __init__(self, raw_fnames, duration=1., overlap=0.0, y_measure="movement", transform=None, normalize_input=True,
-                 data_dir=None):
+    def __init__(
+        self,
+        raw_fnames,
+        duration=1.0,
+        overlap=0.0,
+        y_measure="movement",
+        transform=None,
+        normalize_input=True,
+        data_dir=None,
+    ):
         """
 
         Args:
@@ -167,21 +198,22 @@ class MEG_Dataset2(Dataset):
         # else:
         #     _, self.data, _, self.target = split_data(*import_MEG_Tensor(raw_fnames, duration, overlap), test_size=test_size)
 
-
         self.raw_fnames = raw_fnames
         self.duration = duration
         self.overlap = overlap
         self.normalize_input = normalize_input
         self.data_dir = data_dir
 
-        if duration == 1. and overlap == 0.8 and data_dir is not None:
+        if duration == 1.0 and overlap == 0.8 and data_dir is not None:
             # Import already epoched MEG data from file
-            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
-                                                                 y_measure=y_measure)
+            self.data, self.target = import_MEG_Tensor_form_file(
+                data_dir, normalize_input=self.normalize_input, y_measure=y_measure
+            )
         else:
             # Generate dataset from raw MEG data
-            self.data, self.target, self.bp = import_MEG_Tensor_2(self.raw_fnames, self.duration, self.overlap,
-                                                       normalize_input=self.normalize_input, y_measure=y_measure)
+            self.data, self.target, self.bp = import_MEG_Tensor_2(
+                self.raw_fnames, self.duration, self.overlap, normalize_input=self.normalize_input, y_measure=y_measure
+            )
 
         self.transform = transform
 

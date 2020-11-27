@@ -15,7 +15,7 @@ class Print(nn.Module):
         super(Print, self).__init__()
 
     def forward(self, x):
-        print('Inside print layer...')
+        print("Inside print layer...")
         print(x.shape)
         return x
 
@@ -25,12 +25,7 @@ class Sample(nn.Module):
     def __init__(self):
         super(Sample, self).__init__()
 
-        self.net = nn.Sequential(
-            Flatten_MEG(),
-            nn.Linear(62 * 1000, 1),
-            nn.ReLU(),
-            nn.Dropout(1)
-        )
+        self.net = nn.Sequential(Flatten_MEG(), nn.Linear(62 * 1000, 1), nn.ReLU(), nn.Dropout(1))
 
     def forward(self, x):
         return self.net(x).squeeze(1)
@@ -87,42 +82,43 @@ class SCNN_swap(nn.Module):
     def __init__(self):
         super(SCNN_swap, self).__init__()
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[62, 32], bias=False),
-                                     nn.ReLU(),
-                                     nn.Conv2d(32, 64, kernel_size=[1, 32], bias=False),
-                                     nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 2]),
-                                     nn.BatchNorm2d(64))
+        self.spatial = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=[62, 32], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=[1, 32], bias=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2]),
+            nn.BatchNorm2d(64),
+        )
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[16, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[16, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 3]),
-                                      nn.BatchNorm2d(32),
-                                      nn.Conv2d(32, 64, kernel_size=[8, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[8, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(64),
-                                      nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[2, 2]),
-                                      nn.BatchNorm2d(128),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU()
-                                      )
+        self.temporal = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=[16, 16], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=[16, 16], bias=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 3]),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, kernel_size=[8, 8], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=[8, 8], bias=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2]),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[2, 2]),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
+            nn.ReLU(),
+        )
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
-                                nn.ReLU(),
-                                nn.Linear(1024, 512),
-                                nn.ReLU(),
-                                nn.Linear(512, 1))
+        self.ff = nn.Sequential(
+            nn.Linear(128 * 2 * 25, 1024), nn.ReLU(), nn.Linear(1024, 512), nn.ReLU(), nn.Linear(512, 1)
+        )
 
     def forward(self, x):
         x = self.spatial(x.unsqueeze(1))

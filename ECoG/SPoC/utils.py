@@ -100,6 +100,7 @@ def create_epoch(X, sampling_rate, duration=4.0, overlap=0.0, ds_factor=1.0, ver
 
     return epochs
 
+
 def standard_scaling(data, scalings="mean", log=False):
 
     if log:
@@ -112,6 +113,7 @@ def standard_scaling(data, scalings="mean", log=False):
         raise ValueError("scalings should be mean or median")
 
     return data
+
 
 def y_resampling(y, n_chunks, scaling=True):
 

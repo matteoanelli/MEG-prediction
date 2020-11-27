@@ -19,11 +19,14 @@ def parameter_test(params):
         n_times_ = int(n_times_ / max_pool if max_pool is not None else 1)
 
     if n_times_ < 1:
-        print(" The reduction factor must be < than n_times. Got reduction to {}"
-                         " recalculatig parameters...".format(n_times_))
+        print(
+            " The reduction factor must be < than n_times. Got reduction to {}"
+            " recalculatig parameters...".format(n_times_)
+        )
         return False
     else:
         return True
+
 
 def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir):
 
@@ -86,32 +89,35 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
 
     return random_grid
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--figure_dir', type=str, default='MEG\Figures',
-                        help="Figure data directory (default= MEG\Figures)")
-    parser.add_argument('--model_dir', type=str, default='MEG\Models',
-                        help="Model data directory (default= MEG\Models\)")
-
+    parser.add_argument(
+        "--data_dir", type=str, default="Z:\Desktop", help="Input data directory (default= Z:\Desktop\\)"
+    )
+    parser.add_argument(
+        "--figure_dir", type=str, default="MEG\Figures", help="Figure data directory (default= MEG\Figures)"
+    )
+    parser.add_argument(
+        "--model_dir", type=str, default="MEG\Models", help="Model data directory (default= MEG\Models\)"
+    )
 
     param_grid = {
         "sub": [1],
         "finger": [0, 1, 2, 3],
         "batch_size": [80, 100],
         "learning_rate": [8e-3, 1e-4],
-        "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2)],
+        "duration_overlap": [(1.0, 0.8), (1.2, 1.0), (1.4, 1.2)],
         "s_kernel_size": [[62], [32, 31], [32, 20, 12], [20, 20, 20, 5]],
         "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
         "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
         "dropout": [0.2, 0.3, 0.5],
         "activation": ["relu"],
-        }
+    }
 
     args = parser.parse_args()
 
@@ -123,16 +129,39 @@ if __name__ == '__main__':
         "patience": 20,
         "max_pooling": 2,
         "experiment": 6,
-        "finger": 0
+        "finger": 0,
     }
     random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
-    df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'finger', 'batch_size', 'batch_size_valid',
-             'batch_size_test', "epochs", 'learning_rate', 'bias', 'duration', 'overlap', 'patience',
-             'experiment',
-             's_n_layer', 's_kernel_size', 't_n_layer', 't_kernel_size', 'max_pooling',
-             'ff_n_layer', 'ff_hidden_channels', 'dropout', 'activation']]
+    df = df[
+        [
+            "data_dir",
+            "figure_dir",
+            "model_dir",
+            "sub",
+            "finger",
+            "batch_size",
+            "batch_size_valid",
+            "batch_size_test",
+            "epochs",
+            "learning_rate",
+            "bias",
+            "duration",
+            "overlap",
+            "patience",
+            "experiment",
+            "s_n_layer",
+            "s_kernel_size",
+            "t_n_layer",
+            "t_kernel_size",
+            "max_pooling",
+            "ff_n_layer",
+            "ff_hidden_channels",
+            "dropout",
+            "activation",
+        ]
+    ]
 
     print(df)
     # np.savetxt("parameters.csv", df, delimiter=";")
