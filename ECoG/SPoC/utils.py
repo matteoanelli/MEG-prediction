@@ -9,16 +9,42 @@ import scipy.io as sio
 from sklearn.model_selection import train_test_split
 from mne.decoding import Scaler
 
+sys.path.insert(1, r'')
 
-def import_ECoG(datadir, filename, finger):
+from MEG.Utils.utils import *
+
+
+def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input, y_measure="movement"):
     # TODO add finger choice dict
     path = "".join([datadir, filename])
-
     if os.path.exists(path):
         dataset = sio.loadmat(path)
         X = dataset["train_data"].astype(np.float).T
         assert finger >= 0 and finger < 5, "Finger input not valid, range value from 0 to 4."
         y = dataset["train_dg"][:, finger]  #
+
+        raw = create_raw(X, X.shape[0], sampling_rate=1000)
+        # Generate fixed length events.
+        events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+        # Notch filter out some specific noisy bands
+        raw.notch_filter([50, 100])
+        # Band pass the input data
+        raw.filter(l_freq=1., h_freq=70)
+
+        epochs = mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2)
+
+        X = epochs.get_data()
+
+        bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+        bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
+
+        # Normalize data
+        if normalize_input:
+            X = standard_scaling(X, scalings="mean", log=True)
+
+        # Pick the y vales per each hand
+        y = y_reshape(y_PCA(y), measure=y_measure)
+
 
         print(
             "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(

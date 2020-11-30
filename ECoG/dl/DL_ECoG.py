@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on ...
-
-@author: Matteo Anelli
+    Main script to train the different models.
+    This script is meant to be run to train all the different architectures tested. It receives in input data and
+    architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
+    combination.
 """
 import argparse
 import sys
 import time as timer
 
 import matplotlib.pyplot as plt
-import mlflow
 import mlflow.pytorch
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
 from torch.utils.data import DataLoader, random_split
 from mne import viz
-import json
 
 sys.path.insert(1, r'')
 
 from Dataset import ECoG_Dataset
-from ECoG.dl.DL_utils import *
 from ECoG.dl.params import Params_tunable
-from ECoG.dl.tests.test_net import *
+from ECoG.Utils.utils import *
 from ECoG.dl.train import train
-from Models import LeNet5, SCNN_swap, Sample
-from MEG.dl.models import SCNN_tunable
+from Models import SCNN_swap
+from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
+from ECoG.dl.Models import LeNet5_ECoG
 
 #%%
 if __name__ == "__main__":
@@ -141,33 +140,50 @@ if __name__ == "__main__":
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
 
-    # Import dataset, split in train and tests
-    dataset = ECoG_Dataset(data_dir, file_name, parameters.finger, parameters.duration, sampling_rate,
-                           parameters.overlap)
+    # Set if generate with RPS values or not (check network architecture used later)
+    rps = False
+
+    # Generate the custom dataset
+    if rps:
+        # Import dataset, split in train and tests
+        dataset = ECoG_Dataset(data_dir, file_name, parameters.finger, parameters.duration,
+                           parameters.overlap,sampling_rate, rps=rps)
+    else:
+        dataset = ECoG_Dataset(data_dir, file_name, parameters.finger, parameters.duration,
+                               parameters.overlap, sampling_rate, rps=rps)
 
     train_len, valid_len, test_len = len_split(len(dataset))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
-    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=True, num_workers=1)
+    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
     # net = LeNet5(in_channel=62, n_times=1000)
     with torch.no_grad():
         x, _ = iter(trainloader).next()
         print(x.shape)
+
     n_times = x.shape[-1]
-    # net = LeNet5(in_channel=204, n_times=1001)
-    net = SCNN_tunable(parameters.s_n_layer,
-                       parameters.s_kernel_size,
-                       parameters.t_n_layer,
-                       parameters.t_kernel_size,
-                       n_times,
-                       parameters.ff_n_layer,
-                       parameters.ff_hidden_channels,
-                       parameters.dropout,
-                       parameters.max_pooling,
-                       parameters.activation)
+
+    # Initialize network
+    net = LeNet5_ECoG(n_times)
+    # net = ResNet([2, 2, 2], 64, n_times)
+    # net = MNet(n_times)
+    # net = RPS_SCNN(parameters.s_n_layer,
+    #                    parameters.s_kernel_size,
+    #                    parameters.t_n_layer,
+    #                    parameters.t_kernel_size,
+    #                    n_times,
+    #                    parameters.ff_n_layer,
+    #                    parameters.ff_hidden_channels,
+    #                    parameters.dropout,
+    #                    parameters.max_pooling,
+    #                    parameters.activation)
+
+    # net = RPS_MNet(n_times)
+    # net = RPS_MLP()
+
     print(net)
 
     # Training loop or model loading
@@ -175,6 +191,8 @@ if __name__ == "__main__":
         print("Begin training...")
 
         optimizer = Adam(net.parameters(), lr=parameters.lr)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+
         loss_function = torch.nn.MSELoss()
 
         start_time = timer.time()

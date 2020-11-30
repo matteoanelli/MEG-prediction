@@ -54,30 +54,49 @@ class DNN(nn.Module):
     def forward(self, x):
         return self.net(x).squeeze(1)
 
+# LeNet-like network solution.
+class LeNet5_ECoG(nn.Module):
+    def __init__(self, n_times):
+        """
 
-class LeNet5(nn.Module):
-    def __init__(self, in_channel=62, n_times=500):
-        super(LeNet5, self).__init__()
+        Args:
+            n_times (int):
+                n_times dimension of the input data.
+        """
+        super(LeNet5_ECoG, self).__init__()
 
+        if n_times == 501:  # TODO automatic n_times
+            self.n_times = 8 * 118
+        elif n_times == 601:
+            self.n_times = 8 * 143
+        elif n_times == 701:
+            self.n_times = 8 * 168
+        else:
+            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
         self.net = nn.Sequential(
-            nn.Conv1d(in_channel, 16, 3, padding=1),
+            nn.Conv2d(1, 16, 5, stride=1, bias=False),
             nn.ReLU(),
-            nn.MaxPool1d(2),
-            nn.BatchNorm1d(16),
-            nn.Conv1d(16, 32, 3, padding=1, bias=False),
+            nn.MaxPool2d(2),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 32, 5, stride=1, bias=False),
             nn.ReLU(),
-            nn.MaxPool1d(2),
-            nn.BatchNorm1d(32),
+            nn.MaxPool2d(2),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, 5, stride=1, bias=False),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
             Flatten_MEG(),
-            nn.Linear(32 * round(n_times / 4), 2048),
+            nn.Linear(64 * self.n_times, 1024),
             # nn.Linear(204 * 1001, 2048),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(2048, 1024),
+            # nn.Dropout(0.5),
+            nn.Linear(1024, 120),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            # nn.Dropout(0.5),
+            nn.Linear(120, 1),
         )
+
 
     def forward(self, x):
         return self.net(x).squeeze(1)

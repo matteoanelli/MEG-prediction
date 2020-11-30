@@ -342,6 +342,7 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
 def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement", rps=True):
     """
     Generate the epoched data as tensor to create the custom dataset for DL processing.
+    TODO: Check X_out shape: may be [n_epochs,, 1, n_channels, n_times]
     Args:
         raw_fnames [list]:
             List of path of files to import. (The main file format used is fif, however, it accept all the files

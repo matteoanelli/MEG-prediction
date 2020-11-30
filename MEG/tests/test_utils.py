@@ -349,6 +349,15 @@ def test_standard_scaling():
 
     assert np.allclose(data_mean, expected), "Wrong normalization!"
 
+    # test y shape
+    data = np.random.rand(10)
+    data = np.expand_dims(data, axis=1)
+    print(data.shape)
+    print("data: {}".format(data))
+    data = standard_scaling(data)
+    print("scaled data: {}".format(data))
+
+
 
 def test_len_split():
     for len in range(2000):

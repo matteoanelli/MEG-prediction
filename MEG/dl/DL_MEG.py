@@ -37,12 +37,12 @@ def main(args):
     model_path = args.model_dir
 
     # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
-    subj_id = "/sub"+str(args.sub)+"/ball0"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    # subj_id = "/sub"+str(args.sub)+"/ball0"
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     # local
-    # subj_id = "/sub"+str(args.sub)+"/ball"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    subj_id = "/sub"+str(args.sub)+"/ball"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
@@ -66,11 +66,11 @@ def main(args):
                                 device=device,
                                 y_measure=args.y_measure,
                                 s_n_layer=args.s_n_layer,
-                                # s_kernel_size=args.s_kernel_size,
-                                s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+                                s_kernel_size=args.s_kernel_size,  # Local
+                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
                                 t_n_layer=args.t_n_layer,
-                                # t_kernel_size=args.t_kernel_size,
-                                t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+                                t_kernel_size=args.t_kernel_size,  # Local
+                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
                                 max_pooling=args.max_pooling,
                                 ff_n_layer=args.ff_n_layer,
                                 ff_hidden_channels=args.ff_hidden_channels,
@@ -79,7 +79,7 @@ def main(args):
                                 )
 
     # Set if generate with RPS values or not (check network architecture used later)
-    rps = True
+    rps = False
 
     # Generate the custom dataset
     if rps:
