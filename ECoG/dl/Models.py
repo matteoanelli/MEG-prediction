@@ -167,3 +167,111 @@ class SCNN_ECoG(nn.Module):
         x = self.ff(x)
 
         return x
+
+
+class ResNet_ECoG(nn.Module):
+
+    def __init__(self, n_blocks, n_channels=64, n_times=501):
+        """
+        TODO: Implement for different subjects (adapt the input shape to Linear. 62 inchannel --> 2)
+        Args:
+        n_blocks (list): A list with three elements which contains the␣
+
+        ,→number of blocks in
+
+        each of the three groups of blocks in ResNet.
+        For instance, n_blocks = [2, 4, 6] means that the␣
+
+        ,→first group has two blocks,
+
+        the second group has four blocks and the third one␣
+
+        ,→has six blocks.
+
+        n_channels (int): Number of channels in the first group of blocks.
+        num_classes (int): Number of classes.
+        """
+        if n_times == 501:  # TODO automatic n_times
+            self.n_times = 39
+        elif n_times == 601:
+            self.n_times = 47
+        elif n_times == 701:
+            self.n_times = 55
+        else:
+            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
+
+        assert len(n_blocks) == 3, "The number of groups should be three."
+        super(ResNet_ECoG, self).__init__()
+
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=n_channels, kernel_size=10, stride=1, padding=2, bias=False)
+        self.bn1 = nn.BatchNorm2d(n_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=[3, 5], stride=3, padding=1)
+
+        self.group1 = GroupOfBlocks(n_channels, n_channels, n_blocks[0])
+        self.group2 = GroupOfBlocks(n_channels, 2 * n_channels, n_blocks[1], stride=2)
+        self.group3 = GroupOfBlocks(2 * n_channels, 4 * n_channels, n_blocks[2], stride=2)
+
+        self.avgpool = nn.AvgPool2d(kernel_size=4, stride=1)
+        self.flatten = Flatten_MEG()
+        self.fc1 = nn.Linear(4 * n_channels * 2 * self.n_times, 516)
+        self.dropout = nn.Dropout(0.4)
+        self.fc2 = nn.Linear(516, 1)
+
+        # Initialize weights
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv2d):
+        #         n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+        #         m.weight.data.normal_(0, np.sqrt(2. / n))
+        #     elif isinstance(m, nn.BatchNorm2d):
+        #         m.weight.data.fill_(1)
+        #         m.bias.data.zero_()
+
+    def forward(self, x, verbose=False):
+        """
+        Args:
+        x of shape (batch_size, 1, 28, 28): Input images.
+        verbose: True if you want to print the shapes of the intermediate␣
+
+        ,→variables.
+        Returns:
+        y of shape (batch_size, 10): Outputs of the network.
+        """
+
+        if verbose: print(x.shape)
+        x = self.conv1(x)
+
+        if verbose: print('conv1: ', x.shape)
+        x = self.bn1(x)
+
+        if verbose: print('bn1: ', x.shape)
+        x = self.relu(x)
+
+        if verbose: print('relu: ', x.shape)
+        x = self.maxpool(x)
+
+        if verbose: print('maxpool:', x.shape)
+        x = self.group1(x)
+
+        if verbose: print('group1: ', x.shape)
+        x = self.group2(x)
+
+        if verbose: print('group2: ', x.shape)
+        x = self.group3(x)
+
+        if verbose: print('group3: ', x.shape)
+        x = self.avgpool(x)
+
+        if verbose: print('avgpool:', x.shape)
+        x = self.flatten(x)
+
+        if verbose: print('x.view: ', x.shape)
+        x = self.dropout(self.fc1(x))
+
+        if verbose: print('fc1: ', x.shape)
+        x = self.fc2(x)
+
+        if verbose: print('out: ', x.shape)
+
+        return x.squeeze()

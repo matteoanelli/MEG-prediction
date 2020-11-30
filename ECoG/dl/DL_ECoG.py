@@ -24,7 +24,7 @@ from ECoG.dl.params import Params_tunable
 from ECoG.Utils.utils import *
 from ECoG.dl.train import train
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
-from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG
+from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG, ResNet_ECoG
 
 #%%
 if __name__ == "__main__":
@@ -166,23 +166,23 @@ if __name__ == "__main__":
     # net = LeNet5(in_channel=62, n_times=1000)
     with torch.no_grad():
         x, _ = iter(trainloader).next()
-        print(x.shape)
+        print("X shae: {}".format(x.shape))
 
     n_times = x.shape[-1]
 
     # Initialize network
     # net = LeNet5_ECoG(n_times)
-    net = SCNN_ECoG(parameters.s_n_layer,
-               parameters.s_kernel_size,
-               parameters.t_n_layer,
-               parameters.t_kernel_size,
-               n_times,
-               parameters.ff_n_layer,
-               parameters.ff_hidden_channels,
-               parameters.dropout,
-               parameters.max_pooling,
-               parameters.activation)
-    # net = ResNet([2, 2, 2], 64, n_times)
+    # net = SCNN_ECoG(parameters.s_n_layer,
+    #            parameters.s_kernel_size,
+    #            parameters.t_n_layer,
+    #            parameters.t_kernel_size,
+    #            n_times,
+    #            parameters.ff_n_layer,
+    #            parameters.ff_hidden_channels,
+    #            parameters.dropout,
+    #            parameters.max_pooling,
+    #            parameters.activation)
+    net = ResNet_ECoG([2, 2, 2], 64, n_times)
     # net = MNet(n_times)
     # net = RPS_SCNN(parameters.s_n_layer,
     #                    parameters.s_kernel_size,
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         save_pytorch_model(net, model_path, "Baselinemodel_lenet5.pth")
     else:
         # Load the model
-        net = SCNN_swap()
+        net = SCNN()
         net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_lenet5.pth"), "cpu")
 
     # Evaluation

@@ -761,6 +761,8 @@ class ResNet(nn.Module):
         if verbose: print('group3: ', x.shape)
         x = self.avgpool(x)
 
+        print(x.shape)
+
         if verbose: print('avgpool:', x.shape)
         x = self.flatten(x)
 

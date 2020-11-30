@@ -461,13 +461,13 @@ def test_ResNet_shape():
     # Create a network with 2 block in each of the three groups
     device = "cpu"
     n_blocks = [2, 2, 2] # number of blocks in the three groups
-    net = models.ResNet(n_blocks, n_channels=10, n_times=701)
+    net = models.ResNet(n_blocks, n_channels=64, n_times=501)
     net.to(device)
 
     print(net)
 
 
-    train_set = TensorDataset(torch.ones([10, 1, 204, 701]), torch.zeros([10, 2]))
+    train_set = TensorDataset(torch.ones([10, 1, 204, 501]), torch.zeros([10, 2]))
     trainloader = DataLoader(train_set, batch_size=5, shuffle=False, num_workers=1)
 
     with torch.no_grad():

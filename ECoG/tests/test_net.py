@@ -303,3 +303,4 @@ def test_SCNN_ECoG_train():
     model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, "")
 
     print('Training do not rise error')
+
