@@ -1,7 +1,7 @@
 import sys
 import pytest
 import torch
-from torch.utils.data import DataLoader, random_split, TensorDataset
+from torch.utils.data import DataLoader, random_split, TensorDataset, Subset
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 
@@ -9,7 +9,7 @@ sys.path.insert(1, r'')
 
 from ECoG.Utils.utils import *
 from ECoG.dl.Dataset import ECoG_Dataset
-from ECoG.dl.Models import LeNet5_ECoG
+from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG
 
 from ECoG.dl.train import train
 
@@ -163,7 +163,7 @@ def test_ECoG_dataset_shape():
 
 def test_LeNet_ECoG_shape():
 
-    x = torch.zeros([10, 1, 204, 701])
+    x = torch.zeros([10, 1, 62, 701])
     net = LeNet5_ECoG(x.shape[-1])
 
     with torch.no_grad():
@@ -201,3 +201,105 @@ def test_LeNet_ECoG_train():
 
     print('Training do not rise error')
 
+
+def test_sampler():
+
+
+    dataset = TensorDataset(torch.arange(100), torch.zeros([100]))
+
+    train, test, valid = list(range(70)), list(range(70, 70+15)), list(range(70+15, 100))
+
+    print(train)
+    print(test)
+    print(valid)
+
+    train_set = Subset(dataset, train)
+    test_set = Subset(dataset, test)
+
+
+
+    print(len(train_set))
+
+    trainloader = DataLoader(train_set, batch_size=70, shuffle=True, num_workers=1)
+    testloader = DataLoader(test_set, batch_size=15, shuffle=False, num_workers=1)
+
+
+
+    x, _ = iter(trainloader).next()
+    print(x)
+    x, _ = iter(testloader).next()
+    print(x)
+
+
+def test_SCNN_ECoG_shape():
+    x = torch.zeros([10, 1, 62, 501])
+
+    n_spatial_layer = 2
+    spatial_kernel_size = [32, 31]
+
+    temporal_n_block = 1
+    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
+    temporal_kernel_size = [250]
+    max_pool = 2
+
+    mlp_n_layer = 3
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
+
+
+    net = SCNN_ECoG(n_spatial_layer, spatial_kernel_size,
+                              temporal_n_block, temporal_kernel_size, x.shape[-1],
+                              mlp_n_layer, mlp_hidden, mlp_dropout,
+                              max_pool=max_pool)
+    print(net)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test Success.")
+
+
+def test_SCNN_ECoG_train():
+
+    train_set = TensorDataset(torch.ones([50, 1, 62, 501]), torch.zeros([50]))
+
+    valid_set = TensorDataset(torch.ones([10, 1, 62, 501]), torch.zeros([10]))
+
+    print(len(train_set))
+
+    device = 'cpu'
+
+    trainloader = DataLoader(train_set, batch_size=10, shuffle=False, num_workers=1)
+
+    validloader = DataLoader(valid_set, batch_size=2, shuffle=False, num_workers=1)
+
+    epochs = 1
+
+    n_spatial_layer = 2
+    spatial_kernel_size = [32, 31]
+
+    temporal_n_block = 1
+    # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
+    temporal_kernel_size = [250]
+    max_pool = 2
+
+    mlp_n_layer = 3
+    mlp_hidden = 1024
+    mlp_dropout = 0.5
+
+    net = SCNN_ECoG(n_spatial_layer, spatial_kernel_size,
+                    temporal_n_block, temporal_kernel_size, 501,
+                    mlp_n_layer, mlp_hidden, mlp_dropout,
+                    max_pool=max_pool)
+
+    optimizer = Adam(net.parameters(), lr=0.00001)
+    loss_function = torch.nn.MSELoss()
+
+    print("begin training...")
+    model, _, _ = train(net, trainloader, validloader, optimizer, loss_function, device, epochs, 10, "")
+
+    print('Training do not rise error')

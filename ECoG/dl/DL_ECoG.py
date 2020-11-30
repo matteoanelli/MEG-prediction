@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import mlflow.pytorch
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 from mne import viz
 
 sys.path.insert(1, r'')
@@ -23,9 +23,8 @@ from Dataset import ECoG_Dataset
 from ECoG.dl.params import Params_tunable
 from ECoG.Utils.utils import *
 from ECoG.dl.train import train
-from Models import SCNN_swap
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
-from ECoG.dl.Models import LeNet5_ECoG
+from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG
 
 #%%
 if __name__ == "__main__":
@@ -76,12 +75,12 @@ if __name__ == "__main__":
     parser.add_argument('--s_n_layer', type=int, default=1, metavar='N',
                         help='Spatial sub-net number of layer (default: 2)')
     parser.add_argument('--s_kernel_size', type=str, default=[62], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [104, 101])')
+                        help='Spatial sub-net kernel sizes (default: [62])')
     # Temporal sub-net
-    parser.add_argument('--t_n_layer', type=int, default=6, metavar='N',
-                        help='Temporal sub-net number of layer (default: 6)')
-    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 8, 5], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 8, 5])')
+    parser.add_argument('--t_n_layer', type=int, default=5, metavar='N',
+                        help='Temporal sub-net number of layer (default: 5)')
+    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 5], metavar='N', nargs='+',
+                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])')
     parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
                         help='Spatial sub-net max-pooling (default: 2)')
 
@@ -153,10 +152,15 @@ if __name__ == "__main__":
                                parameters.overlap, sampling_rate, rps=rps)
 
     train_len, valid_len, test_len = len_split(len(dataset))
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    # train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    # Better vizualization
+    train_dataset = Subset(dataset, list(range(train_len)))
+    valid_dataset = Subset(dataset, list(range(train_len, train_len+valid_len)))
+    test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
-    validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
+    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
     # net = LeNet5(in_channel=62, n_times=1000)
@@ -167,7 +171,17 @@ if __name__ == "__main__":
     n_times = x.shape[-1]
 
     # Initialize network
-    net = LeNet5_ECoG(n_times)
+    # net = LeNet5_ECoG(n_times)
+    net = SCNN_ECoG(parameters.s_n_layer,
+               parameters.s_kernel_size,
+               parameters.t_n_layer,
+               parameters.t_kernel_size,
+               n_times,
+               parameters.ff_n_layer,
+               parameters.ff_hidden_channels,
+               parameters.dropout,
+               parameters.max_pooling,
+               parameters.activation)
     # net = ResNet([2, 2, 2], 64, n_times)
     # net = MNet(n_times)
     # net = RPS_SCNN(parameters.s_n_layer,
@@ -251,8 +265,8 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(100)
-    ax.plot(times, y_pred[100:200], color='b', label='Predicted')
-    ax.plot(times, y[100:200], color='r', label='True')
+    ax.plot(times, np.array(y_pred[100:200]), color='b', label='Predicted')
+    ax.plot(times, np.array(y[100:200]), color='r', label='True')
     ax.set_xlabel("Times")
     ax.set_ylabel("Finger Movement")
     ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
@@ -264,8 +278,8 @@ if __name__ == "__main__":
     # plot y_new against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
     times = np.arange(len(y_pred))
-    ax.plot(times, y_pred, color="b", label="Predicted")
-    ax.plot(times, y, color="r", label="True")
+    ax.plot(times, np.array(y_pred), color="b", label="Predicted")
+    ax.plot(times, np.array(y), color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("Finger Movement")
     ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))

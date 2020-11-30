@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
+sys.path.insert(1, r'')
+
+from MEG.dl.models import *
 
 class Flatten_MEG(nn.Module):
     def forward(self, x):
@@ -102,52 +105,65 @@ class LeNet5_ECoG(nn.Module):
         return self.net(x).squeeze(1)
 
 
-class SCNN_swap(nn.Module):
-    def __init__(self):
-        super(SCNN_swap, self).__init__()
+class SCNN_ECoG(nn.Module):
+    """
+        SCNN Model inspired by [Kostas at al., 10.1038/s41598-019-38612-9]
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[62, 32], bias=False),
-                                     nn.ReLU(),
-                                     nn.Conv2d(32, 64, kernel_size=[1, 32], bias=False),
-                                     nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 2]),
-                                     nn.BatchNorm2d(64))
+        The model can be tuned automatically and the architecture is generated based on a specific combination of
+        input parameters. The model is divided in 3 main bocks:
+            * The spatial block that performs spatial filtering along the channel dimension only.
+            * The temporal block that performs temporal filtering along the time dimension only.
+            * The MLP block that combine all the feature previously extracted to optimally predict the target.
+    """
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[16, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[16, 16], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 3]),
-                                      nn.BatchNorm2d(32),
-                                      nn.Conv2d(32, 64, kernel_size=[8, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[8, 8], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2]),
-                                      nn.BatchNorm2d(64),
-                                      nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[2, 2]),
-                                      nn.BatchNorm2d(128),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                                      nn.ReLU()
-                                      )
+    def __init__(self, n_spatial_layer, spatial_kernel_size,
+                 temporal_n_block, temporal_kernel_size, n_times,
+                 mlp_n_layer, mlp_hidden, mlp_dropout,
+                 max_pool=None, activation="relu"):
+        """
+
+        Args:
+            n_spatial_layer (int):
+                Number of spatial filters applied.
+            spatial_kernel_size (list):
+                List of kernel sizes. The len of it has to be the same as the number of spatial filters.
+            temporal_n_block (int):
+                Number of temporal block applied. Each block applies 2 temporal stacked filters.
+            temporal_kernel_size (list):
+                List of kernel sizes. The len of it has to be the same as the number of temporal filters.
+            n_times (int):
+                n_times dimension of the input data.
+            mlp_n_layer (int):
+                Number of linear hidden layers.
+            mlp_hidden (int):
+                Number of neuron that the hidden layers has to have. It is designed to be the same for all of hiiden
+                layers.
+            mlp_dropout (float):
+                Dropout percentage to apply. 0 <= mlp_dropout <= 1.
+            max_pool (int):
+                Max pooling factor. Default 2.
+            activation (str):
+                Which activation function to apply to each trainable layer. Values in [selu, relu, elu]
+        """
+        super(SCNN_ECoG, self).__init__()
+
+        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)
+
+        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(128 * 2 * 25, 1024),
-                                nn.ReLU(),
-                                nn.Linear(1024, 512),
-                                nn.ReLU(),
-                                nn.Linear(512, 1))
+        # self.concatenate = Concatenate()
+
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ #TODO substitue the number of channel
+        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
 
     def forward(self, x):
-        x = self.spatial(x.unsqueeze(1))
+        x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
+
         x = self.temporal(x)
         x = self.flatten(x)
         x = self.ff(x)
 
-        return x.squeeze(1)
+        return x
