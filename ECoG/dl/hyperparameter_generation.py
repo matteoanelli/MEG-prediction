@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+"""
+    Hyper-parameter random search-spcae generation.
+"""
+
 import argparse
 import random
 
@@ -53,9 +59,9 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
 
         if "duration_overlap" not in sampled_grid:
             sampled_grid["duration_overlap"] = random.choice(param_grid.get("duration_overlap"))
-            sampled_grid["duration"] = sampled_grid["duration_overlap"][0]
-            sampled_grid["overlap"] = sampled_grid["duration_overlap"][1]
-            sampled_grid.pop("duration_overlap")
+        sampled_grid["duration"] = sampled_grid["duration_overlap"][0]
+        sampled_grid["overlap"] = sampled_grid["duration_overlap"][1]
+        sampled_grid.pop("duration_overlap")
 
         if "s_kernel_size" not in sampled_grid:
             sampled_grid["s_kernel_size"] = random.choice(param_grid.get("s_kernel_size"))
@@ -76,6 +82,9 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
 
         if "activation" not in sampled_grid:
             sampled_grid["activation"] = random.choice(param_grid.get("activation"))
+
+        if "max_pooling" not in sampled_grid:
+            sampled_grid["max_pooling"] = random.choice(param_grid.get("max_pooling"))
 
         if parameter_test(sampled_grid):
             random_grid.append(sampled_grid)
@@ -106,11 +115,11 @@ if __name__ == '__main__':
         "learning_rate": [8e-3, 1e-4],
         "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2)],
         "s_kernel_size": [[62], [32, 31], [32, 20, 12], [20, 20, 20, 5]],
-        "t_kernel_size": [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
+        "t_kernel_size": [[20, 10, 10, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
         "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
         "dropout": [0.2, 0.3, 0.5],
-        "activation": ["relu"],
+        "activation": ["relu", "selu", "elu"],
         }
 
     args = parser.parse_args()
@@ -118,14 +127,14 @@ if __name__ == '__main__':
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "epochs": 100,
+        "epochs": 200,
         "bias": False,
         "patience": 20,
         "max_pooling": 2,
-        "experiment": 6,
+        "experiment": 12,
         "finger": 0
     }
-    random_search = generate_parameters(param_grid, 1, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'finger', 'batch_size', 'batch_size_valid',

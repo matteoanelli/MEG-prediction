@@ -304,3 +304,18 @@ def test_SCNN_ECoG_train():
 
     print('Training do not rise error')
 
+
+def test_ResNet_ECoG_shape():
+    pass
+
+
+def test_ResNet_ECoG_train():
+    pass
+
+
+def test_MNet_ECoG_shape():
+    pass
+
+
+def test_MNet_ECoG_train():
+    pass

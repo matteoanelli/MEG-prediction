@@ -9,6 +9,7 @@
 import argparse
 import sys
 import time as timer
+import json
 
 import matplotlib.pyplot as plt
 import mlflow.pytorch
@@ -22,9 +23,9 @@ sys.path.insert(1, r'')
 from Dataset import ECoG_Dataset
 from ECoG.dl.params import Params_tunable
 from ECoG.Utils.utils import *
-from ECoG.dl.train import train
+from ECoG.dl.train import train, train_bp, train_bp_MLP
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
-from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG, ResNet_ECoG
+from ECoG.dl.Models import LeNet5_ECoG, SCNN_ECoG, ResNet_ECoG, MNet_ECoG, RPS_SCNN_ECoG, RPS_MNet_ECoG
 
 #%%
 if __name__ == "__main__":
@@ -119,11 +120,11 @@ if __name__ == "__main__":
                                 device=device,
                                 y_measure=args.y_measure,
                                 s_n_layer=args.s_n_layer,
-                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
-                                s_kernel_size=args.s_kernel_size,
+                                s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+                                # s_kernel_size=args.s_kernel_size,  # Local
                                 t_n_layer=args.t_n_layer,
-                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
-                                t_kernel_size=args.t_kernel_size,
+                                t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+                                # t_kernel_size=args.t_kernel_size,  # Local
                                 max_pooling=args.max_pooling,
                                 ff_n_layer=args.ff_n_layer,
                                 ff_hidden_channels=args.ff_hidden_channels,
@@ -164,14 +165,18 @@ if __name__ == "__main__":
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
     # net = LeNet5(in_channel=62, n_times=1000)
+
     with torch.no_grad():
-        x, _ = iter(trainloader).next()
+        if rps:
+            x, _, _ = iter(trainloader).next()
+        else:
+            x, _ = iter(trainloader).next()
         print("X shae: {}".format(x.shape))
 
     n_times = x.shape[-1]
 
     # Initialize network
-    # net = LeNet5_ECoG(n_times)
+    net = LeNet5_ECoG(n_times)
     # net = SCNN_ECoG(parameters.s_n_layer,
     #            parameters.s_kernel_size,
     #            parameters.t_n_layer,
@@ -182,21 +187,22 @@ if __name__ == "__main__":
     #            parameters.dropout,
     #            parameters.max_pooling,
     #            parameters.activation)
-    net = ResNet_ECoG([2, 2, 2], 64, n_times)
-    # net = MNet(n_times)
-    # net = RPS_SCNN(parameters.s_n_layer,
-    #                    parameters.s_kernel_size,
-    #                    parameters.t_n_layer,
-    #                    parameters.t_kernel_size,
-    #                    n_times,
-    #                    parameters.ff_n_layer,
-    #                    parameters.ff_hidden_channels,
-    #                    parameters.dropout,
-    #                    parameters.max_pooling,
-    #                    parameters.activation)
+    # net = ResNet_ECoG([2, 2, 2], 64, n_times)
+    # net = MNet_ECoG(n_times)
+    # net = RPS_SCNN_ECoG(parameters.s_n_layer,
+    #                parameters.s_kernel_size,
+    #                parameters.t_n_layer,
+    #                parameters.t_kernel_size,
+    #                n_times,
+    #                parameters.ff_n_layer,
+    #                parameters.ff_hidden_channels,
+    #                parameters.dropout,
+    #                parameters.max_pooling,
+    #                parameters.activation)
 
-    # net = RPS_MNet(n_times)
-    # net = RPS_MLP()
+    # net = RPS_MNet_ECoG(n_times)
+    # net = RPS_MLP(in_channel=62, n_bands=6)
+    mlp = False
 
     print(net)
 
@@ -210,8 +216,18 @@ if __name__ == "__main__":
         loss_function = torch.nn.MSELoss()
 
         start_time = timer.time()
-        net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
-                                            parameters.device, parameters.epochs, parameters.patience, model_path)
+        if rps:
+            if mlp:
+                net, train_loss, valid_loss = train_bp_MLP(net, trainloader, validloader, optimizer, loss_function,
+                                                    parameters.device, parameters.epochs, parameters.patience,
+                                                    model_path)
+            else:
+                net, train_loss, valid_loss = train_bp(net, trainloader, validloader, optimizer, loss_function,
+                                                       parameters.device, parameters.epochs, parameters.patience,
+                                                       model_path)
+        else:
+            net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
+                                                parameters.device, parameters.epochs, parameters.patience, model_path)
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
@@ -249,11 +265,24 @@ if __name__ == "__main__":
     net.eval()
     y_pred = []
     y = []
+
     with torch.no_grad():
-        for data, labels in testloader:
-            data, labels = data.to(parameters.device), labels.to(parameters.device)
-            y.extend(list(labels))
-            y_pred.extend((list(net(data))))
+        if rps:
+            if mlp:
+                for _, labels, bp in testloader:
+                    labels, bp = labels.to(parameters.device), bp.to(device)
+                    y.extend(list(labels))
+                    y_pred.extend((list(net(bp))))
+            else:
+                for data, labels, bp in testloader:
+                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+                    y.extend(list(labels))
+                    y_pred.extend((list(net(data, bp))))
+        else:
+            for data, labels in testloader:
+                data, labels = data.to(parameters.device), labels.to(parameters.device)
+                y.extend(list(labels))
+                y_pred.extend((list(net(data))))
 
     # Calculate Evaluation measures
     mse = mean_squared_error(y, y_pred)

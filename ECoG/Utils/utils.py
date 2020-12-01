@@ -22,7 +22,7 @@ def create_raw(X, y, n_channels, sampling_rate):
     return mne.io.RawArray(np.concatenate((X, np.expand_dims(y, axis=0)), axis=0), info)
 
 
-def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="movement"):
+def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"):
     # TODO add finger choice dict
     path = "".join([datadir, filename])
     if os.path.exists(path):
@@ -65,7 +65,7 @@ def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input=Tr
         print("No such file '{}'".format(path), file=sys.stderr)
 
 
-def import_ECoG_rps(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="movement"):
+def import_ECoG_rps(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"):
     # TODO add finger choice dict
     path = "".join([datadir, filename])
     if os.path.exists(path):
@@ -96,7 +96,7 @@ def import_ECoG_rps(datadir, filename, finger, duration, overlap, normalize_inpu
             X = standard_scaling(X, scalings="mean", log=False)
 
         # Pick the y vales per each hand
-        y = y_reshape(y, measure=y_measure)
+        y = y_reshape(np.expand_dims(y, axis=1), measure=y_measure)
 
         print(
             "The input data are of shape: {}, the corresponding y shape (filtered to 1 finger) is: {}".format(
@@ -112,10 +112,10 @@ def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, ov
 
     if rps:
         X, y, bp = import_ECoG_rps(datadir, filename, finger, duration, overlap=overlap, normalize_input=True,
-                                   y_measure="movement")
+                                   y_measure="mean")
     else:
         X, y = import_ECoG(datadir, filename, finger, duration, overlap=overlap, normalize_input=True,
-                           y_measure="movement")
+                           y_measure="mean")
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
 

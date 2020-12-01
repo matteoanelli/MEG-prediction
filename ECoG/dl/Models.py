@@ -169,6 +169,70 @@ class SCNN_ECoG(nn.Module):
         return x
 
 
+class RPS_SCNN_ECoG(nn.Module):
+    """
+        RPS_SCNN Model inspired by [Kostas at al., 10.1038/s41598-019-38612-9] integrated with bandpowers.
+
+        The model can be tuned automatically and the architecture is generated based on a specific combination of
+        input parameters. The model is divided in 3 main bocks:
+            * The spatial block that performs spatial filtering along the channel dimension only.
+            * The temporal block that performs temporal filtering along the time dimension only.
+            * The MLP block that combine all the feature previously extracted to optimally predict the target.
+    """
+
+    def __init__(self, n_spatial_layer, spatial_kernel_size,
+                 temporal_n_block, temporal_kernel_size, n_times,
+                 mlp_n_layer, mlp_hidden, mlp_dropout,
+                 max_pool=None, activation="relu"):
+        """
+
+        Args:
+            n_spatial_layer (int):
+                Number of spatial filters applied.
+            spatial_kernel_size (list):
+                List of kernel sizes. The len of it has to be the same as the number of spatial filters.
+            temporal_n_block (int):
+                Number of temporal block applied. Each block applies 2 temporal stacked filters.
+            temporal_kernel_size (int):
+                List of kernel sizes. The len of it has to be the same as the number of temporal filters.
+            n_times (int):
+                n_times dimension of the input data.
+            mlp_n_layer (int):
+                Number of linear hidden layers.
+            mlp_hidden (int):
+                Number of neuron that the hidden layers has to have. It is designed to be the same for all of hiiden
+                layers.
+            mlp_dropout (float):
+                Dropout percentage to apply. 0 <= mlp_dropout <= 1.
+            max_pool (int):
+                Max pooling factor. Default 2.
+            activation (str):
+                Which activation function to apply to each trainable layer. Values in [selu, relu, elu]
+        """
+        super(RPS_SCNN_ECoG, self).__init__()
+
+        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)
+
+        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
+
+        # self.flatten = Flatten_MEG()
+
+        self.concatenate = Concatenate()
+
+        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 62 * 6 #TODO substitue the number of channel
+        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
+
+    def forward(self, x, bp):
+        x = self.spatial(x)
+        x = torch.transpose(x, 1, 2)
+
+        x = self.temporal(x)
+        x = self.concatenate(x, bp)
+        x = self.ff(x)
+
+        return x
+
+
 class ResNet_ECoG(nn.Module):
 
     def __init__(self, n_blocks, n_channels=64, n_times=501):
@@ -275,3 +339,146 @@ class ResNet_ECoG(nn.Module):
         if verbose: print('out: ', x.shape)
 
         return x.squeeze()
+
+class MNet_ECoG(nn.Module):
+    """
+        Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x]
+    """
+    def __init__(self, n_times):
+        """
+
+        Args:
+            n_times (int):
+                n_times dimension of the input data.
+        """
+        super(MNet_ECoG, self).__init__()
+        if n_times == 501:  #TODO automatic n_times
+            self.n_times = 1
+        elif n_times == 601:
+            self.n_times = 2
+        elif n_times == 701:
+            self.n_times = 4
+        else:
+            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
+
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
+                                     nn.ReLU(),
+                                     nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
+                                     nn.ReLU(),
+                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                     )
+
+        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
+                                      nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      )
+
+        self.flatten = Flatten_MEG()
+
+        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1))
+
+    def forward(self, x):
+        x = self.spatial(x)
+        x = torch.transpose(x, 1, 2)
+        print(x.shape)
+        x = self.temporal(x)
+        x = self.flatten(x)
+        x = self.ff(x)
+
+        return x.squeeze(1)
+
+
+class RPS_MNet_ECoG(nn.Module):
+    """
+        Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x] integrated with bandpower.
+    """
+    def __init__(self, n_times):
+        """
+
+        Args:
+            n_times (int):
+                n_times dimension of the input data.
+        """
+        super(RPS_MNet_ECoG, self).__init__()
+        if n_times == 501:  #TODO automatic n_times
+            self.n_times = 1
+        elif n_times == 601:
+            self.n_times = 2
+        elif n_times == 701:
+            self.n_times = 4
+        else:
+            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
+
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
+                                     nn.ReLU(),
+                                     nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
+                                     nn.ReLU(),
+                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                     )
+
+        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
+                                      nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                      nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
+                                      nn.ReLU(),
+                                      )
+
+        self.concatenate = Concatenate()
+
+        # self.flatten = Flatten_MEG()
+
+        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times + 62 * 6, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.5),
+                                nn.Linear(1024, 1))
+
+    def forward(self, x, pb):
+        x = self.spatial(x)
+        x = torch.transpose(x, 1, 2)
+        x = self.temporal(x)
+        x = self.concatenate(x, pb)
+        x = self.ff(x)
+
+        return x.squeeze(1)
+
