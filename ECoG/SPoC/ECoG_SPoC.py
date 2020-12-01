@@ -22,8 +22,8 @@ from utils import *
 
 sys.path.insert(1, r'')
 # from  ECoG.Utils.utils import *
-from ECoG.SPoC.utils import standard_scaling
 from ECoG.SPoC.SPoC_param import SPoC_params
+from ECoG.Utils.utils import import_ECoG
 
 import matplotlib.pyplot as plt
 
@@ -47,19 +47,9 @@ def main(args):
     sampling_rate = 1000
 
     #%%
-    # Example
-    X, y = import_ECoG(data_dir, file_name, parameters.finger)
-    X = filter_data(X, sampling_rate)
-    X = standard_scaling(X).squeeze(-1)
+    # import ECoG <-- datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"
+    X, y = import_ECoG(data_dir, file_name, parameters.finger, parameters.duration, parameters.overlap)
 
-    print("Example of fingers position : {}".format(y[0]))
-    print("epochs with events generation")
-    epochs = create_epoch(X, sampling_rate, duration=parameters.duration, overlap=parameters.overlap, ds_factor=1)
-
-    X = epochs.get_data()
-
-    #%%
-    y = y_resampling(y, X.shape[0])
 
     # %%
     print("X shape {}, y shape {}".format(X.shape, y.shape))
@@ -75,10 +65,12 @@ def main(args):
 
     # %%
     cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=2
-                       )
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30)))),
+                         'Ridge__alpha': [0.8, 1.0, 2, 5, 10, 15]}]
+
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3)
+
     # %%
     start = time.time()
     print('Start Fitting model ...')
