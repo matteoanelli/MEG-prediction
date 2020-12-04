@@ -403,7 +403,7 @@ class MNet_ECoG(nn.Module):
     def forward(self, x):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
-        print(x.shape)
+        
         x = self.temporal(x)
         x = self.flatten(x)
         x = self.ff(x)

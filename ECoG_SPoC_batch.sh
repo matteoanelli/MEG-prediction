@@ -2,8 +2,8 @@
 
 #SBATCH --time=01:00:00
 #SBATCH --mem-per-cpu=30000M
-#SBATCH --cpus-per-task=2
-#SBATCH --array=1-3
+#SBATCH --cpus-per-task=4
+#SBATCH --array=2-3
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/ECoG_SPoC__%A_%a.log
 
 n=$((SLURM_ARRAY_TASK_ID+1))
@@ -21,4 +21,4 @@ echo "duration is $duration"
 echo "overlap is $overlap"
 echo "exp is $exp"
 
-srun python ECoG/SPoC/ECoG_SPoC.py --data_dir $data --figure_dir $figures --model_dir $models --sub $SLURM_ARRAY_TASK_ID --finger $finger --duration $duration --overlap $overlap --experiment $exp
+srun python ECoG/SPoC/ECoG_SPoC.py --data_dir $data --figure_dir $figures --model_dir $models --sub $sub --finger $finger --duration $duration --overlap $overlap --experiment $exp
