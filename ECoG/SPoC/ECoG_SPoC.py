@@ -21,7 +21,6 @@ from sklearn.pipeline import Pipeline
 from utils import *
 
 sys.path.insert(1, r'')
-# from  ECoG.Utils.utils import *
 from ECoG.SPoC.SPoC_param import SPoC_params
 from ECoG.Utils.utils import import_ECoG
 

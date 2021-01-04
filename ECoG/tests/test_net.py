@@ -177,9 +177,9 @@ def test_LeNet_ECoG_shape():
 
 def test_LeNet_ECoG_train():
 
-    train_set = TensorDataset(torch.ones([50, 1, 62, 601]), torch.zeros([50]))
+    train_set = TensorDataset(torch.ones([50, 1, 62, 701]), torch.zeros([50]))
 
-    valid_set = TensorDataset(torch.ones([10, 1, 62, 601]), torch.zeros([10]))
+    valid_set = TensorDataset(torch.ones([10, 1, 62, 701]), torch.zeros([10]))
 
     print(len(train_set))
 
@@ -192,7 +192,7 @@ def test_LeNet_ECoG_train():
     epochs = 1
 
     # change between different network
-    net = LeNet5_ECoG(601)
+    net = LeNet5_ECoG(701)
     optimizer = Adam(net.parameters(), lr=0.00001)
     loss_function = torch.nn.MSELoss()
 
@@ -319,3 +319,37 @@ def test_MNet_ECoG_shape():
 
 def test_MNet_ECoG_train():
     pass
+
+
+def test_Subset():
+
+    # train_set = TensorDataset(torch.range([0,50), torch.zeros([50]))
+    #
+    # valid_set = TensorDataset(torch.range([50, 60]), torch.zeros([10]))
+    #
+    # test_set = TensorDataset(torch.range([50, 60]), torch.zeros([10]))
+
+    dataset = TensorDataset(torch.arange(0,70), torch.zeros([70]))
+    train_len, valid_len, test_len = 60, 10, 10
+
+    # train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+
+    # Better vizualization
+    train_dataset = Subset(dataset, list(range(train_len)))
+    test_dataset = Subset(dataset, list(range(train_len, len(dataset))))
+
+    train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
+
+
+    trainloader = DataLoader(train_dataset, batch_size=50, shuffle=True, num_workers=1)
+    validloader = DataLoader(valid_dataset, batch_size=10, shuffle=True, num_workers=1)
+    testloader = DataLoader(test_dataset, batch_size=10, shuffle=False, num_workers=1)
+
+    for x, _ in trainloader:
+        print(x)
+
+    for x, _ in validloader:
+        print(x)
+
+    for x, _ in testloader:
+        print(x)

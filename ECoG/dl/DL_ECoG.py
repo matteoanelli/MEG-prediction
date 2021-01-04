@@ -12,6 +12,7 @@ import time as timer
 import json
 
 import matplotlib.pyplot as plt
+import matplotlib
 import mlflow.pytorch
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.optim.adam import Adam
@@ -153,12 +154,13 @@ if __name__ == "__main__":
                                parameters.overlap, sampling_rate, rps=rps)
 
     train_len, valid_len, test_len = len_split(len(dataset))
-    # train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
     # Better vizualization
-    train_dataset = Subset(dataset, list(range(train_len)))
-    valid_dataset = Subset(dataset, list(range(train_len, train_len+valid_len)))
-    test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
+    # train_valid_dataset = Subset(dataset, list(range(train_len+valid_len)))
+    # test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
+    #
+    # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
 
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
@@ -175,7 +177,7 @@ if __name__ == "__main__":
 
     n_times = x.shape[-1]
 
-    # Initialize network
+#     # Initialize network
     net = LeNet5_ECoG(n_times)
     # net = SCNN_ECoG(parameters.s_n_layer,
     #            parameters.s_kernel_size,

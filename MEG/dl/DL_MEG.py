@@ -103,6 +103,12 @@ def main(args):
     #                                                        generator=torch.Generator().manual_seed(42))
     train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
 
+    # Better vizualization
+    # train_valid_dataset = Subset(dataset, list(range(train_len+valid_len)))
+    # test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
+    #
+    # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
+
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
     validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
