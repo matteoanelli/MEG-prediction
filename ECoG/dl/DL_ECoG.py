@@ -142,7 +142,7 @@ if __name__ == "__main__":
     skip_training = False
 
     # Set if generate with RPS values or not (check network architecture used later)
-    rps = False
+    rps = True
 
     # Generate the custom dataset
     if rps:
@@ -177,21 +177,9 @@ if __name__ == "__main__":
 
     n_times = x.shape[-1]
 
-#     # Initialize network
-    net = LeNet5_ECoG(n_times)
+    # Initialize network
+    # net = LeNet5_ECoG(n_times)
     # net = SCNN_ECoG(parameters.s_n_layer,
-    #            parameters.s_kernel_size,
-    #            parameters.t_n_layer,
-    #            parameters.t_kernel_size,
-    #            n_times,
-    #            parameters.ff_n_layer,
-    #            parameters.ff_hidden_channels,
-    #            parameters.dropout,
-    #            parameters.max_pooling,
-    #            parameters.activation)
-    # net = ResNet_ECoG([2, 2, 2], 64, n_times)
-    # net = MNet_ECoG(n_times)
-    # net = RPS_SCNN_ECoG(parameters.s_n_layer,
     #                parameters.s_kernel_size,
     #                parameters.t_n_layer,
     #                parameters.t_kernel_size,
@@ -201,10 +189,22 @@ if __name__ == "__main__":
     #                parameters.dropout,
     #                parameters.max_pooling,
     #                parameters.activation)
+    # net = ResNet_ECoG([2, 2, 2], 64, n_times)
+    # net = MNet_ECoG(n_times)
+    # net = RPS_SCNN_ECoG(parameters.s_n_layer,
+    #                   parameters.s_kernel_size,
+    #                   parameters.t_n_layer,
+    #                   parameters.t_kernel_size,
+    #                   n_times,
+    #                  parameters.ff_n_layer,
+    #                   parameters.ff_hidden_channels,
+    #                   parameters.dropout,
+    #                   parameters.max_pooling,
+    #                   parameters.activation)
 
     # net = RPS_MNet_ECoG(n_times)
-    # net = RPS_MLP(in_channel=62, n_bands=6)
-    mlp = False
+    net = RPS_MLP(in_channel=62, n_bands=6)
+    mlp = True
 
     print(net)
 

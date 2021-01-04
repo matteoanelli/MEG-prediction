@@ -111,8 +111,8 @@ if __name__ == '__main__':
     param_grid = {
         "sub": [1],
         "finger": [0, 1, 2, 3],
-        "batch_size": [80, 100],
-        "learning_rate": [8e-3, 1e-4],
+        "batch_size": [50, 80, 100],
+        "learning_rate": [1e-3, 1e-5],
         "duration_overlap": [(1., 0.8), (1.2, 1.), (1.4, 1.2)],
         "s_kernel_size": [[62], [32, 31], [32, 20, 12], [20, 20, 20, 5]],
         "t_kernel_size": [[20, 10, 10, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10]],
@@ -131,10 +131,10 @@ if __name__ == '__main__':
         "bias": False,
         "patience": 20,
         "max_pooling": 2,
-        "experiment": 12,
-        "finger": 0
+        "experiment": 20,
+        "finger": 0,
     }
-    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 50, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'finger', 'batch_size', 'batch_size_valid',
