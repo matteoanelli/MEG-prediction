@@ -11,6 +11,7 @@ import sys
 import mne
 import numpy as np
 import torch
+import mneflow
 from mne.decoding import Scaler
 from mne.decoding import UnsupervisedSpatialFilter
 from numpy import trapz
@@ -237,7 +238,8 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     # get indices of accelerometer channels
 
     # Pic only with gradiometer
-    X = epochs.get_data()[:, :204, :]
+    X = segment_x(epochs.get_data()[:, :204, :], 500, stride=100)
+
 
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
     bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
@@ -247,8 +249,10 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
         X = standard_scaling(X, scalings="mean", log=True)
 
     # Pick the y vales per each hand
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    y_left = process_y_ivan(epochs.get_data()[:, accelerometer_picks_left, :])
     y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+    y_right = process_y_ivan(epochs.get_data()[:, accelerometer_picks_right, :])
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {}," \
@@ -319,15 +323,21 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
     # get indices of accelerometer channels
 
     # Pic only with gradiometer
-    X = epochs.get_data()[:, :204, :]
+    # X = epochs.get_data()[:, :204, :]
+    X = segment_x(epochs.get_data()[:, :204, :], 500, stride=100)
+
+    # bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    # bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
 
     # Normalize data
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
     # Pick the y vales per each hand
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
+    y_left = process_y_ivan(epochs.get_data()[:, accelerometer_picks_left, :])
     y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+    y_right = process_y_ivan(epochs.get_data()[:, accelerometer_picks_right, :])
 
     print(
         "The input data are of shape: {}, the corresponding y_left shape is: {}," \
@@ -899,3 +909,111 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
 
     bp = torch.from_numpy(bp.astype(np.float32))
     return X, torch.stack([y_left, y_right], dim=1), bp
+
+
+def process_y_ivan(y, rms=True):
+    """
+    Parameters:
+    ----------
+    y : ndarray [n_epochs, 2, n_times]
+
+
+    Returns:
+    --------
+    y_out : ndarray [n_epochs, 1]
+
+    """
+    segment_length = 500
+    stride = int(500 * 0.2)
+
+    # center based on first 2 seconds (no movemement there)
+    y -= np.mean(y[...,:1000], axis=-1, keepdims=True)
+
+
+    #combine directions with PCA
+    y_combined = y.transpose([1, 0, 2]).reshape([2, -1])
+    y_cov = np.cov(y_combined)
+    vals, vecs = np.linalg.eig(y_cov)
+    order = np.argsort(vals)[::-1]
+    u = vecs[:, order][:, :1]
+    y_pca = np.einsum("ijk, jl -> ilk", y, u)
+
+    y_2 = np.abs(y_pca)
+
+    # y_out = y_2
+
+
+    #split into segments of 256 samples(1 s) and 128ms overlap (stride=64 samples)
+    #no need to use mneflow if you dont want to
+    y_segmented = mneflow.utils._segment(y_2, segment_length=segment_length,stride=stride)
+    print('y_segmented {}'.format(y_segmented.shape))
+    print(stride)
+
+
+    y_out = np.squeeze(np.log(y_segmented[..., -stride:].sum(-1) + 1e-3))
+    # y_out = np.squeeze(np.sqrt(y_segmented[..., -64:].sum(-1)))
+
+
+
+    print("RMS: {} Mean: {:.2f}, range {:.2f} - {:.2f}".format(y_out.shape, y_out.mean(), y_out.min(), y_out.max()))
+
+    #the second dimension is needed for mneflow so you can skip this
+    if np.ndim(y_out) == 1:
+        y_out = np.expand_dims(y_out, -1)
+
+    return y_out
+
+def segment_x(data, segment_length=200, stride=None):
+    """Split the data into fixed-length segments.
+
+    Parameters
+    ----------
+    data : ndarray
+        Data array of shape (n_epochs, n_channels, n_times)
+
+    segment_length : int or False
+        Length of segment into which to split the data in time samples.
+
+    stride: int or None
+        Stride value to slide the window in time points. (stride = length - overlap)
+
+    Returns
+    -------
+    data : list of ndarrays [n_epoch_fix_lenght, n_channels, segment_length]
+        TODO: fix formula
+        where n_epoch_fix_lenght = (n_epochs//seq_length)*(n_times - segment_length + 1)//stride
+        """
+    x_out = []
+    # If not overlapping window
+    if not stride:
+            stride = segment_length
+
+    # print('data :',data.shape)
+
+    for jj, xx in enumerate(data):
+        # print('xx :', xx.shape)
+        n_ch, n_t = xx.shape
+        last_segment_start = n_t - segment_length
+        #print('last start:', last_segment_start)
+
+        #print("stride:", stride)
+        starts = np.arange(0, last_segment_start+1, stride)
+        ## TODO: check if the segment_lenght is right
+        segments = [xx[..., s:s+segment_length] for s in starts]
+
+        x_new = np.stack(segments, axis=0)
+        # print('x_new shape : ', x_new.shape)
+
+            #print("x_new:", x_new.shape)
+#        if jj == len(data) - 1:
+#            print("n_segm:", seq_length)
+#            print("x_new:", x_new.shape)
+        x_out.append(x_new)
+
+    #print(len(x_out))
+    if len(x_out) > 1:
+        X = np.concatenate(x_out)
+    else:
+        X = x_out[0]
+    print("X:", X.shape)
+    return X

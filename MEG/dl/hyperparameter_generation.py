@@ -131,7 +131,9 @@ if __name__ == '__main__':
         "patience": 20,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 12,
+        "hand": 0,
+        "duration_overlap": (1., 0.8),
+        "experiment": 22,
     }
     random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 

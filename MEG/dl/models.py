@@ -161,7 +161,7 @@ class MNet(nn.Module):
                 n_times dimension of the input data.
         """
         super(MNet, self).__init__()
-        if n_times == 501:  #TODO automatic n_times
+        if n_times == 500:  #TODO automatic n_times
             self.n_times = 1
         elif n_times == 601:
             self.n_times = 2
@@ -231,7 +231,7 @@ class RPS_MNet(nn.Module):
                 n_times dimension of the input data.
         """
         super(RPS_MNet, self).__init__()
-        if n_times == 501:  #TODO automatic n_times
+        if n_times == 500:  #TODO automatic n_times
             self.n_times = 1
         elif n_times == 601:
             self.n_times = 2
