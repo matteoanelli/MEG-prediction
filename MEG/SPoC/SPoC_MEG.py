@@ -12,7 +12,7 @@ import mlflow.sklearn
 from mne import viz
 from mne.decoding import SPoC
 from sklearn.linear_model import Ridge
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
@@ -96,9 +96,11 @@ def main(args):
     mse = mean_squared_error(y_test, y_new)
     rmse = mean_squared_error(y_test, y_new, squared=False)
     mae = mean_absolute_error(y_test, y_new)
+    r2 = r2_score(y_test, y_new)
     print("mean squared error {}".format(mse))
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
+    print("r2 score {}".format(r2))
     #%%
     # Plot the y expected vs y predicted.
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -127,6 +129,15 @@ def main(args):
                                                          parameters.y_measure))
     plt.legend()
     plt.savefig(os.path.join(figure_path, 'MEG_SPoC.pdf'))
+    plt.show()
+
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y_test), np.array(y_new), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
     plt.show()
 
     # %%
@@ -158,6 +169,7 @@ def main(args):
         mlflow.log_metric('MSE', mse)
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
+        mlflow.log_metric('R2', r2)
 
         mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
         mlflow.log_param("alpha", clf.best_params_['Ridge__alpha'])
@@ -165,6 +177,7 @@ def main(args):
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
+        mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.sklearn.log_model(clf, "models")
 
 if __name__ == "__main__":

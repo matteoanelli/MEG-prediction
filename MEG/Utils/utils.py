@@ -216,7 +216,8 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
             raw = mne.io.Raw(fname, preload=True)
             # Generate fixed length events.
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            # events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            events = mne.pick_events(mne.find_events(raw), include=[3, 5])
             # Isolate analysis to gradiometer and misc channels only
             raw.pick_types(meg='grad', misc=True)
             # Notch filter out some specific noisy bands
@@ -229,7 +230,7 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
             accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
                                                           include=["MISC003", "MISC004"])
             # Genrate eochs
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., baseline=(0, 0), decim=2))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -301,7 +302,8 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
             raw = mne.io.Raw(fname, preload=True)
             # Generate fixed length events.
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            # events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            events = mne.pick_events(mne.find_events(raw), include=[3, 5])
             # Isolate analysis to gradiometer and misc channels only
             raw.pick_types(meg='grad', misc=True)
             # Notch filter out some specific noisy bands
@@ -314,7 +316,7 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
             accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
                                                           include=["MISC003", "MISC004"])
             # Genrate eochs
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., baseline=(0, 0), decim=2))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -958,8 +960,8 @@ def process_y_ivan(y, rms=True):
     print("RMS: {} Mean: {:.2f}, range {:.2f} - {:.2f}".format(y_out.shape, y_out.mean(), y_out.min(), y_out.max()))
 
     #the second dimension is needed for mneflow so you can skip this
-    if np.ndim(y_out) == 1:
-        y_out = np.expand_dims(y_out, -1)
+    # if np.ndim(y_out) == 1:
+    #    y_out = np.expand_dims(y_out, -1)
 
     return y_out
 
