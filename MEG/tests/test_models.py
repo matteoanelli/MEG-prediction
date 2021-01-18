@@ -603,9 +603,9 @@ def test_RPS_MLP_shape():
 
 def test_RPS_MLP_training():
 
-    train_set = TensorDataset(torch.zeros([50, 2]), torch.zeros([50, 204, 6]))
+    train_set = TensorDataset(torch.zeros([50, 204, 501]), torch.zeros([50, 2]), torch.zeros([50, 204, 6]))
 
-    valid_set = TensorDataset(torch.zeros([10, 2]), torch.zeros([10, 204, 6]))
+    valid_set = TensorDataset(torch.zeros([10, 204, 501]), torch.zeros([10, 2]), torch.zeros([10, 204, 6]))
 
     print(len(train_set))
 

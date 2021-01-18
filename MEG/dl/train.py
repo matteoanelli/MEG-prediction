@@ -306,7 +306,7 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
         net.train()
         train_losses = []
         valid_losses = []
-        for labels, bp in trainloader:
+        for _, labels, bp in trainloader:
             # Set data to appropiate device
             labels, bp = labels.to(device), bp.to(device)
             # Clear the gradients
@@ -325,7 +325,7 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for labels, bp in validloader:
+            for _, labels, bp in validloader:
                 # Set data to appropiate device
                 labels, bp = labels.to(device), bp.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model

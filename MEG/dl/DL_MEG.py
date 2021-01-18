@@ -13,14 +13,14 @@ import argparse
 import time as timer
 import json
 
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
 
-from MEG.dl.train import train
+from MEG.dl.train import train, train_bp, train_bp_MLP
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_tunable
@@ -118,13 +118,26 @@ def main(args):
     # Get the n_times dimension
     with torch.no_grad():
         # Changes if RPS integration or not
-        x, _, _ = iter(trainloader).next()
-        # x, _ = iter(trainloader).next()
+        if rps:
+            x, _, _ = iter(trainloader).next()
+        else:
+            x, _ = iter(trainloader).next()
+
     n_times = x.shape[-1]
 
     # Initialize network
     # net = LeNet5(n_times)
     # net = ResNet([2, 2, 2], 64, n_times)
+    # net = SCNN(parameters.s_n_layer,
+    #                    parameters.s_kernel_size,
+    #                    parameters.t_n_layer,
+    #                    parameters.t_kernel_size,
+    #                    n_times,
+    #                    parameters.ff_n_layer,
+    #                    parameters.ff_hidden_channels,
+    #                    parameters.dropout,
+    #                    parameters.max_pooling,
+    #                    parameters.activation)
     # net = MNet(n_times)
     # net = RPS_SCNN(parameters.s_n_layer,
     #                    parameters.s_kernel_size,
@@ -139,6 +152,7 @@ def main(args):
 
     net = RPS_MNet(n_times)
     # net = RPS_MLP()
+    mlp = False
 
     print(net)
     # Training loop or model loading
@@ -151,9 +165,19 @@ def main(args):
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
-        net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
+        if rps:
+            if mlp:
+                net, train_loss, valid_loss = train_bp_MLP(net, trainloader, validloader, optimizer, loss_function,
                                             parameters.device, parameters.epochs, parameters.patience,
                                             parameters.hand, model_path)
+            else:
+                net, train_loss, valid_loss = train_bp(net, trainloader, validloader, optimizer, loss_function,
+                                                           parameters.device, parameters.epochs, parameters.patience,
+                                                           parameters.hand, model_path)
+        else:
+            net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
+                                                       parameters.device, parameters.epochs, parameters.patience,
+                                                       parameters.hand, model_path)
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
@@ -196,25 +220,33 @@ def main(args):
 
     # if RPS integration
     with torch.no_grad():
-        for data, labels, bp in testloader:
-            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
-            y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(data, bp))))
-
-    # with torch.no_grad():
-    #     for data, labels in testloader:
-    #         data, labels = data.to(parameters.device), labels.to(parameters.device)
-    #         y.extend(list(labels[:, parameters.hand]))
-    #         y_pred.extend((list(net(data))))
+        if rps:
+            if mlp:
+                for _, labels, bp in testloader:
+                    labels, bp = labels.to(parameters.device), bp.to(device)
+                    y.extend(list(labels[:, parameters.hand]))
+                    y_pred.extend((list(net(bp))))
+            else:
+                for data, labels, bp in testloader:
+                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+                    y.extend(list(labels[:, parameters.hand]))
+                    y_pred.extend((list(net(data, bp))))
+        else:
+            for data, labels in testloader:
+                data, labels = data.to(parameters.device), labels.to(parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(data))))
 
     print('SCNN_swap...')
     # Calculate Evaluation measures
     mse = mean_squared_error(y, y_pred)
     rmse = mean_squared_error(y, y_pred, squared=False)
     mae = mean_absolute_error(y, y_pred)
+    r2 = r2_score(y, y_pred)
     print("mean squared error {}".format(mse))
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
+    print("r2 score {}".format(r2))
 
     # plot y_new against the true value focus on 100 timepoints
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -244,6 +276,14 @@ def main(args):
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
     plt.show()
 
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y), np.array(y_pred), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
+    plt.show()
 
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
@@ -255,13 +295,13 @@ def main(args):
         mlflow.log_metric('MSE', mse)
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
+        mlflow.log_metric('R2', r2)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.pytorch.log_model(net, "models")
-
-
 
 
 if __name__ == "__main__":
