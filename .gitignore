@@ -24,4 +24,4 @@ ECoG/SPoC/BaselineModel_SPoC.ipynb
 ECoG/dl/ECoG_Experiment.ipynb
 MEG/dl/LFCNN_ivan.py
 checkpoint.pt
-MEG\dl\paper_analysis.ipynb
+/MEG/dl/paper_analysis.ipynb
