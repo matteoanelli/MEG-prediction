@@ -4,13 +4,16 @@
 """
 
 import io
+import os
 import argparse
 
 import numpy as np
 import mne
 
+from matplotlib import pyplot as plt
 
-subjects = [1, 2, 3, 4, 5, 6, 7, 8,9] 
+
+subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9] 
 
 
 def main(args):
@@ -22,8 +25,6 @@ def main(args):
     # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
 
     for sub in subjects:
-
-
 
     	if sub != 3:
     		file = "/sub"+str(sub)+"/ball01_sss_trans.fif"
@@ -42,10 +43,9 @@ def main(args):
 
     	print(raw.info['ch_names'])
 
-    	accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-    	                                             include=["MISC001", "MISC002"])
-    	accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-    	                                              include=["MISC003", "MISC004"])
+    	raw.plot(duration=320, n_channels=6, show=False)
+    	plt.savefig(os.path.join(figure_path, "./sub_acc/sub_{}.pdf".format(sub)))
+
 
     	del raw
 
