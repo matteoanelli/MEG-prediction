@@ -51,13 +51,13 @@ if __name__ == "__main__":
     raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
 
     # local
-    subj_id = "/sub"+str(args.sub)+"/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    # subj_id = "/sub"+str(args.sub)+"/ball"
+    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
-            raw = mne.io.Raw(raw_fnames[0], preload=True).crop(tmax=60)
+            raw = mne.io.Raw(fname, preload=True).crop(tmax=60)
             # raw = mne.io.Raw(raw_fnames[0], preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
             events = mne.make_fixed_length_events(raw, duration=args.duration, overlap=args.overlap)
@@ -94,35 +94,28 @@ if __name__ == "__main__":
     print("Begin to save the dataset on disk")
     start = timer.time()
 
-
-    with h5py.File("".join([out_dir, "sub" + str(args.sub), "_data.hdf5"]), "w") as f:
-        grp1 = f.create_group("".join(["sub" + str(args.sub)]))
-        grp1.create_dataset("MEG", data=X, dtype='f')
-        grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
-        grp1.create_dataset("Y_left", data=y_left, dtype='f')
-        grp1.create_dataset("RPS", data=bp, dtype='f')
+    if os.path.exists("".join([out_dir,"\data.hdf5"])):
+        with h5py.File("".join([out_dir,"\data.hdf5"]), "a") as f:
+            grp1 = f.create_group("".join(["sub" + str(args.sub)]))
+            grp1.create_dataset("MEG", data=X, dtype='f')
+            grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
+            grp1.create_dataset("Y_left", data=y_left, dtype='f')
+            grp1.create_dataset("RPS", data=bp, dtype='f')
+    else:
+        with h5py.File("".join([out_dir,"\data.hdf5"]), "w") as f:
+            grp1 = f.create_group("".join(["sub" + str(args.sub)]))
+            grp1.create_dataset("MEG", data=X, dtype='f')
+            grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
+            grp1.create_dataset("Y_left", data=y_left, dtype='f')
+            grp1.create_dataset("RPS", data=bp, dtype='f')
 
     print("Data saved in: {}".format(timer.time()-start))
 
-    with h5py.File("".join([out_dir, "sub" + str(args.sub), "_data.hdf5"]), "r") as f:
+    with h5py.File("".join([out_dir, "\data.hdf5"]), "r") as f:
         print(f)
         print(f.keys())
         for group in f.keys():
-            print("{}/{}".format(f.name, group))
+            print("/{}".format(group))
             for dset in f[group].keys():
-                print("{}/{}/{}".format(fname, group, dset))
-
-            rps = f["sub8/RPS"]
-            print(X.shape)
-
-
-
-
-
-
-
-
-
-
-
+                print("{}/{}/{}".format(f.name, group, dset))
 
