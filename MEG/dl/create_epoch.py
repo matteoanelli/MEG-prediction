@@ -3,7 +3,6 @@
 """
     Script to save the epoched data.
 
-    TODO: Better implementation and testing.
 """
 
 import argparse
@@ -11,9 +10,13 @@ import os
 import sys
 
 import mne
+import h5py
+import time as timer
 import numpy as np
 
 sys.path.insert(1, r'')
+
+from MEG.Utils.utils import bandpower_multi, standard_scaling_sklearn, y_PCA, y_reshape
 
 if __name__ == "__main__":
     # main(sys.argv[1:])
@@ -27,6 +30,10 @@ if __name__ == "__main__":
     # Directories
     parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
                         help="Input data directory (default= Z:\Desktop\\)")
+    parser.add_argument('--out_dir', type=str, default='Z:\Desktop\\',
+                        help="Input data directory (default= Z:\Desktop\\)")
+
+    # Duration and overlap
     parser.add_argument('--duration', type=float, default=1., metavar='N',
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
@@ -35,14 +42,23 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     data_dir = args.data_dir
+    out_dir = args.out_dir
 
-    subj_id = "/sub" + str(args.sub) + "/ball"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 4)]
+    start = timer.time()
+    print("Pre-processing data....")
+    # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
+    subj_id = "/sub" + str(args.sub) + "/ball0"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+
+    # local
+    subj_id = "/sub"+str(args.sub)+"/ball"
+    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
     epochs = []
     for fname in raw_fnames:
         if os.path.exists(fname):
-            raw = mne.io.Raw(raw_fnames[0], preload=True)
+            raw = mne.io.Raw(raw_fnames[0], preload=True).crop(tmax=60)
+            # raw = mne.io.Raw(raw_fnames[0], preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
             events = mne.make_fixed_length_events(raw, duration=args.duration, overlap=args.overlap)
             raw.pick_types(meg='grad', misc=True)
@@ -50,11 +66,7 @@ if __name__ == "__main__":
             raw.filter(l_freq=1., h_freq=70)
 
             # get indices of accelerometer channels
-            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                         include=["MISC001", "MISC002"])
-            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                          include=["MISC003", "MISC004"])
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=args.duration, baseline=(0, 0)))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=args.duration, baseline=(0, 0),  decim=2))
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -62,25 +74,55 @@ if __name__ == "__main__":
 
     X = epochs.get_data()[:, :204, :]
 
+    X = standard_scaling_sklearn(X)
+
     print('X shape before saving: {}'.format(X.shape))
 
-    X.tofile("".join([data_dir, "sub" + str(args.sub), "\X.dat"]))
+    # Keep only the first 6 misc channel (accelerometer data)
+    accelermoters = epochs.get_data()[:, 204:210, :]
 
-    y_left = epochs.get_data()[:, accelerometer_picks_left, :]
-    y_right = epochs.get_data()[:, accelerometer_picks_right, :]
+    # RPS
+    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
 
-    print('y_left shape before saving: {}'.format(y_left.shape))
-    print('y_right shape before saving: {}'.format(y_right.shape))
+    # y reshape in one pca direction. After pca the two directions it firstly reshape them and
+    # eventually standard scale them.
+    y_left = y_reshape(y_PCA(epochs.get_data()[:, 204:206, :]))
 
-    y_left.tofile("".join([data_dir, "sub" + str(args.sub), "\y_left.dat"]))
-    y_right.tofile("".join([data_dir, "sub" + str(args.sub), "\y_right.dat"]))
+    print("Pre-processing done in: {}".format(timer.time()-start))
+
+    print("Begin to save the dataset on disk")
+    start = timer.time()
 
 
-    X = np.fromfile("".join([data_dir, "sub" + str(args.sub), "\X.dat"]), dtype=float)
-    print('X shape after saving: {}'.format(X.shape))
+    with h5py.File("".join([out_dir, "sub" + str(args.sub), "_data.hdf5"]), "w") as f:
+        grp1 = f.create_group("".join(["sub" + str(args.sub)]))
+        grp1.create_dataset("MEG", data=X, dtype='f')
+        grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
+        grp1.create_dataset("Y_left", data=y_left, dtype='f')
+        grp1.create_dataset("RPS", data=bp, dtype='f')
 
-    y_left = np.fromfile("".join([data_dir, "sub" + str(args.sub), "\y_left.dat"]), dtype=float)
-    y_right = np.fromfile("".join([data_dir, "sub" + str(args.sub), "\y_right.dat"]), dtype=float)
+    print("Data saved in: {}".format(timer.time()-start))
 
-    print('y_left shape after saving: {}'.format(y_left.shape))
-    print('y_right shape after saving: {}'.format(y_right.shape))
+    with h5py.File("".join([out_dir, "sub" + str(args.sub), "_data.hdf5"]), "r") as f:
+        print(f)
+        print(f.keys())
+        for group in f.keys():
+            print("{}/{}".format(f.name, group))
+            for dset in f[group].keys():
+                print("{}/{}/{}".format(fname, group, dset))
+
+            rps = f["sub8/RPS"]
+            print(X.shape)
+
+
+
+
+
+
+
+
+
+
+
+

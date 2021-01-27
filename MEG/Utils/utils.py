@@ -19,7 +19,7 @@ from scipy.integrate import simps
 from scipy.signal import welch
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-
+from sklearn.preprocessing import StandardScaler as skScaler
 
 def bandpower_1d(data, sf, band, window_sec=None, relative=False):
     """
@@ -678,6 +678,7 @@ def normalize(data):
 def standard_scaling(data, scalings="mean", log=False):
     """
     Standard scale the input data on last dimension. It center the data to 0 and scale to unit variance.
+    It scales channel-wise estimating mu and sigma using all the epochs. Therefore it uses the mne.Scaler.
     Args:
         data (nd-array): [n_epochs, n_channel, n_times]
             The data to scale.
@@ -703,6 +704,26 @@ def standard_scaling(data, scalings="mean", log=False):
 
     return data
 
+
+
+def standard_scaling_sklearn(data):
+    """
+    Standard scale the input data on last dimension. It center the data to 0 and scale to unit variance.
+    It scales trial- or epoch-wise, estimating the mean and the std using the timepoints of a single trial.
+    Args:
+        data (nd-array): [n_epochs, n_channel, n_times]
+            The data to scale.
+
+    Returns:
+        data (nd-array): [n_epochs, n_channel, n_times]
+            The standardized data.
+    """
+    n_epoch = data.shape[0]
+    for e in range(n_epoch):
+        scaler = skScaler()
+        data[e, ...] = scaler.fit_transform(data[e, ...])
+
+    return data
 
 def transform_data():
     pass

@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 
 from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, \
-    bandpower_multi, y_reshape_final, window_stack
+    bandpower_multi, y_reshape_final, window_stack, standard_scaling_sklearn
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Dataset2
 
 
@@ -356,6 +356,33 @@ def test_standard_scaling():
     print("data: {}".format(data))
     data = standard_scaling(data)
     print("scaled data: {}".format(data))
+
+
+def test_standard_skScaling():
+
+    data = torch.Tensor([[0, 0, 0, 0], [2, 2, 2, 2]]).repeat(2, 1, 1).numpy()
+
+    print(data.shape)
+    print('data input: {}'.format(data))
+
+    data_mean = standard_scaling_sklearn(data)
+
+    # ata_median = standard_scaling(data, scalings="median", log=False)
+
+    expected = torch.Tensor([[-1., -1., -1., -1.], [1., 1., 1., 1.]]) \
+        .repeat(2, 1, 1).numpy()
+
+    print("Expected = {}".format(expected))
+    print("Stundardized = {}".format(data_mean))
+
+    assert np.allclose(data_mean, expected), "Wrong normalization!"
+
+    # test y shape
+    data = np.random.rand(5, 10)
+    data = np.expand_dims(data, axis=0)
+    print("data shape: ", data.shape)
+    scaled = standard_scaling(data)
+    print("scaled data shape: {}".format(scaled.shape))
 
 
 
