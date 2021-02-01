@@ -31,10 +31,6 @@ if __name__ == "__main__":
     rps_train = []
     Y_left_train = []
 
-    X_test = []
-    rps_test = []
-    Y_test = []
-
     with h5py.File("".join([data_dir, file_name]), "r") as f:
         subjects = f.keys()
 

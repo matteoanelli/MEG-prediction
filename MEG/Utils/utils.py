@@ -8,6 +8,7 @@ import os
 import pickle
 import sys
 
+import h5py
 import mne
 import numpy as np
 import torch
@@ -20,6 +21,7 @@ from scipy.signal import welch
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as skScaler
+
 
 def bandpower_1d(data, sf, band, window_sec=None, relative=False):
     """
@@ -920,3 +922,71 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
 
     bp = torch.from_numpy(bp.astype(np.float32))
     return X, torch.stack([y_left, y_right], dim=1), bp
+
+
+def import_MEG_cross_subject_train(data_dir, file_name, subject):
+    """
+    Import the data and generate the train set.
+    Test set composed by input subject.
+    Train set composed by all the others.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+
+    Returns:
+        X_train, y_train, rps_train
+    """
+
+    X_train = []
+    rps_train = []
+    y_train = []
+
+    with h5py.File("".join([data_dir, file_name]), "r") as f:
+        subjects = f.keys()
+        for sub in subjects:
+            if sub != ("sub" + str(subject)):
+                X_train.append(f[sub]["MEG"][...])
+                rps_train.append(f[sub]["RPS"][...])
+                y_train.append(f[sub]["Y_left"][...])
+
+    X_train = torch.from_numpy(np.concatenate(X_train))
+    rps_train = torch.from_numpy(np.concatenate(rps_train))
+    y_train = torch.from_numpy(np.concatenate(y_train))
+
+    return X_train, y_train, rps_train
+
+
+def import_MEG_cross_subject_test(data_dir, file_name, subject):
+    """
+    Import the data and generate the test set.
+    Test set composed by input subject.
+    Train set composed by all the others.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+
+    Returns:
+        X_train, y_train, rps_train, X_test, y_test, rps_test
+    """
+
+    print("Test subject: sub" + str(subject) + "!")
+    sub = "sub" + str(subject)
+
+    with h5py.File("".join([data_dir, file_name]), "r") as f:
+        X_test = f[sub]["MEG"][...]
+        rps_test = f[sub]["RPS"][...]
+        y_test = f[sub]["Y_left"][...]
+
+    X_test = torch.from_numpy(X_test)
+    rps_test = torch.from_numpy(rps_test)
+    y_test = torch.from_numpy(y_test)
+
+    return X_test, y_test, rps_test

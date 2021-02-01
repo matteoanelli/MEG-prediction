@@ -198,3 +198,48 @@ class MEG_Dataset2(Dataset):
             sample_data, sample_target, sample_bp = self.transform(sample_data, sample_target, sample_bp)
 
         return sample_data, sample_target, sample_bp
+
+
+class MEG_Cross_Dataset(Dataset):
+    def __init__(self, data_dir, file_name, sub, mlp=False):
+        """
+
+        Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        sub (int):
+            Number of the test subject.
+        mlp (bool):
+            True if mlp_rps else otherwise.
+        """
+        self.data_dir = data_dir
+        self.file_name = file_name
+        self.sub = sub
+
+        if mlp:
+            # Import already epoched MEG data from file
+            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
+                                                                 y_measure=y_measure)
+        else:
+            # Generate dataset from raw MEG data
+            self.data, self.target, self.bp = import_MEG_Tensor_2(self.raw_fnames, self.duration, self.overlap,
+                                                                  normalize_input=self.normalize_input,
+                                                                  y_measure=y_measure)
+
+        self.transform = transform
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+
+        sample_data = self.data[idx, :, :]
+        sample_target = self.target[idx, :]
+        sample_bp = self.bp[idx, :, :]
+
+        if self.transform:
+            sample_data, sample_target, sample_bp = self.transform(sample_data, sample_target, sample_bp)
+
+        return sample_data, sample_target, sample_bp
