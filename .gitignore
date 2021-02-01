@@ -1,0 +1,10 @@
+/parameters_ECoG.csv
+/MEG/dl/checkpoint.pt
+/MEG/dl/dataAnalysis.ipynb
+/MEG/dl/LFCNN_ivan.py
+/MEG/dl/paper_analysis.ipynb
+/MEG/strokemotor_import.py
+/checkpoint.pt
+/data.hdf5
+/MEG/dl/Example_read_from_file.ipynb
+/.venv/
