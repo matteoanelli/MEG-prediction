@@ -94,20 +94,14 @@ if __name__ == "__main__":
     print("Begin to save the dataset on disk")
     start = timer.time()
 
-    if os.path.exists("".join([out_dir,"\data.hdf5"])):
-        with h5py.File("".join([out_dir,"\data.hdf5"]), "a") as f:
-            grp1 = f.create_group("".join(["sub" + str(args.sub)]))
-            grp1.create_dataset("MEG", data=X, dtype='f')
-            grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
-            grp1.create_dataset("Y_left", data=y_left, dtype='f')
-            grp1.create_dataset("RPS", data=bp, dtype='f')
-    else:
-        with h5py.File("".join([out_dir,"\data.hdf5"]), "w") as f:
-            grp1 = f.create_group("".join(["sub" + str(args.sub)]))
-            grp1.create_dataset("MEG", data=X, dtype='f')
-            grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
-            grp1.create_dataset("Y_left", data=y_left, dtype='f')
-            grp1.create_dataset("RPS", data=bp, dtype='f')
+    with h5py.File("".join([out_dir,"\data.hdf5"]), "a") as f:
+        grp1 = f.create_group("".join(["sub" + str(args.sub)]))
+        # if group already exist
+        # grp1 = f["".join(["sub" + str(args.sub)])]
+        grp1.create_dataset("MEG", data=X, dtype='f')
+        grp1.create_dataset("ACC_original", data=accelermoters, dtype='f')
+        grp1.create_dataset("Y_left", data=y_left, dtype='f')
+        grp1.create_dataset("RPS", data=bp, dtype='f')
 
     print("Data saved in: {}".format(timer.time()-start))
 
