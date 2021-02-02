@@ -27,6 +27,8 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
+    file_name = "data.hdf5"
+
     # Generate the parameters class.
     parameters = SPoC_params(subject_n=args.sub,
                              hand=args.hand,
@@ -34,29 +36,15 @@ def main(args):
                              overlap=args.overlap,
                              y_measure=args.y_measure)
 
-    # Generate list of input files
-    subj_id = "/sub"+str(args.sub)+"/ball0"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    X_train, y_train, _ = import_MEG_cross_subject_train(data_dir, file_name, parameters.subject_n)
 
-    # LOCAL
-    # subj_n = 8
-    # subj_id = "sub" + str(subj_n) + "\\ball"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+    X_test, y_test, _ = import_MEG_cross_subject_test(data_dir, file_name, parameters.subject_n)
 
-    # Import and epoch the MEG data
-    X, y_left, y_right = import_MEG_no_bp(raw_fnames,
-                                          duration=parameters.duration,
-                                          overlap=parameters.overlap,
-                                          y_measure=parameters.y_measure,
-                                          normalize_input=True)   # concentrate the analysis only on the left hand
+    # Required conversion and double float precision.
 
-    print('X shape {}, y shape {}'.format(X.shape, y_left.shape))
+    X_train, y_train = np.array(X_train.squeeze()).astype(np.float64), np.array(y_train.squeeze()).astype(np.float64)
 
-    # Select hand
-    if parameters.hand == 0:
-        X_train, X_test, y_train, y_test = split_data(X, y_left, 0.3)
-    else:
-        X_train, X_test, y_train, y_test = split_data(X, y_right, 0.3)
+    X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test.squeeze()).astype(np.float64)
 
     print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
@@ -67,9 +55,9 @@ def main(args):
 
     # %%
     # Initialize the cross-validation pipeline and grid search
-    cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 4)))),
-                         'Ridge__alpha': [0.8, 1.0, 5, 10]}]
+    cv = KFold(n_splits=8, shuffle=False)
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 5)))),
+                         'Ridge__alpha': [0.8, 1.0, 5]}]
 
     clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3)
 
@@ -134,19 +122,6 @@ def main(args):
     # %%
     n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
     MSEs = clf.cv_results_['mean_test_score']
-    # %%
-    # Plot the number of components.
-    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    ax.plot(n_components, MSEs, color='b')
-    ax.set_xlabel('Number of SPoC components')
-    ax.set_ylabel('MSE')
-    ax.set_title('SPoC Components Analysis')
-    # plt.legend()
-    plt.xticks(n_components, n_components)
-    viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
-    plt.show()
-
     # %%
     # Save the model.
     name = 'MEG_SPoC.p'

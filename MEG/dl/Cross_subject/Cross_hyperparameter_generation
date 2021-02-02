@@ -78,6 +78,5 @@ if __name__ == '__main__':
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
              'batch_size_test', "epochs", 'learning_rate', 'patience', 'y_measure', 'experiment']]
 
-    print(df)
     # np.savetxt("parameters.csv", df, delimiter=";")
     df.to_csv("cross_parameters.csv", index=False, sep=";")
