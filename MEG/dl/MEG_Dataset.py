@@ -4,9 +4,11 @@
     TODO: add and test dataset without bandpower.
 """
 
+import os, errno
 from torch.utils.data import Dataset
 
-from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file, import_MEG_Tensor_2
+from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file, import_MEG_Tensor_2, \
+    import_MEG_cross_subject_train, import_MEG_cross_subject_test
 
 
 class MEG_Dataset(Dataset):
@@ -201,7 +203,7 @@ class MEG_Dataset2(Dataset):
 
 
 class MEG_Cross_Dataset(Dataset):
-    def __init__(self, data_dir, file_name, sub, mlp=False):
+    def __init__(self, data_dir, file_name, sub, mode="train", mlp=False):
         """
 
         Args:
@@ -214,32 +216,36 @@ class MEG_Cross_Dataset(Dataset):
         mlp (bool):
             True if mlp_rps else otherwise.
         """
+
         self.data_dir = data_dir
         self.file_name = file_name
         self.sub = sub
+        self.mode = mode
 
-        if mlp:
-            # Import already epoched MEG data from file
-            self.data, self.target = import_MEG_Tensor_form_file(data_dir, normalize_input=self.normalize_input,
-                                                                 y_measure=y_measure)
+        if self.mode not in ["train", "test"]:
+            raise ValueError("mode mast be train or test!")
+
+        if not os.path.exists("".join([self.data_dir, self.file_name])):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "".join([self.data_dir, self.file_name]))
+
+        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError("Subject does not exist!")
+
+        if self.mode == "train":
+            self.data, self.target, self.bp = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub)
         else:
-            # Generate dataset from raw MEG data
-            self.data, self.target, self.bp = import_MEG_Tensor_2(self.raw_fnames, self.duration, self.overlap,
-                                                                  normalize_input=self.normalize_input,
-                                                                  y_measure=y_measure)
-
-        self.transform = transform
+            self.data, self.target, self.bp = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub)
 
     def __len__(self):
         return self.data.shape[0]
 
     def __getitem__(self, idx):
 
-        sample_data = self.data[idx, :, :]
-        sample_target = self.target[idx, :]
-        sample_bp = self.bp[idx, :, :]
-
-        if self.transform:
-            sample_data, sample_target, sample_bp = self.transform(sample_data, sample_target, sample_bp)
+        sample_data = self.data[idx, ...]
+        sample_target = self.target[idx]
+        sample_bp = self.bp[idx, ...]
 
         return sample_data, sample_target, sample_bp

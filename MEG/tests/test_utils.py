@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 
 from MEG.Utils.utils import y_reshape, normalize, standard_scaling, y_PCA, len_split, bandpower_1d, bandpower, \
-    bandpower_multi, y_reshape_final, window_stack, standard_scaling_sklearn
+    bandpower_multi, y_reshape_final, window_stack, standard_scaling_sklearn, len_split_cross
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Dataset2
 
 
@@ -392,4 +392,12 @@ def test_len_split():
 
         assert len == train + valid + test, 'Splitting of the dataset wrong, total len expected: {}, got {}' \
             .format(train + valid + test, len)
+
+
+def test_len_split_cross():
+    for len in range(2000):
+        train, valid = len_split_cross(len)
+
+        assert len == train + valid, 'Splitting of the dataset wrong, total len expected: {}, got {}' \
+            .format(train + valid, len)
 

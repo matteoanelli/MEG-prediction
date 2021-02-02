@@ -8,3 +8,14 @@
 /data.hdf5
 /MEG/dl/Example_read_from_file.ipynb
 /.venv/
+/mlruns/
+/MEG/Figures/
+/MEG/IDA_figures/
+/MEG/Models/
+/ECoG/Figures/
+/ECoG/Figures_IDA/
+/ECoG/Models/
+/ECoG/dl/ECoG_Experiment.ipynb
+/ECoG/dl/ECoG_IDA.ipynb
+/ECoG/SPoC/Downsampling_analysis.py
+/.idea/

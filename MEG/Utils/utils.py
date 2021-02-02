@@ -953,11 +953,14 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject):
                 rps_train.append(f[sub]["RPS"][...])
                 y_train.append(f[sub]["Y_left"][...])
 
+
+
     X_train = torch.from_numpy(np.concatenate(X_train))
     rps_train = torch.from_numpy(np.concatenate(rps_train))
     y_train = torch.from_numpy(np.concatenate(y_train))
 
-    return X_train, y_train, rps_train
+
+    return X_train.unsqueeze(1), y_train.unsqueeze(-1), rps_train
 
 
 def import_MEG_cross_subject_test(data_dir, file_name, subject):
@@ -989,4 +992,29 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject):
     rps_test = torch.from_numpy(rps_test)
     y_test = torch.from_numpy(y_test)
 
-    return X_test, y_test, rps_test
+    return X_test.unsqueeze(1), y_test.unsqueeze(-1), rps_test
+
+def len_split_cross(len):
+    """
+    Generate the splitting number of sample given the total dataset sample number.
+    It split in train 80%, test and validation 20%.
+    Args:
+        len (int):
+        The dataset length.
+
+    Returns:
+        train (int):
+            The train number of samples.
+        valid (int):
+            The validation number of samples.
+
+    test = len * 0.7
+    valid = len * 0.15
+    tets = len - train - valid
+
+    """
+
+    train = int(len * 0.80)
+    valid = len - train
+
+    return train, valid
