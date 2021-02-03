@@ -72,11 +72,10 @@ if __name__ == '__main__':
     }
     random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
-    print(random_search)
-
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
              'batch_size_test', "epochs", 'learning_rate', 'patience', 'y_measure', 'experiment']]
 
+    print(df)
     # np.savetxt("parameters.csv", df, delimiter=";")
     df.to_csv("cross_parameters.csv", index=False, sep=";")

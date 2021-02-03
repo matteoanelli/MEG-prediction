@@ -924,7 +924,7 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
     return X, torch.stack([y_left, y_right], dim=1), bp
 
 
-def import_MEG_cross_subject_train(data_dir, file_name, subject):
+def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
     """
     Import the data and generate the train set.
     Test set composed by input subject.
@@ -936,6 +936,8 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject):
             Data file name. file.hdf5.
         subject (int):
             Number of the test subject.
+        y (string):
+            The target variable.
 
     Returns:
         X_train, y_train, rps_train
@@ -947,23 +949,22 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject):
 
     with h5py.File("".join([data_dir, file_name]), "r") as f:
         subjects = f.keys()
-        for sub in subjects:
-            if sub != ("sub" + str(subject)):
-                X_train.append(f[sub]["MEG"][...])
-                rps_train.append(f[sub]["RPS"][...])
-                y_train.append(f[sub]["Y_left"][...])
-
-
+        if y == "left_pca":
+            for sub in subjects:
+                if sub != ("sub" + str(subject)) and sub != "sub4":
+                    X_train.append(f[sub]["MEG"][...])
+                    rps_train.append(f[sub]["RPS"][...])
+                    y_train.append(f[sub]["Y_left"][...])
 
     X_train = torch.from_numpy(np.concatenate(X_train))
     rps_train = torch.from_numpy(np.concatenate(rps_train))
     y_train = torch.from_numpy(np.concatenate(y_train))
 
 
-    return X_train.unsqueeze(1), y_train.unsqueeze(-1), rps_train
+    return X_train.unsqueeze(1), y_train.unsqueeze(-1).repeat(1, 2), rps_train
 
 
-def import_MEG_cross_subject_test(data_dir, file_name, subject):
+def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
     """
     Import the data and generate the test set.
     Test set composed by input subject.
@@ -975,24 +976,27 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject):
             Data file name. file.hdf5.
         subject (int):
             Number of the test subject.
+        y (string):
+            The target variable.
 
     Returns:
-        X_train, y_train, rps_train, X_test, y_test, rps_test
+        X_test, y_test, rps_test
     """
 
     print("Test subject: sub" + str(subject) + "!")
     sub = "sub" + str(subject)
 
     with h5py.File("".join([data_dir, file_name]), "r") as f:
-        X_test = f[sub]["MEG"][...]
-        rps_test = f[sub]["RPS"][...]
-        y_test = f[sub]["Y_left"][...]
+        if y == "left_pca":
+            X_test = f[sub]["MEG"][...]
+            rps_test = f[sub]["RPS"][...]
+            y_test = f[sub]["Y_left"][...]
 
     X_test = torch.from_numpy(X_test)
     rps_test = torch.from_numpy(rps_test)
     y_test = torch.from_numpy(y_test)
 
-    return X_test.unsqueeze(1), y_test.unsqueeze(-1), rps_test
+    return X_test.unsqueeze(1), y_test.unsqueeze(-1).repeat(1, 2), rps_test
 
 def len_split_cross(len):
     """

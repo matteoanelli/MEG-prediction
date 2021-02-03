@@ -401,3 +401,11 @@ def test_len_split_cross():
         assert len == train + valid, 'Splitting of the dataset wrong, total len expected: {}, got {}' \
             .format(train + valid, len)
 
+
+def test_cross_y_left_dimension():
+
+    labels = torch.arange((10)).unsqueeze(-1).repeat(1, 2)
+    print(labels.shape)
+    print(labels)
+
+    print(labels[:, 0])

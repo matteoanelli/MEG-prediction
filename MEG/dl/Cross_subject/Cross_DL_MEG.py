@@ -156,19 +156,32 @@ def main(args):
     net.eval()
     y_pred = []
     y = []
+    y_pred_valid = []
+    y_valid = []
 
     # if RPS integration
     with torch.no_grad():
         if mlp:
             for _, labels, bp in testloader:
-                labels, bp = labels.to(parameters.device), bp.to(device)
+                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(bp))))
+
+            for _, labels, bp in validloader:
+                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(bp))))
         else:
             for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(data, bp))))
+
+            for data, labels, bp in validloader:
+                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(data, bp))))
+
 
     # Calculate Evaluation measures
     print("Evaluation measures")
@@ -183,9 +196,9 @@ def main(args):
 
     # plot y_new against the true value focus on 100 timepoints
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(100)
-    ax.plot(times, y_pred[0:100], color="b", label="Predicted")
-    ax.plot(times, y[0:100], color="r", label="True")
+    times = np.arange(200)
+    ax.plot(times, y_pred[0:200], color="b", label="Predicted")
+    ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
     ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
@@ -217,6 +230,18 @@ def main(args):
     # plt.legend()
     plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
     plt.show()
+
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
+    plt.show()
+
+
+
 
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:

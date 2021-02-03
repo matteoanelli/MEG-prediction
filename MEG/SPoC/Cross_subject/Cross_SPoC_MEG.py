@@ -34,7 +34,8 @@ def main(args):
                              hand=args.hand,
                              duration=args.duration,
                              overlap=args.overlap,
-                             y_measure=args.y_measure)
+                             y_measure=args.y_measure,
+                             alpha = args.alpha)
 
     X_train, y_train, _ = import_MEG_cross_subject_train(data_dir, file_name, parameters.subject_n)
 
@@ -42,24 +43,32 @@ def main(args):
 
     # Required conversion and double float precision.
 
-    X_train, y_train = np.array(X_train.squeeze()).astype(np.float64), np.array(y_train.squeeze()).astype(np.float64)
+    if parameters.hand == 0:
+        X_train, y_train = np.array(X_train.squeeze()).astype(np.float64), np.array(y_train[..., 0].squeeze()).astype(
+            np.float64)
+        X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test[..., 0].squeeze()).astype(
+            np.float64)
+    else:
+        X_train, y_train = np.array(X_train.squeeze()).astype(np.float64), np.array(y_train[..., 1].squeeze()).astype(
+            np.float64)
+        X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test[..., 1].squeeze()).astype(
+            np.float64)
 
-    X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test.squeeze()).astype(np.float64)
+
 
     print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
                                                                                           X_test.shape, y_test.shape))
 
     pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full')),
-                         ('Ridge', Ridge())])
+                         ('Ridge', Ridge(alpha=parameters.alpha))])
 
     # %%
     # Initialize the cross-validation pipeline and grid search
-    cv = KFold(n_splits=8, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 5)))),
-                         'Ridge__alpha': [0.8, 1.0, 5]}]
+    cv = KFold(n_splits=5, shuffle=False)
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(25, 30, 5))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3)
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=-1, cv=cv, verbose=3)
 
     #%%
     # Tune the pipeline
@@ -73,7 +82,6 @@ def main(args):
 
     print(clf.best_score_)
     print(clf.best_params_['Spoc__n_components'])
-    print(clf.best_params_['Ridge__alpha'])
     print("CV results")
     print(clf.cv_results_)
     print("Number of splits")
@@ -138,7 +146,7 @@ def main(args):
         mlflow.log_metric('R2', r2)
 
         mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
-        mlflow.log_param("alpha", clf.best_params_['Ridge__alpha'])
+        mlflow.log_param("alpha", parameters.alpha)
 
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC.pdf'))
@@ -175,6 +183,8 @@ if __name__ == "__main__":
                         help='Y type reshaping (default: movement)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
+    parser.add_argument('--alpha', type=int, default=2, metavar='N',
+                        help='Ridge alpha value (default: 2)')
 
     args = parser.parse_args()
 
