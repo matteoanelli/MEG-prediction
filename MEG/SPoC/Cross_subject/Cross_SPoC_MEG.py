@@ -183,7 +183,7 @@ if __name__ == "__main__":
                         help='Y type reshaping (default: movement)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
-    parser.add_argument('--alpha', type=int, default=2, metavar='N',
+    parser.add_argument('--alpha', type=float, default=2, metavar='N',
                         help='Ridge alpha value (default: 2)')
 
     args = parser.parse_args()

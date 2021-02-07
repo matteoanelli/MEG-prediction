@@ -203,7 +203,7 @@ class MEG_Dataset2(Dataset):
 
 
 class MEG_Cross_Dataset(Dataset):
-    def __init__(self, data_dir, file_name, sub, mode="train", mlp=False):
+    def __init__(self, data_dir, file_name, sub, mode="train", y_measure="left_pca"):
         """
 
         Args:
@@ -221,6 +221,7 @@ class MEG_Cross_Dataset(Dataset):
         self.file_name = file_name
         self.sub = sub
         self.mode = mode
+        self.y_measure = y_measure
 
         if self.mode not in ["train", "test"]:
             raise ValueError("mode mast be train or test!")
@@ -235,9 +236,11 @@ class MEG_Cross_Dataset(Dataset):
             raise ValueError("Subject does not exist!")
 
         if self.mode == "train":
-            self.data, self.target, self.bp = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub)
+            self.data, self.target, self.bp = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub,
+                                                                             self.y_measure)
         else:
-            self.data, self.target, self.bp = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub)
+            self.data, self.target, self.bp = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub,
+                                                                            self.y_measure)
 
     def __len__(self):
         return self.data.shape[0]

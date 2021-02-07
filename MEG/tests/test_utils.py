@@ -355,6 +355,7 @@ def test_standard_scaling():
     print(data.shape)
     print("data: {}".format(data))
     data = standard_scaling(data)
+    print("scaled data shape: ", data.shape)
     print("scaled data: {}".format(data))
 
 

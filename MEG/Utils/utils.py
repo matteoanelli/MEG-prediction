@@ -937,11 +937,14 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
         subject (int):
             Number of the test subject.
         y (string):
-            The target variable.
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
 
     Returns:
         X_train, y_train, rps_train
     """
+    if y not in ["left_pca", "left_single_1"]:
+        raise ValueError("The y value to predict does not exist.")
 
     X_train = []
     rps_train = []
@@ -955,6 +958,13 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
                     X_train.append(f[sub]["MEG"][...])
                     rps_train.append(f[sub]["RPS"][...])
                     y_train.append(f[sub]["Y_left"][...])
+
+        if y == "left_single_1":
+            for sub in subjects:
+                if sub != ("sub" + str(subject)) and sub != "sub4":
+                    X_train.append(f[sub]["MEG"][...])
+                    rps_train.append(f[sub]["RPS"][...])
+                    y_train.append(y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True))
 
     X_train = torch.from_numpy(np.concatenate(X_train))
     rps_train = torch.from_numpy(np.concatenate(rps_train))
@@ -977,11 +987,15 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
         subject (int):
             Number of the test subject.
         y (string):
-            The target variable.
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
 
     Returns:
         X_test, y_test, rps_test
     """
+
+    if y not in ["left_pca", "left_single_1"]:
+        raise ValueError("The y value to predict does not exist.")
 
     print("Test subject: sub" + str(subject) + "!")
     sub = "sub" + str(subject)
@@ -991,6 +1005,13 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
             X_test = f[sub]["MEG"][...]
             rps_test = f[sub]["RPS"][...]
             y_test = f[sub]["Y_left"][...]
+
+        if y == "left_single_1":
+            X_test = f[sub]["MEG"][...]
+            rps_test = f[sub]["RPS"][...]
+            y_test = y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True)
+
+
 
     X_test = torch.from_numpy(X_test)
     rps_test = torch.from_numpy(rps_test)

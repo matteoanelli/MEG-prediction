@@ -90,7 +90,7 @@ class SPoC_params(object):
 
 class Params_cross(object):
     def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, patience, device,
-                 y_measure):
+                 y_measure, desc):
 
         self.subject_n = subject_n
         self.hand = hand
@@ -102,6 +102,7 @@ class Params_cross(object):
         self.patience = patience
         self.device = device
         self.y_measure = y_measure
+        self.desc = desc
 
     def __str__(self):
         return "_" + str(self.subject_n) + \
@@ -110,4 +111,5 @@ class Params_cross(object):
                "_" + str(self.epochs) + \
                "_" + str(self.lr) + \
                "_" + str(self.device) + \
-               "_" + str(self.y_measure)
+               "_" + str(self.y_measure)+ \
+               "_" + str(self.desc)

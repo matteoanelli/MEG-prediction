@@ -62,15 +62,20 @@ def main(args):
                                 lr=args.learning_rate,
                                 patience=args.patience,
                                 device=device,
-                                y_measure=args.y_measure
+                                y_measure=args.y_measure,
+                                desc= args.desc
                                 )
     # Import data and generate train-, valid- and test-set
     # Set if generate with RPS values or not (check network architecture used later)
 
+    print("Testing: {} ".format(parameters.desc))
+
     mlp = False
 
-    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train", mlp=mlp)
-    test_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test", mlp=mlp)
+    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train",
+                                y_measure=parameters.y_measure)
+    test_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test",
+                                     y_measure=parameters.y_measure)
 
 
     # split the dataset in train, test and valid sets.
@@ -259,6 +264,7 @@ def main(args):
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
         mlflow.pytorch.log_model(net, "models")
 
 
@@ -295,10 +301,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="movement",
-                        help='Y type reshaping (default: movement)')
+    parser.add_argument('--y_measure', type=str, default="left_pca",
+                        help='Y type reshaping (default: left_pca)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
+    parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
+                        help='Experiment description (default: Normal test)')
 
     args = parser.parse_args()
 
