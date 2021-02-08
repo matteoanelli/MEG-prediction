@@ -1033,10 +1033,6 @@ def len_split_cross(len):
         valid (int):
             The validation number of samples.
 
-    test = len * 0.7
-    valid = len * 0.15
-    tets = len - train - valid
-
     """
 
     train = int(len * 0.80)

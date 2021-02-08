@@ -24,10 +24,11 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
+import torch.nn as nn
 
 sys.path.insert(1, r'')
 
-from MEG.dl.train import train, train_bp, train_bp_MLP
+from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_cross
@@ -74,24 +75,29 @@ def main(args):
 
     dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train",
                                 y_measure=parameters.y_measure)
-    test_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test",
+    leave_one_out_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test",
                                      y_measure=parameters.y_measure)
-
 
     # split the dataset in train, test and valid sets.
     train_len, valid_len = len_split_cross(len(dataset))
 
+    # split the test set in fine_tunning and final testset
+    test_len, transfer_len = len_split_cross(len(leave_one_out_dataset))
+
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_datatest = random_split(dataset, [train_len, valid_len])
+    train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
 
-    print("Train dataset len {}, valid dataset len {}, test dataset len {}".format(
-        len(train_dataset), len(valid_datatest), len(test_dataset)))
+    test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+
+    print("Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
+        len(train_dataset), len(valid_dataset), len(test_dataset), len(transfer_dataset)))
 
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=4)
-    validloader = DataLoader(valid_datatest, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
+    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=4)
+    transferloader = DataLoader(test_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
 
     # Initialize network
     if mlp:
@@ -105,6 +111,7 @@ def main(args):
         net = RPS_MNet(n_times)
 
     print(net)
+
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
@@ -246,6 +253,50 @@ def main(args):
     plt.show()
 
 
+    # Transfer learning, feature extraction.
+
+    optimizer_trans = SGD(net.parameters(), lr=parameters.lr)
+
+    loss_function_trans = torch.nn.MSELoss()
+
+    net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
+                                        parameters.device, 50, parameters.patience,
+                                        parameters.hand, model_path)
+    # Evaluation
+    print("Evaluation after transfer...")
+    net.eval()
+    y_pred = []
+    y = []
+
+    # if RPS integration
+    with torch.no_grad():
+        if mlp:
+            for _, labels, bp in testloader:
+                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(bp))))
+        else:
+            for data, labels, bp in testloader:
+                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(
+                    parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(data, bp))))
+
+    print("Evaluation measures")
+    rmse_trans = mean_squared_error(y, y_pred, squared=False)
+    r2_trans = r2_score(y, y_pred)
+
+    print("root mean squared error after transfer learning {}".format(rmse))
+    print("r2 score after transfer learning  {}".format(r2))
+
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y), np.array(y_pred), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter_after_trans.pdf"))
+    plt.show()
 
 
     # log the model and parameters using mlflow tracker
@@ -260,11 +311,15 @@ def main(args):
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
 
+        mlflow.log_metric('RMSE_T', rmse_trans)
+        mlflow.log_metric('R2_T', r2_trans)
+
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "Scatter_after_trans.pdf"))
         mlflow.pytorch.log_model(net, "models")
 
 

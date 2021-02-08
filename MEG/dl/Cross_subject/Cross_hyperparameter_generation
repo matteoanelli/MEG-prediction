@@ -52,8 +52,8 @@ if __name__ == '__main__':
                         help="Figure data directory (default= MEG\Figures)")
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
-    description = "one y direction only"
 
+    description = "y_pca_trans_last_layer"
 
     param_grid = {
         "sub": [8],
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         "batch_size_test": 30,
         "epochs": 100,
         "patience": 20,
-        "y_measure": "left_single_1",
+        "y_measure": "left_pca",
         "experiment": 27,
         "desc": description
     }

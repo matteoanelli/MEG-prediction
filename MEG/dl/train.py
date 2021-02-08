@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import torch
 from tqdm import tqdm
+import torch.nn as nn
 
 sys.path.insert(1, r'')
 
@@ -416,3 +417,78 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 
     return net, avg_train_losses, avg_valid_losses
+
+def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+    """
+    Train loop used to train the rps_mnet to transfer learning.
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+    """
+    print("Transfer learning test subject...")
+    # freeze all the layers
+    for param in net.parameters():
+        param.requires_grad = False
+    #re-initialize last layer
+    net.ff[8] = nn.Linear(1024, 1)
+
+    net = net.to(device)
+    avg_train_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        for data, labels, bp in trainloader:
+            # Set data to appropiate device
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(data, bp)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+
+        train_loss = np.mean(train_losses)
+        avg_train_losses.append(train_loss)
+
+        early_stopping(train_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses

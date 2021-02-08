@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=02:00:00
+#SBATCH --time=02:30:00
 #SBATCH --mem-per-cpu=30000M
 #SBATCH --cpus-per-task=1
 #SBATCH --array=1
