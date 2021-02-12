@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "y_pca_trans_last_layer"
+    description = "y_pca_trans_fine_tuning"
 
     param_grid = {
         "sub": [8],
@@ -68,6 +68,7 @@ if __name__ == '__main__':
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
+        "hand": 0,
         "epochs": 100,
         "patience": 20,
         "y_measure": "left_pca",

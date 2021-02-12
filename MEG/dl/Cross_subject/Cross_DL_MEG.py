@@ -23,12 +23,12 @@ import json
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 import torch.nn as nn
 
 sys.path.insert(1, r'')
 
-from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer
+from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer, train_bp_fine_tuning
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_cross
@@ -88,16 +88,21 @@ def main(args):
     #                                                        generator=torch.Generator().manual_seed(42))
     train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
 
-    test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+    # test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+
+    transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
+    test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
 
     print("Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
         len(train_dataset), len(valid_dataset), len(test_dataset), len(transfer_dataset)))
+
+
 
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=4)
     validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=4)
-    transferloader = DataLoader(test_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
+    transferloader = DataLoader(transfer_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
 
     # Initialize network
     if mlp:
@@ -259,8 +264,11 @@ def main(args):
 
     loss_function_trans = torch.nn.MSELoss()
 
-    net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                        parameters.device, 50, parameters.patience,
+    # net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
+    #                                    parameters.device, 50, parameters.patience,
+    #                                     parameters.hand, model_path)
+    net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
+                                        parameters.device, 50, 10,
                                         parameters.hand, model_path)
     # Evaluation
     print("Evaluation after transfer...")
@@ -286,8 +294,8 @@ def main(args):
     rmse_trans = mean_squared_error(y, y_pred, squared=False)
     r2_trans = r2_score(y, y_pred)
 
-    print("root mean squared error after transfer learning {}".format(rmse))
-    print("r2 score after transfer learning  {}".format(r2))
+    print("root mean squared error after transfer learning {}".format(rmse_trans))
+    print("r2 score after transfer learning  {}".format(r2_trans))
 
     # scatterplot y predicted against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
