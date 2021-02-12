@@ -61,6 +61,7 @@ def main(args):
                                 test_batch_size=args.batch_size_test,
                                 epochs=args.epochs,
                                 lr=args.learning_rate,
+                                wd=args.weight_decay,
                                 patience=args.patience,
                                 device=device,
                                 y_measure=args.y_measure,
@@ -123,7 +124,7 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -361,6 +362,8 @@ if __name__ == "__main__":
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
                         help='Learning rate (default: 1e-3),')
+    parser.add_argument('--weight_decay', type=float, default=5e-4, metavar='wd',
+                        help='Weight dacay (default: 5e-4),')
 
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')

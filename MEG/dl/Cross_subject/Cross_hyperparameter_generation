@@ -34,6 +34,11 @@ def generate_parameters(param_grid, times, fix, data_dir, figure_dir, model_dir)
         if "learning_rate" not in sampled_grid:
             sampled_grid["learning_rate"] = round(random.uniform(*param_grid.get("learning_rate")), 5)
 
+        if "weight_decay" not in sampled_grid:
+            sampled_grid["weight_decay"] = random.choice(param_grid.get("weight_decay"))
+
+
+
         random_grid.append(sampled_grid)
         i += 1
 
@@ -60,7 +65,8 @@ if __name__ == '__main__':
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
         "learning_rate": [3e-3, 1e-4],
-        "y_measure": ["left_pca", "left_single_1"]
+        "y_measure": ["left_pca", "left_single_1"],
+        "weight_decay": [5e-3, 5e-4, 5e-5]
     }
 
     args = parser.parse_args()
@@ -79,7 +85,7 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
-             'batch_size_test', "epochs", 'learning_rate', 'patience', 'y_measure', 'experiment', "desc"]]
+             'batch_size_test', "epochs", 'learning_rate','weight_decay', 'patience', 'y_measure', 'experiment', "desc"]]
 
     print(df)
     # np.savetxt("parameters.csv", df, delimiter=";")
