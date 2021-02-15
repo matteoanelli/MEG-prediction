@@ -35,7 +35,7 @@ def main(args):
                              duration=args.duration,
                              overlap=args.overlap,
                              y_measure=args.y_measure,
-                             alpha = args.alpha)
+                             alpha=args.alpha)
 
     X_train, y_train, _ = import_MEG_cross_subject_train(data_dir, file_name, parameters.subject_n)
 
@@ -54,7 +54,15 @@ def main(args):
         X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test[..., 1].squeeze()).astype(
             np.float64)
 
+    # Add the transfer part to the train_set
+    test_len, transfer_len = len_split_cross(X_test.shape[0])
+    X_transfer = X_test[:transfer_len, ...]
+    X_test = X_test[transfer_len:, ...]
+    X_train = np.concatenate((X_train, X_transfer), axis=0)
 
+    y_transfer = y_test[:transfer_len, ...]
+    y_test = y_test[transfer_len:, ...]
+    y_train = np.concatenate((y_train, y_transfer), axis=0)
 
     print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
@@ -66,7 +74,7 @@ def main(args):
     # %%
     # Initialize the cross-validation pipeline and grid search
     cv = KFold(n_splits=5, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(25, 30, 5))))}]
+    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(1, 30, 5))))}]
 
     clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=-1, cv=cv, verbose=3)
 
@@ -127,6 +135,15 @@ def main(args):
     plt.savefig(os.path.join(figure_path, 'MEG_SPoC.pdf'))
     plt.show()
 
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y_test), np.array(y_new), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
+    plt.show()
+
     # %%
     n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
     MSEs = clf.cv_results_['mean_test_score']
@@ -179,8 +196,8 @@ if __name__ == "__main__":
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
                         help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--y_measure', type=str, default="movement",
-                        help='Y type reshaping (default: movement)')
+    parser.add_argument('--y_measure', type=str, default="left_pca",
+                        help='Y type reshaping (default: left_pca)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--alpha', type=float, default=2, metavar='N',
