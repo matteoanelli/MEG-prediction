@@ -28,7 +28,7 @@ import torch.nn as nn
 
 sys.path.insert(1, r'')
 
-from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer, train_bp_fine_tuning
+from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer, train_bp_fine_tuning, train_mlp_transfer
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_cross
@@ -72,7 +72,7 @@ def main(args):
 
     print("Testing: {} ".format(parameters.desc))
 
-    mlp = False
+    mlp = True
 
     dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train",
                                 y_measure=parameters.y_measure)
@@ -265,12 +265,18 @@ def main(args):
 
     loss_function_trans = torch.nn.MSELoss()
 
-    # net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-    #                                    parameters.device, 50, parameters.patience,
-    #                                     parameters.hand, model_path)
-    net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
-                                        parameters.device, 50, 10,
-                                        parameters.hand, model_path)
+    if mlp:
+        net, train_loss = train_mlp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
+                                            parameters.device, 50, parameters.patience,
+                                            parameters.hand, model_path)
+    else:
+        net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
+                                       parameters.device, 50, parameters.patience,
+                                       parameters.hand, model_path)
+        # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
+        #                                     parameters.device, 50, 10,
+        #                                     parameters.hand, model_path)
+
     # Evaluation
     print("Evaluation after transfer...")
     net.eval()
@@ -286,8 +292,7 @@ def main(args):
                 y_pred.extend((list(net(bp))))
         else:
             for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(
-                    parameters.device)
+                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(data, bp))))
 
