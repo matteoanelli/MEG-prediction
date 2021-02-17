@@ -924,7 +924,7 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
     return X, torch.stack([y_left, y_right], dim=1), bp
 
 
-def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
+def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"):
     """
     Import the data and generate the train set.
     Test set composed by input subject.
@@ -936,15 +936,25 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
             Data file name. file.hdf5.
         subject (int):
             Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
         y (string):
-            The target variable. The value can be left_pca, left_single.
+            The target variable. The value can be pca, left_single.
             Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
 
     Returns:
         X_train, y_train, rps_train
     """
-    if y not in ["left_pca", "left_single_1"]:
+    if y not in ["pca", "left_single_1"]:
         raise ValueError("The y value to predict does not exist.")
+
+    if y == "pca" and hand == 0:
+        y = "left_pca"
+        print("y measure : ", y)
+
+    if y == "pca" and hand == 1:
+        y = "right_pca"
+        print("y measure : ", y)
 
     X_train = []
     rps_train = []
@@ -966,15 +976,25 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, y="left_pca"):
                     rps_train.append(f[sub]["RPS"][...])
                     y_train.append(y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True))
 
+        if y == "right_pca":
+            for sub in subjects:
+                if sub != ("sub" + str(subject)) and sub != "sub3" and sub != "sub5":
+                    X_train.append(f[sub]["MEG"][...])
+                    rps_train.append(f[sub]["RPS"][...])
+                    y_train.append(f[sub]["Y_right"][...])
+
     X_train = torch.from_numpy(np.concatenate(X_train))
     rps_train = torch.from_numpy(np.concatenate(rps_train))
     y_train = torch.from_numpy(np.concatenate(y_train))
+
+    print(X_train.shape)
+    print(y_train.shape)
 
 
     return X_train.unsqueeze(1), y_train.unsqueeze(-1).repeat(1, 2), rps_train
 
 
-def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
+def import_MEG_cross_subject_test(data_dir, file_name, subject, hand = 0,  y="pca"):
     """
     Import the data and generate the test set.
     Test set composed by input subject.
@@ -986,6 +1006,8 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
             Data file name. file.hdf5.
         subject (int):
             Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
         y (string):
             The target variable. The value can be left_pca, left_single.
             Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
@@ -994,8 +1016,14 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
         X_test, y_test, rps_test
     """
 
-    if y not in ["left_pca", "left_single_1"]:
+    if y not in ["pca", "left_single_1"]:
         raise ValueError("The y value to predict does not exist.")
+
+    if y == "pca" and hand == 0:
+        y = "left_pca"
+
+    if y == "pca" and hand == 1:
+        y = "right_pca"
 
     print("Test subject: sub" + str(subject) + "!")
     sub = "sub" + str(subject)
@@ -1010,6 +1038,11 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, y="left_pca"):
             X_test = f[sub]["MEG"][...]
             rps_test = f[sub]["RPS"][...]
             y_test = y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True)
+
+        if y == "right_pca":
+            X_test = f[sub]["MEG"][...]
+            rps_test = f[sub]["RPS"][...]
+            y_test = f[sub]["Y_right"][...]
 
 
 

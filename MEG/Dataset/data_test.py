@@ -37,3 +37,6 @@ if __name__ == "__main__":
 
 		y_left = f.get("sub1/Y_left")
 		print("Target data shape:", y_left.shape)
+
+		y_right = f.get("sub1/Y_right")
+		print("Target data shape:", y_right.shape)

@@ -44,7 +44,7 @@ if __name__ == "__main__":
     subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     # local
-    # subjects = [5, 8]
+    # subjects = [1, 5, 8]
 
     for sub in subjects:
 
@@ -61,8 +61,8 @@ if __name__ == "__main__":
         epochs = []
         for fname in raw_fnames:
             if os.path.exists(fname):
-                raw = mne.io.Raw(fname, preload=True)
-                # raw = mne.io.Raw(raw_fnames[0], preload=True)
+                # raw = mne.io.Raw(fname, preload=True).crop(tmax=60)
+                raw = mne.io.Raw(raw_fnames[0], preload=True)
                 # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
                 events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
                 raw.pick_types(meg='grad', misc=True)

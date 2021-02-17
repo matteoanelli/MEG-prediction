@@ -58,14 +58,14 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "y_pca_trans_rps_mlp"
+    description = "y_pca_trans_rps_mnet_final"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
         "learning_rate": [3e-3, 1e-4],
-        "y_measure": ["left_pca", "left_single_1"],
+        "y_measure": ["pca", "left_single_1"],
         "weight_decay": [5e-3, 5e-4, 5e-5]
     }
 
@@ -74,12 +74,12 @@ if __name__ == '__main__':
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "hand": 0,
+        "hand": 1,
         "sub": 8,
         "epochs": 100,
         "patience": 20,
-        "y_measure": "left_pca",
-        "experiment": 27,
+        "y_measure": "pca",
+        "experiment": 29,
         "desc": description
     }
     random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)

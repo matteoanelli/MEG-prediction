@@ -72,12 +72,13 @@ def main(args):
 
     print("Testing: {} ".format(parameters.desc))
 
-    mlp = True
+    mlp = False
 
-    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train",
+    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="train",
                                 y_measure=parameters.y_measure)
-    leave_one_out_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test",
+    leave_one_out_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="test",
                                      y_measure=parameters.y_measure)
+
 
     # split the dataset in train, test and valid sets.
     train_len, valid_len = len_split_cross(len(dataset))
@@ -372,8 +373,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="left_pca",
-                        help='Y type reshaping (default: left_pca)')
+    parser.add_argument('--y_measure', type=str, default="pca",
+                        help='Y type reshaping (default: pca)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--desc', type=str, default="Normal test", metavar='N',

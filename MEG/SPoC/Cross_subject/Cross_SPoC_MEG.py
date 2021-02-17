@@ -37,9 +37,10 @@ def main(args):
                              y_measure=args.y_measure,
                              alpha=args.alpha)
 
-    X_train, y_train, _ = import_MEG_cross_subject_train(data_dir, file_name, parameters.subject_n)
+    X_train, y_train, _ = import_MEG_cross_subject_train(data_dir, file_name, parameters.subject_n, parameters.hand)
 
-    X_test, y_test, _ = import_MEG_cross_subject_test(data_dir, file_name, parameters.subject_n)
+    X_test, y_test, _ = import_MEG_cross_subject_test(data_dir, file_name, parameters.subject_n, parameters.hand)
+
 
     # Required conversion and double float precision.
 
@@ -53,6 +54,7 @@ def main(args):
             np.float64)
         X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(y_test[..., 1].squeeze()).astype(
             np.float64)
+
 
     # Add the transfer part to the train_set
     test_len, transfer_len = len_split_cross(X_test.shape[0])
@@ -196,8 +198,8 @@ if __name__ == "__main__":
                         help='Duration of the time window  (default: 1s)')
     parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
                         help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--y_measure', type=str, default="left_pca",
-                        help='Y type reshaping (default: left_pca)')
+    parser.add_argument('--y_measure', type=str, default="pca",
+                        help='Y type reshaping (default: pca)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--alpha', type=float, default=2, metavar='N',
