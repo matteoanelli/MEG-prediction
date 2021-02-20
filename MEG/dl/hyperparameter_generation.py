@@ -107,8 +107,10 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
+    description = "y_pca_SCNN"
+
     param_grid = {
-        "sub": [8],
+        "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
         "learning_rate": [3e-3, 1e-4],
@@ -124,14 +126,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     fix_param = {
+        "sub": 8,
+        "hand": 0,
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "epochs": 100,
+        "epochs": 50,
+        "duration_overlap": (1., 0.8),
         "bias": False,
-        "patience": 20,
+        "patience": 10,
         "y_measure": "movement",
         "max_pooling": 2,
-        "experiment": 12,
+        "experiment": 30,
+        "dropout": [0.2],
+        "activation": ["relu"],
+        "desc": description
     }
     random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
@@ -140,7 +148,7 @@ if __name__ == '__main__':
              'batch_size_test', "epochs", 'learning_rate', 'bias', 'duration', 'overlap', 'patience', 'y_measure',
              'experiment',
              's_n_layer', 's_kernel_size', 't_n_layer', 't_kernel_size', 'max_pooling',
-             'ff_n_layer', 'ff_hidden_channels', 'dropout', 'activation']]
+             'ff_n_layer', 'ff_hidden_channels', 'dropout', 'activation', "desc"]]
 
     print(df)
     # np.savetxt("parameters.csv", df, delimiter=";")

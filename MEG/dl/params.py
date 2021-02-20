@@ -34,7 +34,7 @@ class Params(object):
 class Params_tunable(object):
     def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
                  patience, device, y_measure, s_n_layer, s_kernel_size, t_n_layer, t_kernel_size, max_pooling,
-                 ff_n_layer, ff_hidden_channels, dropout, activation):
+                 ff_n_layer, ff_hidden_channels, dropout, activation, desc):
 
         self.subject_n = subject_n
         self.hand = hand
@@ -57,6 +57,7 @@ class Params_tunable(object):
         self.ff_hidden_channels = ff_hidden_channels
         self.dropout = dropout
         self.activation = activation
+        self.desc = desc
 
     def __str__(self):
         return "_" + str(self.subject_n) + \
@@ -67,7 +68,8 @@ class Params_tunable(object):
                "_" + str(self.duration) + \
                "_" + str(self.overlap) + \
                "_" + str(self.device) + \
-               "_" + str(self.y_measure)
+               "_" + str(self.y_measure) + \
+               "_" + str(self.desc)
 
 class SPoC_params(object):
     def __init__(self, subject_n, hand, duration, overlap, y_measure, alpha):
