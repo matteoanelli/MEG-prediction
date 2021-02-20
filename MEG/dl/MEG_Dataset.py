@@ -258,3 +258,60 @@ class MEG_Cross_Dataset(Dataset):
         sample_bp = self.bp[idx, ...]
 
         return sample_data, sample_target, sample_bp
+
+
+class MEG_Cross_Dataset_no_bp(Dataset):
+    def __init__(self, data_dir, file_name, sub, hand=0, mode="train", y_measure="pca"):
+        """
+
+        Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        sub (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        mlp (bool):
+            True if mlp_rps else otherwise.
+        """
+
+        self.data_dir = data_dir
+        self.file_name = file_name
+        self.sub = sub
+        self.hand = hand
+        self.mode = mode
+        self.y_measure = y_measure
+
+        if self.mode not in ["train", "test"]:
+            raise ValueError("mode mast be train or test!")
+
+        if hand not in [0, 1]:
+            raise ValueError("hand value must be 0 for left or 1 for right hand")
+
+        if not os.path.exists("".join([self.data_dir, self.file_name])):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "".join([self.data_dir, self.file_name]))
+
+        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError("Subject does not exist!")
+
+        if self.mode == "train":
+            self.data, self.target, _ = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub,
+                                                                             self.hand, self.y_measure)
+        else:
+            self.data, self.target, _ = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub,
+                                                                            self.hand, self.y_measure)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+
+        sample_data = self.data[idx, ...]
+        sample_target = self.target[idx]
+
+        return sample_data, sample_target
