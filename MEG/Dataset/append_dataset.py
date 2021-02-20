@@ -44,7 +44,7 @@ if __name__ == "__main__":
     subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     # local
-    # subjects = [1, 5, 8]
+    subjects = [1, 5, 8]
 
     for sub in subjects:
 
@@ -55,8 +55,8 @@ if __name__ == "__main__":
                      range(1 if sub != 3 else 2, 4)]
 
         # local
-        # subj_id = "/sub"+str(sub)+"/ball"
-        # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+        subj_id = "/sub"+str(sub)+"/ball"
+        raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
 
         epochs = []
         for fname in raw_fnames:
