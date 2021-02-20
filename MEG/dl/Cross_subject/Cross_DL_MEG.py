@@ -3,13 +3,11 @@
     Main script to train the different models in the cross-subject analysis.
     This script is meant to be run to train all the different architectures tested.
     Such that each run of this script generate and test a new model from a specific combination of parameters.
-
     The approach implemented is the leave-one-out subject.
     Test set: 1 subject. (Sub in input as parameter)
     Trin set: 80% other subjects.
     Valid set: 20% other subjects.
     Meant to work only with RPS_MNET and RPS_MLP.
-
 """
 import sys
 
@@ -23,12 +21,11 @@ import json
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
-from torch.utils.data import DataLoader, random_split, Subset
-import torch.nn as nn
+from torch.utils.data import DataLoader, random_split
 
 sys.path.insert(1, r'')
 
-from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer, train_bp_fine_tuning, train_mlp_transfer
+from MEG.dl.train import train, train_bp, train_bp_MLP
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset
 from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
 from MEG.dl.params import Params_cross
@@ -44,7 +41,7 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    file_name = "data_f.hdf5"
+    file_name = "data.hdf5"
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -61,7 +58,6 @@ def main(args):
                                 test_batch_size=args.batch_size_test,
                                 epochs=args.epochs,
                                 lr=args.learning_rate,
-                                wd=args.weight_decay,
                                 patience=args.patience,
                                 device=device,
                                 y_measure=args.y_measure,
@@ -72,39 +68,28 @@ def main(args):
 
     print("Testing: {} ".format(parameters.desc))
 
-    mlp = True
+    mlp = False
 
-    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="train",
+    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="train",
                                 y_measure=parameters.y_measure)
-    leave_one_out_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="test",
+    test_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, mode="test",
                                      y_measure=parameters.y_measure)
 
 
     # split the dataset in train, test and valid sets.
     train_len, valid_len = len_split_cross(len(dataset))
 
-    # split the test set in fine_tunning and final testset
-    test_len, transfer_len = len_split_cross(len(leave_one_out_dataset))
-
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
+    train_dataset, valid_datatest = random_split(dataset, [train_len, valid_len])
 
-    # test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
-
-    transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
-    test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
-
-    print("Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
-        len(train_dataset), len(valid_dataset), len(test_dataset), len(transfer_dataset)))
-
-
+    print("Train dataset len {}, valid dataset len {}, test dataset len {}".format(
+        len(train_dataset), len(valid_datatest), len(test_dataset)))
 
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=4)
-    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
+    validloader = DataLoader(valid_datatest, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=4)
-    transferloader = DataLoader(transfer_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
 
     # Initialize network
     if mlp:
@@ -118,14 +103,13 @@ def main(args):
         net = RPS_MNet(n_times)
 
     print(net)
-
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -260,58 +244,6 @@ def main(args):
     plt.show()
 
 
-    # Transfer learning, feature extraction.
-
-    optimizer_trans = SGD(net.parameters(), lr=parameters.lr)
-
-    loss_function_trans = torch.nn.MSELoss()
-
-    if mlp:
-        net, train_loss = train_mlp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                            parameters.device, 50, parameters.patience,
-                                            parameters.hand, model_path)
-    else:
-        net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                       parameters.device, 50, parameters.patience,
-                                       parameters.hand, model_path)
-        # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
-        #                                     parameters.device, 50, 10,
-        #                                     parameters.hand, model_path)
-
-    # Evaluation
-    print("Evaluation after transfer...")
-    net.eval()
-    y_pred = []
-    y = []
-
-    # if RPS integration
-    with torch.no_grad():
-        if mlp:
-            for _, labels, bp in testloader:
-                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
-                y.extend(list(labels[:, parameters.hand]))
-                y_pred.extend((list(net(bp))))
-        else:
-            for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
-                y.extend(list(labels[:, parameters.hand]))
-                y_pred.extend((list(net(data, bp))))
-
-    print("Evaluation measures")
-    rmse_trans = mean_squared_error(y, y_pred, squared=False)
-    r2_trans = r2_score(y, y_pred)
-
-    print("root mean squared error after transfer learning {}".format(rmse_trans))
-    print("r2 score after transfer learning  {}".format(r2_trans))
-
-    # scatterplot y predicted against the true value
-    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    ax.scatter(np.array(y), np.array(y_pred), color="b", label="Predicted")
-    ax.set_xlabel("True")
-    ax.set_ylabel("Predicted")
-    # plt.legend()
-    plt.savefig(os.path.join(figure_path, "Scatter_after_trans.pdf"))
-    plt.show()
 
 
     # log the model and parameters using mlflow tracker
@@ -326,15 +258,11 @@ def main(args):
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
 
-        mlflow.log_metric('RMSE_T', rmse_trans)
-        mlflow.log_metric('R2_T', r2_trans)
-
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "Scatter_after_trans.pdf"))
         mlflow.pytorch.log_model(net, "models")
 
 
@@ -368,13 +296,11 @@ if __name__ == "__main__":
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
                         help='Learning rate (default: 1e-3),')
-    parser.add_argument('--weight_decay', type=float, default=5e-4, metavar='wd',
-                        help='Weight dacay (default: 5e-4),')
 
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="pca",
-                        help='Y type reshaping (default: pca)')
+    parser.add_argument('--y_measure', type=str, default="left_pca",
+                        help='Y type reshaping (default: left_pca)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
