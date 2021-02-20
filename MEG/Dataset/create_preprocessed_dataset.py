@@ -58,7 +58,7 @@ if __name__ == "__main__":
     for fname in raw_fnames:
         if os.path.exists(fname):
             # raw = mne.io.Raw(fname, preload=True).crop(tmax=60)
-            raw = mne.io.Raw(raw_fnames[0], preload=True)
+            raw = mne.io.Raw(fname, preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
             events = mne.make_fixed_length_events(raw, duration=args.duration, overlap=args.overlap)
             raw.pick_types(meg='grad', misc=True)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     print("Begin to save the dataset on disk")
     start = timer.time()
 
-    with h5py.File("".join([out_dir,"\data.hdf5"]), "a") as f:
+    with h5py.File("".join([out_dir,"data_f.hdf5"]), "a") as f:
         grp1 = f.create_group("".join(["sub" + str(args.sub)]))
         # if group already exist
         # grp1 = f["".join(["sub" + str(args.sub)])]
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     print("Data saved in: {}".format(timer.time()-start))
 
-    with h5py.File("".join([out_dir, "\data.hdf5"]), "r") as f:
+    with h5py.File("".join([out_dir, "data_f.hdf5"]), "r") as f:
         print(f)
         print(f.keys())
         for group in f.keys():

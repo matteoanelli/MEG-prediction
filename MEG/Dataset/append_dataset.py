@@ -62,7 +62,7 @@ if __name__ == "__main__":
         for fname in raw_fnames:
             if os.path.exists(fname):
                 # raw = mne.io.Raw(fname, preload=True).crop(tmax=60)
-                raw = mne.io.Raw(raw_fnames[0], preload=True)
+                raw = mne.io.Raw(fname, preload=True)
                 # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
                 events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
                 raw.pick_types(meg='grad', misc=True)
@@ -94,12 +94,13 @@ if __name__ == "__main__":
             y_right = np.zeros((accelermoters.shape[0], ))
 
 
-        with h5py.File("".join([out_dir, "\data.hdf5"]), "a") as f:
+        with h5py.File("".join([out_dir, "data.hdf5"]), "a") as f:
             grp1 = f["".join(["sub" + str(sub)])]
             grp1.create_dataset("Y_right", data=y_right, dtype='f')
+            # data = f["sub" + str(sub) + "/Y_right"]
+            # data = y_right
 
-
-    with h5py.File("".join([out_dir, "\data.hdf5"]), "r") as f:
+    with h5py.File("".join([out_dir, "data.hdf5"]), "r") as f:
         print(f)
         print(f.keys())
         for group in f.keys():
