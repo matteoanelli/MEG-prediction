@@ -58,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "y_pca_trans_rps_mnet_exp_SGD_batchnorm_new_arch"
+    description = "y_pca_trans_rps_mnet_exp_SGD_arch_avgPool_drop2d02_drop03_sub_integration_number"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
@@ -76,11 +76,13 @@ if __name__ == '__main__':
         "batch_size_test": 30,
         "hand": 0,
         "sub": 8,
-        "epochs": 100,
-        "patience": 20,
+        "epochs": 60,
+        "patience": 15,
         "y_measure": "pca",
         "experiment": 30,
-        "desc": description
+        "desc": description,
+        "learning_rate": 2e-3,
+        "weight_decay": 5e-4
     }
     random_search = generate_parameters(param_grid, 20, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 

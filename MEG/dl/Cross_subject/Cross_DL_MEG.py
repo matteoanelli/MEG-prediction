@@ -98,10 +98,11 @@ def main(args):
     else:
         # Get the n_times dimension
         with torch.no_grad():
-            sample, y, _ = iter(trainloader).next()
+            sample, y, _, sub = iter(trainloader).next()
 
         n_times = sample.shape[-1]
         net = RPS_MNet(n_times)
+
 
     print(net)
     # Training loop or model loading
@@ -176,15 +177,17 @@ def main(args):
                 y_valid.extend(list(labels[:, parameters.hand]))
                 y_pred_valid.extend((list(net(bp))))
         else:
-            for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+            for data, labels, bp, sub in testloader:
+                data, labels, bp, sub = data.to(parameters.device), labels.to(parameters.device), \
+                                        bp.to(parameters.device), sub.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
-                y_pred.extend((list(net(data, bp))))
+                y_pred.extend((list(net(data, bp, sub))))
 
-            for data, labels, bp in validloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+            for data, labels, bp, sub in validloader:
+                data, labels, bp, sub = data.to(parameters.device), labels.to(parameters.device), \
+                                        bp.to(parameters.device), sub.to(parameters.device)
                 y_valid.extend(list(labels[:, parameters.hand]))
-                y_pred_valid.extend((list(net(data, bp))))
+                y_pred_valid.extend((list(net(data, bp, sub))))
 
 
     # Calculate Evaluation measures

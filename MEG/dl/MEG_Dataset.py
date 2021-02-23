@@ -242,10 +242,10 @@ class MEG_Cross_Dataset(Dataset):
             raise ValueError("Subject does not exist!")
 
         if self.mode == "train":
-            self.data, self.target, self.bp = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub,
+            self.data, self.target, self.bp, self.sub_val = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub,
                                                                              self.hand, self.y_measure)
         else:
-            self.data, self.target, self.bp = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub,
+            self.data, self.target, self.bp, self.sub_val = import_MEG_cross_subject_test(self.data_dir, self.file_name, self.sub,
                                                                             self.hand, self.y_measure)
 
     def __len__(self):
@@ -256,8 +256,9 @@ class MEG_Cross_Dataset(Dataset):
         sample_data = self.data[idx, ...]
         sample_target = self.target[idx]
         sample_bp = self.bp[idx, ...]
+        sample_sub = self.sub_val[idx]
 
-        return sample_data, sample_target, sample_bp
+        return sample_data, sample_target, sample_bp, sample_sub
 
 
 class MEG_Cross_Dataset_no_bp(Dataset):

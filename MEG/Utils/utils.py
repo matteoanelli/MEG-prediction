@@ -959,6 +959,7 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"
     X_train = []
     rps_train = []
     y_train = []
+    sub_list = []
 
     with h5py.File("".join([data_dir, file_name]), "r") as f:
         subjects = f.keys()
@@ -968,6 +969,7 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"
                     X_train.append(f[sub]["MEG"][...])
                     rps_train.append(f[sub]["RPS"][...])
                     y_train.append(f[sub]["Y_left"][...])
+                    sub_list.append(np.ones(f[sub]["Y_left"].shape[0]) * float(sub[-1]))
 
         if y == "left_single_1":
             for sub in subjects:
@@ -986,15 +988,16 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"
     X_train = torch.from_numpy(np.concatenate(X_train))
     rps_train = torch.from_numpy(np.concatenate(rps_train))
     y_train = torch.from_numpy(np.concatenate(y_train))
+    sub_val = torch.from_numpy(np.concatenate(sub_list).astype(np.float32))
 
     print(X_train.shape)
     print(y_train.shape)
 
 
-    return X_train.unsqueeze(1), y_train.unsqueeze(-1).repeat(1, 2), rps_train
+    return X_train.unsqueeze(1), y_train.unsqueeze(-1).repeat(1, 2), rps_train, sub_val.unsqueeze(1)
 
 
-def import_MEG_cross_subject_test(data_dir, file_name, subject, hand = 0,  y="pca"):
+def import_MEG_cross_subject_test(data_dir, file_name, subject, hand=0,  y="pca"):
     """
     Import the data and generate the test set.
     Test set composed by input subject.
@@ -1049,8 +1052,9 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, hand = 0,  y="pc
     X_test = torch.from_numpy(X_test)
     rps_test = torch.from_numpy(rps_test)
     y_test = torch.from_numpy(y_test)
+    sub_val = torch.ones(y_test.shape[0], dtype=torch.float) * subject
 
-    return X_test.unsqueeze(1), y_test.unsqueeze(-1).repeat(1, 2), rps_test
+    return X_test.unsqueeze(1), y_test.unsqueeze(-1).repeat(1, 2), rps_test, sub_val.unsqueeze(1)
 
 def len_split_cross(len):
     """

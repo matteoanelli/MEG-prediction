@@ -17,11 +17,12 @@ class Flatten_MEG(nn.Module):
 class Concatenate(nn.Module):
     def __init__(self):
         super(Concatenate, self).__init__()
-    def forward(self, x, bp):
+    def forward(self, x, bp, sub):
 
         x = x.view(x.shape[0], -1)
         bp = bp.view(bp.shape[0], -1)
-        x = torch.cat([x, bp], -1)
+
+        x = torch.cat([x, bp, sub], -1)
 
         return x
 
@@ -288,7 +289,7 @@ class RPS_MNet(nn.Module):
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 6 * self.n_times + 204 * 6, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 6 * self.n_times + 204 * 6 + 1, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
@@ -298,11 +299,11 @@ class RPS_MNet(nn.Module):
                                 nn.Dropout(0.3),
                                 nn.Linear(1024, 1))
 
-    def forward(self, x, pb):
+    def forward(self, x, pb, sub):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = self.concatenate(x, pb)
+        x = self.concatenate(x, pb, sub)
         x = self.ff(x)
 
         return x.squeeze(1)

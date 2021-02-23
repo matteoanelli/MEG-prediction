@@ -8,6 +8,7 @@ import torch
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, TensorDataset
+import numpy as np
 
 import MEG.dl.models as models
 from MEG.Utils.utils import len_split
@@ -137,15 +138,19 @@ def test_RPS_MNet_shape():
 
     x = torch.zeros([10, 1, 204, 501])
     bp = torch.zeros([10, 204, 6])
+    sub = torch.ones([10, 1])
     net = models.RPS_MNet(x.shape[-1])
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
 
-        y = net(x, bp)
+        y = net(x, bp, sub)
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
         print(sum(p.numel() for p in net.parameters() if p.requires_grad))
+        temp = np.ones(x.shape[0]) * 8
+        print(temp.shape)
+        print(temp)
 
     print("Test LeNet5 output shape: Success.")
 
