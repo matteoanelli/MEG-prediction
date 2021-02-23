@@ -145,6 +145,8 @@ def test_RPS_MNet_shape():
         y = net(x, bp)
         assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
 
+        print(sum(p.numel() for p in net.parameters() if p.requires_grad))
+
     print("Test LeNet5 output shape: Success.")
 
 

@@ -232,7 +232,7 @@ class RPS_MNet(nn.Module):
         """
         super(RPS_MNet, self).__init__()
         if n_times == 501:  #TODO automatic n_times
-            self.n_times = 12
+            self.n_times = 3
         elif n_times == 601:
             self.n_times = 18
         elif n_times == 701:
@@ -266,31 +266,36 @@ class RPS_MNet(nn.Module):
                                       nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                                       nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
                                       nn.ReLU(),
+                                      nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(128),
                                       nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
                                       nn.ReLU(),
+                                      nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(128),
                                       nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                                       nn.Conv2d(128, 256, kernel_size=[4, 4], bias=False),
                                       nn.ReLU(),
+                                      nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(256),
                                       nn.Conv2d(256, 256, kernel_size=[4, 4], bias=False),
                                       nn.ReLU(),
+                                      nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(256),
+                                      nn.AvgPool2d(kernel_size=4),
                                       )
 
         self.concatenate = Concatenate()
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 26 * self.n_times + 204 * 6, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 6 * self.n_times + 204 * 6, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
-                                nn.Dropout(0.2),
+                                nn.Dropout(0.3),
                                 nn.Linear(1024, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
-                                nn.Dropout(0.2),
+                                nn.Dropout(0.3),
                                 nn.Linear(1024, 1))
 
     def forward(self, x, pb):
