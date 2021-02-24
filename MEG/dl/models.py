@@ -149,6 +149,33 @@ class LeNet5(nn.Module):
     def forward(self, x):
         return self.net(x).squeeze(1)
 
+
+class ChannelPool(nn.Module):
+    def forward(self, x):
+        return torch.cat((torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)), dim=1)
+
+class SpatialAttention(nn.Module):
+    """
+            Implementation of a spatial attention module.
+        """
+
+    def __init__(self):
+        """
+
+        Args:
+        """
+        super(SpatialAttention, self).__init__()
+        self.spatialAttention = nn.Sequential(ChannelPool(),
+                                              nn.Conv2d(2, 1, kernel_size=[7, 7], padding=3),
+                                              nn.Sigmoid(),
+                                              )
+
+    def forward(self, x):
+
+        return x * self.spatialAttention(x)
+
+
+
 class MNet(nn.Module):
     """
         Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x]
@@ -232,7 +259,7 @@ class RPS_MNet(nn.Module):
         """
         super(RPS_MNet, self).__init__()
         if n_times == 501:  #TODO automatic n_times
-            self.n_times = 3
+            self.n_times = 12
         elif n_times == 601:
             self.n_times = 18
         elif n_times == 701:
@@ -281,14 +308,14 @@ class RPS_MNet(nn.Module):
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(256),
-                                      nn.AvgPool2d(kernel_size=4),
+                                      SpatialAttention(),
                                       )
 
         self.concatenate = Concatenate()
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 6 * self.n_times + 204 * 6, 1024),
+        self.ff = nn.Sequential(nn.Linear(256 * 26 * self.n_times + 204 * 6, 1024),
                                 nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
