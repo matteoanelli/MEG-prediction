@@ -160,10 +160,7 @@ class SpatialAttention(nn.Module):
         """
 
     def __init__(self):
-        """
 
-        Args:
-        """
         super(SpatialAttention, self).__init__()
         self.spatialAttention = nn.Sequential(ChannelPool(),
                                               nn.Conv2d(2, 1, kernel_size=[7, 7], padding=3),
@@ -174,7 +171,33 @@ class SpatialAttention(nn.Module):
 
         return x * self.spatialAttention(x)
 
+class ChannelAttention(nn.Module):
+    """
+            Implementation of a channel attention module.
+        """
 
+    def __init__(self, shape, reduction_factor=16):
+
+        super(ChannelAttention, self).__init__()
+
+        _, in_channel, h, w = shape
+
+        self.mlp = nn.Sequential(Flatten_MEG(),
+                                 nn.Linear(in_channel, in_channel // reduction_factor),
+                                 nn.ReLU(),
+                                 nn.Linear(in_channel // reduction_factor, in_channel))
+        self.avg = nn.AvgPool2d(kernel_size=[h, w], stride=[h, w])
+        self.max = nn.MaxPool2d(kernel_size=[h, w], stride=[h, w])
+
+
+    def forward(self, x):
+
+        avg = self.avg(x)
+        max = self.max(x)
+
+        attention = torch.sigmoid(self.mlp(avg) + self.mlp(max)).unsqueeze(2).unsqueeze(3)
+
+        return x * attention
 
 class MNet(nn.Module):
     """
@@ -308,7 +331,7 @@ class RPS_MNet(nn.Module):
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(256),
-                                      SpatialAttention(),
+                                      ChannelAttention([None, 256, 26, self.n_times]),
                                       )
 
         self.concatenate = Concatenate()

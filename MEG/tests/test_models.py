@@ -730,3 +730,20 @@ def test_SpatialAttention():
 
     print("Test LeNet5 output shape: Success.")
 
+
+def test_ChannelAttention():
+
+    x = torch.zeros([10, 256, 26, 12])
+
+    net = models.ChannelAttention(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        assert y.shape == torch.Size([x.shape[0], 256, 26, 12]), "Bad shape of y: y.shape={}".format(y.shape)
+
+        print(sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    print("Test LeNet5 output shape: Success.")
+
