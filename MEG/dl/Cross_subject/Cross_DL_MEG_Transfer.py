@@ -44,7 +44,7 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    file_name = "data_f.hdf5"
+    file_name = "data.hdf5"
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -72,7 +72,7 @@ def main(args):
 
     print("Testing: {} ".format(parameters.desc))
 
-    mlp = True
+    mlp = False
 
     dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="train",
                                 y_measure=parameters.y_measure)
@@ -124,8 +124,8 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()

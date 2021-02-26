@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=04:00:00
+#SBATCH --time=04:30:00
 #SBATCH --mem-per-cpu=40000M
 #SBATCH --cpus-per-task=1
 #SBATCH --array=1-2
@@ -30,5 +30,5 @@ echo "desc is $desc"
 mkdir -p tmp/$SLURM_ARRAY_TASK_ID
 
 
-srun python MEG/dl/Cross_subject/Cross_DL_MEG.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
+srun python MEG/dl/Cross_subject/Cross_DL_MEG_Transfer.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
 
