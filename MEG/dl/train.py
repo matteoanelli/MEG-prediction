@@ -453,6 +453,10 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
     for param in net.ff.parameters():
         param.requires_grad = True
 
+    # set to true the grad of the attention layer
+    for param in net.attention.parameters():
+        param.requires_grad = True
+
     # net.ff[8] = nn.Linear(1024, 1)
 
 
