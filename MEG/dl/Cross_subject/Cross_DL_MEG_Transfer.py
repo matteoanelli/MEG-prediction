@@ -219,8 +219,8 @@ def main(args):
     print("r2 score {}".format(r2))
 
     print("Validation set")
-    print("root mean squared error {}".format(rmse_valid))
-    print("r2 score {}".format(r2_valid))
+    print("root mean squared error valid {}".format(rmse_valid))
+    print("r2 score valid {}".format(r2_valid))
 
     # plot y_new against the true value focus on 100 timepoints
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
