@@ -172,10 +172,21 @@ def main(args):
     rmse = mean_squared_error(y, y_pred, squared=False)
     mae = mean_absolute_error(y, y_pred)
     r2 = r2_score(y, y_pred)
+
+    rmse_valid = mean_squared_error(y_valid, y_pred_valid, squared=False)
+    r2_valid = r2_score(y_valid, y_pred_valid)
+    valid_loss_last = min(valid_loss)
+
+    print("Test set ")
     print("mean squared error {}".format(mse))
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
     print("r2 score {}".format(r2))
+
+    print("Validation set")
+    print("root mean squared error valid {}".format(rmse_valid))
+    print("r2 score valid {}".format(r2_valid))
+    print("last value of the validation loss:".format(valid_loss_last))
 
     # plot y_new against the true value focus on 100 timepoints
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -237,6 +248,10 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
+
+        mlflow.log_metric('RMSE_Valid', rmse_valid)
+        mlflow.log_metric('R2_Valid', r2_valid)
+        mlflow.log_metric('Valid_loss', valid_loss_last)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))

@@ -78,13 +78,15 @@ def main(args):
     cv = KFold(n_splits=5, shuffle=False)
     tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(1, 30, 5))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=-1, cv=cv, verbose=3)
+    clf = GridSearchCV(pipeline, tuned_parameters, scoring=['neg_mean_squared_error', "r2"], n_jobs=-1, cv=cv,
+                       refit='neg_mean_squared_error', verbose=3)
 
     #%%
     # Tune the pipeline
     start = time.time()
     print('Start Fitting model ...')
     clf.fit(X_train, y_train)
+    print(clf)
 
     print(f'Training time : {time.time() - start}s ')
     print('Number of cross-validation splits folds/iteration: {}'.format(clf.n_splits_))
@@ -148,7 +150,8 @@ def main(args):
 
     # %%
     n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
-    MSEs = clf.cv_results_['mean_test_score']
+    MSE_valid = clf.cv_results_['mean_test_neg_mean_squared_error'][0]
+    R2_valid = clf.cv_results_['mean_test_r2'][0]
     # %%
     # Save the model.
     name = 'MEG_SPoC.p'
@@ -163,6 +166,9 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
+
+        mlflow.log_metric('RMSE_Valid', MSE_valid)
+        mlflow.log_metric('R2_Valid', R2_valid)
 
         mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
         mlflow.log_param("alpha", parameters.alpha)

@@ -90,10 +90,10 @@ def main(args):
     #                                                        generator=torch.Generator().manual_seed(42))
     train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
 
-    # test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+    test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
 
-    transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
-    test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
+    # transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
+    # test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
 
     print("Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
         len(train_dataset), len(valid_dataset), len(test_dataset), len(transfer_dataset)))
@@ -124,10 +124,11 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        # optimizer = Adam(net.parameters(), lr=parameters.lr)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
+        # loss_function = torch.nn.L1Loss()
         start_time = timer.time()
 
         if mlp:
@@ -211,6 +212,7 @@ def main(args):
 
     rmse_valid = mean_squared_error(y_valid, y_pred_valid, squared=False)
     r2_valid = r2_score(y_valid, y_pred_valid)
+    valid_loss_last = min(valid_loss)
 
     print("Test set ")
     print("mean squared error {}".format(mse))
@@ -221,6 +223,7 @@ def main(args):
     print("Validation set")
     print("root mean squared error valid {}".format(rmse_valid))
     print("r2 score valid {}".format(r2_valid))
+    print("last value of the validation loss: {}".format(valid_loss_last))
 
     # plot y_new against the true value focus on 100 timepoints
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -274,6 +277,7 @@ def main(args):
     optimizer_trans = SGD(net.parameters(), lr=3e-4)
 
     loss_function_trans = torch.nn.MSELoss()
+    # loss_function_trans = torch.nn.L1Loss()
 
     if mlp:
         net, train_loss = train_mlp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
@@ -334,6 +338,10 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
+
+        mlflow.log_metric('RMSE_Valid', rmse_valid)
+        mlflow.log_metric('R2_Valid', r2_valid)
+        mlflow.log_metric('Valid_loss', valid_loss_last)
 
         mlflow.log_metric('RMSE_T', rmse_trans)
         mlflow.log_metric('R2_T', r2_trans)

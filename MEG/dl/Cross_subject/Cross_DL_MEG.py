@@ -112,8 +112,8 @@ def main(args):
         # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
-        # loss_function = torch.nn.MSELoss()
-        loss_function = torch.nn.L1Loss()
+        loss_function = torch.nn.MSELoss()
+        # loss_function = torch.nn.L1Loss()
         start_time = timer.time()
 
         if mlp:

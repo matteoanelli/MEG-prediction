@@ -262,11 +262,10 @@ class MNet(nn.Module):
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
                                       nn.BatchNorm2d(256),
-                                      Print()
-                                      )
+                                    )
 
         self.attention = nn.Sequential(ChannelAttention([None, 256, 26, self.n_times]),
-                                      SpatialAttention())
+                                       SpatialAttention())
 
         self.flatten = Flatten_MEG()
 
@@ -284,7 +283,7 @@ class MNet(nn.Module):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = x + self.attention(x)
+        x = self.attention(x)
         x = self.ff(self.flatten(x))
 
         return x.squeeze(1)
@@ -315,52 +314,47 @@ class RPS_MNet(nn.Module):
 
         self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 64], bias=False),
                                      nn.ReLU(),
-                                     nn.BatchNorm2d(32),
+                                     # nn.BatchNorm2d(32),
                                      nn.Conv2d(32, 64, kernel_size=[1, 16], bias=False),
                                      nn.ReLU(),
                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                     nn.BatchNorm2d(64),
+                                     # nn.BatchNorm2d(64),
                                     )
 
 
         self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=False),
                                       nn.ReLU(),
-                                      nn.BatchNorm2d(32),
+                                      # nn.BatchNorm2d(32),
                                       nn.Conv2d(32, 32, kernel_size=[8, 8], bias=False),
                                       nn.ReLU(),
-                                      ChannelAttention([None, 32, 50, 197]),
-                                      SpatialAttention(),
                                       nn.MaxPool2d(kernel_size=[1, 3], stride=(1, 2)),
-                                      nn.BatchNorm2d(32),
+                                      # nn.BatchNorm2d(32),
                                       nn.Conv2d(32, 64, kernel_size=[6, 6], bias=False),
                                       nn.ReLU(),
-                                      nn.BatchNorm2d(64),
+                                      # nn.BatchNorm2d(64),
                                       nn.Conv2d(64, 64, kernel_size=[6, 6], bias=False),
                                       nn.ReLU(),
-                                      ChannelAttention([None, 64, 40, 88]),
-                                      SpatialAttention(),
-                                      nn.BatchNorm2d(64),
+                                      # nn.BatchNorm2d(64),
                                       nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                                       nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
-                                      nn.BatchNorm2d(128),
+                                      # nn.BatchNorm2d(128),
                                       nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
-                                      ChannelAttention([None, 128, 32, 36]),
-                                      SpatialAttention(),
-                                      nn.BatchNorm2d(128),
+                                      # nn.BatchNorm2d(128),
                                       nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                                       nn.Conv2d(128, 256, kernel_size=[4, 4], bias=False),
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
-                                      nn.BatchNorm2d(256),
+                                      # nn.BatchNorm2d(256),
                                       nn.Conv2d(256, 256, kernel_size=[4, 4], bias=False),
                                       nn.ReLU(),
                                       nn.Dropout2d(p=0.2),
-                                      nn.BatchNorm2d(256),
+                                      # nn.BatchNorm2d(256),
                                       )
+
         self.attention = nn.Sequential(ChannelAttention([None, 256, 26, self.n_times]),
                                       SpatialAttention())
 
@@ -382,7 +376,7 @@ class RPS_MNet(nn.Module):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = x + self.attention(x)
+        x = self.attention(x)
         x = self.concatenate(x, pb)
         x = self.ff(x)
 
