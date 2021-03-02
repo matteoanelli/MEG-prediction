@@ -118,7 +118,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         net.train()
         train_losses = []
         valid_losses = []
-        for data, labels in trainloader:
+        for data, labels, _ in trainloader:
             # Set data to appropiate device
             data, labels = data.to(device), labels.to(device)
             # Clear the gradients
@@ -137,7 +137,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for data, labels in validloader:
+            for data, labels, _ in validloader:
                 # Set data to appropiate device
                 data, labels = data.to(device), labels.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model

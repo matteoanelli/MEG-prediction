@@ -1072,3 +1072,60 @@ def len_split_cross(len):
     valid = len - train
 
     return train, valid
+
+
+def import_MEG_within_subject(data_dir, file_name, subject, hand=0,  y="pca"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        X_test, y_test, rps_test
+    """
+
+    if y not in ["pca", "left_single_1"]:
+        raise ValueError("The y value to predict does not exist.")
+
+    if y == "pca" and hand == 0:
+        y = "left_pca"
+
+    if y == "pca" and hand == 1:
+        y = "right_pca"
+
+    sub = "sub" + str(subject)
+    print(sub)
+
+    with h5py.File("".join([data_dir, file_name]), "r") as f:
+        if y == "left_pca":
+            X = f[sub]["MEG"][...]
+            rps = f[sub]["RPS"][...]
+            y = f[sub]["Y_left"][...]
+
+        if y == "left_single_1":
+            X = f[sub]["MEG"][...]
+            rps = f[sub]["RPS"][...]
+            y = y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True)
+
+        if y == "right_pca":
+            X = f[sub]["MEG"][...]
+            rps = f[sub]["RPS"][...]
+            y = f[sub]["Y_right"][...]
+
+
+
+    X = torch.from_numpy(X)
+    rps = torch.from_numpy(rps)
+    y = torch.from_numpy(y)
+
+    return X.unsqueeze(1), y.unsqueeze(-1).repeat(1, 2), rps
