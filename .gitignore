@@ -20,3 +20,5 @@
 /ECoG/SPoC/Downsampling_analysis.py
 /.idea/
 cross_parameters.csv
+/Model/
+trans_parameters.csv

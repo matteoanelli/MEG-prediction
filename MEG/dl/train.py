@@ -418,7 +418,7 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
 
     return net, avg_train_losses, avg_valid_losses
 
-def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, attention=True):
     """
     Train loop used to train the rps_mnet to transfer learning.
     Args:
@@ -452,12 +452,14 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
     # set to true the grad of the MLP
     for param in net.ff.parameters():
         param.requires_grad = True
-
-    # set to true the grad of the attention layer
-    for param in net.attention.parameters():
-        param.requires_grad = True
+    if attention:
+        # set to true the grad of the attention layer
+        for param in net.attention.parameters():
+            param.requires_grad = True
 
     # net.ff[8] = nn.Linear(1024, 1)
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
 
 
     net = net.to(device)
@@ -607,6 +609,9 @@ def train_mlp_transfer(net, trainloader, optimizer, loss_function, device,  EPOC
     # set to true the grad of the last layer of the MLP
     for param in net.ff[4].parameters():
         param.requires_grad = True
+
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
 
     # net.ff[8] = nn.Linear(1024, 1)
 

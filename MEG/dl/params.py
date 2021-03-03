@@ -117,3 +117,20 @@ class Params_cross(object):
                "_" + str(self.device) + \
                "_" + str(self.y_measure)+ \
                "_" + str(self.desc)
+
+class Params_transf(object):
+    def __init__(self, subject_n, hand, test_batch_size, lr, device, desc):
+
+        self.subject_n = subject_n
+        self.hand = hand
+        self.test_batch_size = test_batch_size
+        self.lr = lr
+        self.device = device
+        self.desc = desc
+
+    def __str__(self):
+        return "_" + str(self.subject_n) + \
+               "_" + str(self.hand) + \
+               "_" + str(self.lr) + \
+               "_" + str(self.device) + \
+               "_" + str(self.desc)
