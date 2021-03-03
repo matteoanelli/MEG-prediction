@@ -8,7 +8,7 @@ import os, errno
 from torch.utils.data import Dataset
 
 from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file, import_MEG_Tensor_2, \
-    import_MEG_cross_subject_train, import_MEG_cross_subject_test
+    import_MEG_cross_subject_train, import_MEG_cross_subject_test, import_MEG_within_subject
 
 
 class MEG_Dataset(Dataset):
@@ -349,7 +349,7 @@ class MEG_Within_Dataset(Dataset):
         if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
             raise ValueError("Subject does not exist!")
 
-        self.data, self.target, self.bp = import_MEG_cross_subject_train(self.data_dir, self.file_name, self.sub,
+        self.data, self.target, self.bp = import_MEG_within_subject(self.data_dir, self.file_name, self.sub,
                                                                              self.hand, self.y_measure)
 
     def __len__(self):
