@@ -102,13 +102,13 @@ def main(args):
 
     attention = False
 
-    net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                        parameters.device, 100, 20,
-                                        parameters.hand, model_path, attention)
+    # net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
+    #                                     parameters.device, 100, 20,
+    #                                     parameters.hand, model_path, attention)
 
-    # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
-    #                                         parameters.device, 100, 20,
-    #                                         parameters.hand, model_path)
+    net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
+                                             parameters.device, 100, 20,
+                                             parameters.hand, model_path)
 
 
     # Evaluation

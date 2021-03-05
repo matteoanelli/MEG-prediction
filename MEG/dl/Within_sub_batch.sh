@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#SBATCH --time=01:30:00
-#SBATCH --mem-per-cpu=20000M
+#SBATCH --time=02:15:00
+#SBATCH --mem-per-cpu=24000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-2
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Cross_RPS_MNET_out_%A_%a.log
+#SBATCH --array=1
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Within_RPS_MNET_out_%A_%a.log
 #SBATCH --gres=gpu:1
-#SBATCH --constraint='pascal|volta'
 # if resenet add --constraint='pascal|volta'
 n=$(($SLURM_ARRAY_TASK_ID + 1))
 iteration=`sed -n "${n} p" cross_parameters.csv`
@@ -30,5 +29,5 @@ echo "desc is $desc"
 mkdir -p tmp/$SLURM_ARRAY_TASK_ID
 
 
-srun python MEG/dl/Within_sub_batch.sh --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
+srun python MEG/dl/within_sub.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
 

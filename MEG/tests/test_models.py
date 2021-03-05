@@ -135,9 +135,25 @@ def test_MNet_training():
 
 def test_RPS_MNet_shape():
 
-    x = torch.zeros([10, 1, 204, 501])
+    x = torch.zeros([10, 1, 204, 256])
     bp = torch.zeros([10, 204, 6])
-    net = models.RPS_MNet(x.shape[-1])
+    net = models.RPS_MNet_ivan(x.shape[-1])
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x, bp)
+        assert y.shape == torch.Size([x.shape[0]]), "Bad shape of y: y.shape={}".format(y.shape)
+
+        print(sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    print("Test LeNet5 output shape: Success.")
+
+def test_RPS_MNet_Ivan_shape():
+
+    x = torch.zeros([10, 1, 204, 256])
+    bp = torch.zeros([10, 204, 6])
+    net = models.RPS_MNet_ivan(x.shape[-1])
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))

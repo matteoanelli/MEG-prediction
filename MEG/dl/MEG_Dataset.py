@@ -8,7 +8,8 @@ import os, errno
 from torch.utils.data import Dataset
 
 from MEG.Utils.utils import import_MEG_Tensor, import_MEG_Tensor_form_file, import_MEG_Tensor_2, \
-    import_MEG_cross_subject_train, import_MEG_cross_subject_test, import_MEG_within_subject
+    import_MEG_cross_subject_train, import_MEG_cross_subject_test, import_MEG_within_subject, \
+    import_MEG_within_subject_ivan
 
 
 class MEG_Dataset(Dataset):
@@ -351,6 +352,56 @@ class MEG_Within_Dataset(Dataset):
 
         self.data, self.target, self.bp = import_MEG_within_subject(self.data_dir, self.file_name, self.sub,
                                                                              self.hand, self.y_measure)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+
+        sample_data = self.data[idx, ...]
+        sample_target = self.target[idx]
+        sample_bp = self.bp[idx, ...]
+
+        return sample_data, sample_target, sample_bp
+
+
+class MEG_Within_Dataset_ivan(Dataset):
+    def __init__(self, data_dir, sub=8, hand=0, mode="train"):
+        """
+
+        Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        sub (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        """
+
+
+        self.data_dir = data_dir
+        self.sub = sub
+        self.hand = hand
+        self.mode = mode
+
+        if self.mode not in ["train", "test", "val"]:
+            raise ValueError("mode mast be train or test!")
+
+        if self.hand not in [0, 1]:
+            raise ValueError("hand value must be 0 for left or 1 for right hand")
+
+        if not os.path.exists("".join([self.data_dir])):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "".join([self.data_dir]))
+
+        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError("Subject does not exist!")
+
+        self.data, self.target, self.bp = import_MEG_within_subject_ivan(self.data_dir, self.sub, self.hand, self.mode)
 
     def __len__(self):
         return self.data.shape[0]

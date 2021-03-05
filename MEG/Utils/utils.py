@@ -1129,3 +1129,60 @@ def import_MEG_within_subject(data_dir, file_name, subject, hand=0,  y="pca"):
     y = torch.from_numpy(y)
 
     return X.unsqueeze(1), y.unsqueeze(-1).repeat(1, 2), rps
+
+
+def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        X_test, y_test, rps_test
+    """
+
+    dataset = np.load(data_path)
+    print("datasets :", dataset.files)
+
+    if mode == "train":
+        X = dataset["X_train"]
+        y = dataset["y_train"]
+
+    elif mode == "val":
+        X = dataset["X_val"]
+        y = dataset["y_train"]
+
+    elif mode == "test":
+        X = dataset["X_test"]
+        y = dataset["y_test"]
+
+    else:
+        raise ValueError("mode value must be train, val or test!")
+
+
+    X = np.swapaxes(X, 2, -1) # To reshape the data [n_epoch, 1, n_channel, n_times]
+    print(X.shape)
+
+    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    rps = bandpower_multi(X.squeeze(), fs=250, bands=bands, relative=True)
+
+    # local
+    # rps = np.ones([X.shape[0], 204, 6])
+
+    # generate rps
+
+    X = torch.from_numpy(X).float()
+    rps = torch.from_numpy(rps).float()
+    y = torch.from_numpy(y).float()
+
+    return X, y.repeat(1, 2), rps

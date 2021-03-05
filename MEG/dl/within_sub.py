@@ -16,13 +16,13 @@ import json
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 
 sys.path.insert(1, r'')
 
 from MEG.dl.train import train, train_bp, train_bp_MLP
-from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Within_Dataset
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
+from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Within_Dataset, MEG_Within_Dataset_ivan
+from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP, RPS_MNet_ivan
 from MEG.dl.params import Params_tunable, Params_cross
 
 from  MEG.Utils.utils import *
@@ -36,7 +36,7 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    file_name = "data.hdf5"
+    file_name = "ball_left_mean.npz"
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -66,15 +66,22 @@ def main(args):
     rps = True
 
     # Generate the custom dataset
-    dataset = MEG_Within_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, parameters.y_measure)
+    train_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+                                       mode="train")
+
+    test_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+                                       mode="test")
+
+    valid_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+                                       mode="val")
 
     # split the dataset in train, test and valid sets.
-    train_len, valid_len, test_len = len_split(len(dataset))
-    print('{} + {} + {} = {}?'.format(train_len, valid_len, test_len, len(dataset)))
+
+    print("train set {}, val set {}, test set {}".format(len(train_dataset), len(valid_dataset), len(test_dataset)))
 
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
     # Better vizualization
     # train_valid_dataset = Subset(dataset, list(range(train_len+valid_len)))
     # test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
@@ -83,7 +90,7 @@ def main(args):
 
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
-    validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
+    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
 
@@ -98,7 +105,7 @@ def main(args):
 
         n_times = sample.shape[-1]
         if rps:
-            net = RPS_MNet(n_times)
+            net = RPS_MNet_ivan(n_times)
         else:
             net = MNet(n_times)
 
@@ -109,8 +116,8 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()

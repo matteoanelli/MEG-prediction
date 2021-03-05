@@ -533,6 +533,9 @@ def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EP
     """
     print("Transfer learning test subject...")
 
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+
     net = net.to(device)
     avg_train_losses = []
 
