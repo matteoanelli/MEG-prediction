@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --time=04:30:00
+#SBATCH --time=04:00:00
 #SBATCH --mem-per-cpu=64000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=7-8
+#SBATCH --array=11-15
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Cross_RPS_MNET_out_%A_%a.log
 #SBATCH --gres=gpu:1
 #SBATCH --constraint='pascal|volta'

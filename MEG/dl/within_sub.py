@@ -16,7 +16,7 @@ import json
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 
 sys.path.insert(1, r'')
 
@@ -74,16 +74,16 @@ def main(args):
 
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
     # Better vizualization
-    # train_valid_dataset = Subset(dataset, list(range(train_len+valid_len)))
-    # test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
+    train_valid_dataset = Subset(dataset, list(range(train_len+valid_len)))
+    test_dataset = Subset(dataset, list(range(train_len+valid_len, len(dataset))))
     #
-    # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
+    train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
 
     # Initialize the dataloaders
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
-    validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
+    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
     testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
 
 
@@ -109,8 +109,8 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()

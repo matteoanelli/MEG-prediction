@@ -355,8 +355,8 @@ class RPS_MNet(nn.Module):
                                       # nn.BatchNorm2d(256),
                                       )
 
-        self.attention = nn.Sequential(ChannelAttention([None, 256, 26, self.n_times]),
-                                      SpatialAttention())
+        # self.attention = nn.Sequential(ChannelAttention([None, 256, 26, self.n_times]),
+        #                               SpatialAttention())
 
         self.concatenate = Concatenate()
 
@@ -376,7 +376,7 @@ class RPS_MNet(nn.Module):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = self.attention(x)
+        # x = self.attention(x)
         x = self.concatenate(x, pb)
         x = self.ff(x)
 

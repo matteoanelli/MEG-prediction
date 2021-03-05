@@ -67,10 +67,10 @@ def main(args):
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
 
-    test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+    # test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
 
-    # transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
-    # test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
+    transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
+    test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
 
     print("Test dataset len {}, transfer dataset len {}".format(len(test_dataset), len(transfer_dataset)))
 
@@ -103,11 +103,11 @@ def main(args):
     attention = False
 
     net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                        parameters.device, 100, 20,
+                                        parameters.device, 200, 20,
                                         parameters.hand, model_path, attention)
 
     # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
-    #                                         parameters.device, 100, 20,
+    #                                         parameters.device, 200, 20,
     #                                         parameters.hand, model_path)
 
 
@@ -144,6 +144,9 @@ def main(args):
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
             mlflow.log_param(key, value)
+
+        mlflow.log_metric('RMSE_T', rmse_trans)
+        mlflow.log_metric('R2_T', r2_trans)
 
         mlflow.log_artifact(os.path.join(figure_path, "Scatter_after_trans.pdf"))
         mlflow.pytorch.log_model(net, "models")

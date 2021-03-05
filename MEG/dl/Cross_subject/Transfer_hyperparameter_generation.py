@@ -53,13 +53,13 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "Transfer_learning_exp_fine_tune_attention_MLP"
+    description = "Transfer_learning_exp_fine_tune_MLP_shuffle"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size_test": [60, 80, 100],
-        "learning_rate": [3e-3, 1e-5],
+        "learning_rate": [1e-2, 1e-5],
     }
 
     args = parser.parse_args()
@@ -71,10 +71,10 @@ if __name__ == '__main__':
         "patience": 20,
         "y_measure": "pca",
         "experiment": 34,
-        "run": "",
+        "run": "05cec4f7f84e48feafeded2a737540d3",
         "desc": description,
     }
-    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 30, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size_test', 'learning_rate', 'experiment',
