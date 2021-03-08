@@ -1150,21 +1150,30 @@ def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
     Returns:
         X_test, y_test, rps_test
     """
+    file_name = "ball_left_mean.npz"
+    rps_name = "rps.npz"
+    print("loading dataset for {} ".format(mode))
 
-    dataset = np.load(data_path)
+    dataset = np.load(os.path.join(data_path, file_name))
+    rps_data = np.load(os.path.join(data_path, rps_name))
     print("datasets :", dataset.files)
+    print("rps :", rps_data.files)
 
     if mode == "train":
         X = dataset["X_train"]
         y = dataset["y_train"]
+        rps = rps_data["rps_train"]
+
 
     elif mode == "val":
         X = dataset["X_val"]
-        y = dataset["y_train"]
+        y = dataset["y_val"]
+        rps = rps_data["rps_val"]
 
     elif mode == "test":
         X = dataset["X_test"]
         y = dataset["y_test"]
+        rps = rps_data["rps_test"]
 
     else:
         raise ValueError("mode value must be train, val or test!")
@@ -1173,8 +1182,8 @@ def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
     X = np.swapaxes(X, 2, -1) # To reshape the data [n_epoch, 1, n_channel, n_times]
     print(X.shape)
 
-    bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-    rps = bandpower_multi(X.squeeze(), fs=250, bands=bands, relative=True)
+    # bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    # rps = bandpower_multi(X.squeeze(), fs=250, bands=bands, relative=True)
 
     # local
     # rps = np.ones([X.shape[0], 204, 6])

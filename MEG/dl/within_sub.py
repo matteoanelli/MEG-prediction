@@ -32,6 +32,7 @@ mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 def main(args):
 
+
     data_dir = args.data_dir
     figure_path = args.figure_dir
     model_path = args.model_dir
@@ -64,15 +65,16 @@ def main(args):
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
     mlp = False
     rps = True
+    print("Creating dataset")
 
     # Generate the custom dataset
-    train_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+    train_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n, parameters.hand,
                                        mode="train")
 
-    test_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+    test_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n, parameters.hand,
                                        mode="test")
 
-    valid_dataset = MEG_Within_Dataset_ivan(os.path.join(data_dir, file_name), parameters.subject_n, parameters.hand,
+    valid_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n, parameters.hand,
                                        mode="val")
 
     # split the dataset in train, test and valid sets.
@@ -190,6 +192,12 @@ def main(args):
                         parameters.device)
                     y.extend(list(labels[:, parameters.hand]))
                     y_pred.extend((list(net(data, bp))))
+
+                for data, labels, bp in validloader:
+                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                    y_valid.extend(list(labels[:, parameters.hand]))
+                    y_pred_valid.extend((list(net(data, bp))))
+
             else:
                 for data, labels, _ in testloader:
                     data, labels = data.to(parameters.device), labels.to(parameters.device)
@@ -204,6 +212,8 @@ def main(args):
     mae = mean_absolute_error(y, y_pred)
     r2 = r2_score(y, y_pred)
 
+    rmse_valid = mean_squared_error(y_valid, y_pred_valid, squared=False)
+    r2_valid = r2_score(y_valid, y_pred_valid)
     valid_loss_last = min(valid_loss)
 
     print("Test set ")
@@ -211,6 +221,10 @@ def main(args):
     print("root mean squared error {}".format(rmse))
     print("mean absolute error {}".format(mae))
     print("r2 score {}".format(r2))
+
+    print("Validation set")
+    print("root mean squared error valid {}".format(rmse_valid))
+    print("r2 score valid {}".format(r2_valid))
     print("last value of the validation loss: {}".format(valid_loss_last))
 
     # plot y_new against the true value focus on 200 timepoints
@@ -261,6 +275,8 @@ def main(args):
         mlflow.log_metric('RMSE', rmse)
         mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
+        mlflow.log_metric('RMSE_Valid', rmse_valid)
+        mlflow.log_metric('R2_Valid', r2_valid)
         mlflow.log_metric('Valid_loss', valid_loss_last)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
@@ -296,7 +312,7 @@ if __name__ == "__main__":
                         help='input batch size for validation (default: 100)')
     parser.add_argument('--batch_size_test', type=int, default=30, metavar='N',
                         help='input batch size for  (default: 100)')
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
+    parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 200)')
     parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
                         help='Learning rate (default: 1e-3),')
