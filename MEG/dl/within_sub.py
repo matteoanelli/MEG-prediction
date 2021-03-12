@@ -11,7 +11,6 @@ import mlflow
 import mlflow.pytorch
 import argparse
 import time as timer
-import json
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
@@ -185,16 +184,22 @@ def main(args):
                 labels, bp = labels.to(parameters.device), bp.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(bp))))
+
+            for _, labels, bp in validloader:
+                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(bp))))
         else:
             if rps:
                 for data, labels, bp in testloader:
-                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(
-                        parameters.device)
+                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), \
+                                       bp.to(parameters.device)
                     y.extend(list(labels[:, parameters.hand]))
                     y_pred.extend((list(net(data, bp))))
 
                 for data, labels, bp in validloader:
-                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                    data, labels, bp = data.to(parameters.device), labels.to(parameters.device), \
+                                       bp.to(parameters.device)
                     y_valid.extend(list(labels[:, parameters.hand]))
                     y_pred_valid.extend((list(net(data, bp))))
 
@@ -203,6 +208,11 @@ def main(args):
                     data, labels = data.to(parameters.device), labels.to(parameters.device)
                     y.extend(list(labels[:, parameters.hand]))
                     y_pred.extend((list(net(data))))
+
+                for data, labels, _ in validloader:
+                    data, labels = data.to(parameters.device), labels.to(parameters.device)
+                    y_valid.extend(list(labels[:, parameters.hand]))
+                    y_pred_valid.extend((list(net(data))))
 
 
     # Calculate Evaluation measures

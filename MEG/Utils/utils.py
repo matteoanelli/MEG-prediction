@@ -1150,8 +1150,13 @@ def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
     Returns:
         X_test, y_test, rps_test
     """
-    file_name = "ball_left_mean.npz"
-    rps_name = "rps.npz"
+    if hand == 0:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        rps_name = "sub_{}_left_rps.npz".format(str(subject))
+    else:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        rps_name = "sub_{}_left_rps.npz".format(str(subject))
+
     print("loading dataset for {} ".format(mode))
 
     dataset = np.load(os.path.join(data_path, file_name))

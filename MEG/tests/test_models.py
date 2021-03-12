@@ -151,7 +151,7 @@ def test_RPS_MNet_shape():
 
 def test_RPS_MNet_Ivan_shape():
 
-    x = torch.zeros([10, 1, 204, 256])
+    x = torch.zeros([10, 1, 204, 250])
     bp = torch.zeros([10, 204, 6])
     net = models.RPS_MNet_ivan(x.shape[-1])
 
