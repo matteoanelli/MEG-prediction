@@ -14,9 +14,9 @@ def main(args):
 
     sub = args.sub
 
-    file_name = "sub_{}_left.npz".format(str(sub))
+    file_name = "sub_{}_right.npz".format(str(sub))
     print("processing file :", file_name)
-    out_file = "sub_{}_left_rps.npz".format(str(sub))
+    out_file = "sub_{}_right_rps.npz".format(str(sub))
     print("output_file: ", out_file)
 
     dataset = np.load(os.path.join(data_dir, file_name))

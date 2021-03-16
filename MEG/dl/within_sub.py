@@ -21,7 +21,7 @@ sys.path.insert(1, r'')
 
 from MEG.dl.train import train, train_bp, train_bp_MLP
 from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Within_Dataset, MEG_Within_Dataset_ivan
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP, RPS_MNet_ivan
+from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP, RPS_MNet_ivan, MNet_ivan
 from MEG.dl.params import Params_tunable, Params_cross
 
 from  MEG.Utils.utils import *
@@ -62,8 +62,8 @@ def main(args):
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
-    mlp = False
-    rps = True
+    mlp = True
+    rps = False
     print("Creating dataset")
 
     # Generate the custom dataset
@@ -108,7 +108,7 @@ def main(args):
         if rps:
             net = RPS_MNet_ivan(n_times)
         else:
-            net = MNet(n_times)
+            net = MNet_ivan(n_times)
 
     print(net)
 
@@ -117,7 +117,7 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
         optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         loss_function = torch.nn.MSELoss()
@@ -274,6 +274,15 @@ def main(args):
     plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
     plt.show()
 
+    # scatterplot y predicted against the true value
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    ax.scatter(np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
+    # plt.legend()
+    plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
+    plt.show()
+
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
@@ -293,6 +302,7 @@ def main(args):
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
         mlflow.pytorch.log_model(net, "models")
 
 

@@ -58,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "within_final_RPS_MNET_SGD_no_att_wd"
+    description = "within_final_RPS_MLP_SGD_no_att_wd_l2_loss_dropout02"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
@@ -76,14 +76,14 @@ if __name__ == '__main__':
         "batch_size_test": 30,
         "hand": 0,
         "sub": 8,
-        "epochs": 120,
+        "epochs": 200,
         "patience": 20,
         "y_measure": "pca",
-        "experiment": 35,
+        "experiment": 37,
         "desc": description,
     }
 
-    random_search = generate_parameters(param_grid, 10, fix_param, args.data_dir, args.figure_dir, args.model_dir)
+    random_search = generate_parameters(param_grid, 40, fix_param, args.data_dir, args.figure_dir, args.model_dir)
 
     df = pd.DataFrame(random_search)
     df = df[['data_dir', 'figure_dir', 'model_dir', 'sub', 'hand', 'batch_size', 'batch_size_valid',
