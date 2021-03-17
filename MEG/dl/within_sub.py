@@ -62,8 +62,8 @@ def main(args):
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
-    mlp = True
-    rps = False
+    mlp = False
+    rps = True
     print("Creating dataset")
 
     # Generate the custom dataset

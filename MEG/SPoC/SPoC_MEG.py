@@ -32,75 +32,96 @@ def main(args):
                              hand=args.hand,
                              duration=args.duration,
                              overlap=args.overlap,
-                             y_measure=args.y_measure)
-
-    # Generate list of input files
-    subj_id = "/sub"+str(args.sub)+"/ball0"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
-
-    # LOCAL
-    # subj_n = 8
-    # subj_id = "sub" + str(subj_n) + "\\ball"
-    # raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+                             y_measure=args.y_measure,
+                             alpha=args.alpha)
 
     # Import and epoch the MEG data
-    X, y_left, y_right = import_MEG_no_bp(raw_fnames,
-                                          duration=parameters.duration,
-                                          overlap=parameters.overlap,
-                                          y_measure=parameters.y_measure,
-                                          normalize_input=True)   # concentrate the analysis only on the left hand
+    X_train, y_train, _ = import_MEG_within_subject_ivan(data_dir, args.sub,
+                                                      args.hand, "train")
 
-    print('X shape {}, y shape {}'.format(X.shape, y_left.shape))
+    X_valid, y_valid, _ = import_MEG_within_subject_ivan(data_dir, args.sub,
+                                                      args.hand, "val")
+
+    X_test, y_test, _ = import_MEG_within_subject_ivan(data_dir, args.sub,
+                                                      args.hand, "test")
 
     # Select hand
-    if parameters.hand == 0:
-        X_train, X_test, y_train, y_test = split_data(X, y_left, 0.3)
-    else:
-        X_train, X_test, y_train, y_test = split_data(X, y_right, 0.3)
+
+    X_train, y_train = np.array(X_train.squeeze()).astype(
+        np.float64), np.array(y_train[..., args.hand].squeeze()).astype(
+        np.float64)
+
+    X_valid, y_valid = np.array(X_valid.squeeze()).astype(np.float64), np.array(
+        y_valid[..., args.hand].squeeze()).astype(
+        np.float64)
+
+    X_test, y_test = np.array(X_test.squeeze()).astype(np.float64), np.array(
+        y_test[..., args.hand].squeeze()).astype(
+        np.float64)
 
     print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
     print('X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}'.format(X_train.shape, y_train.shape,
                                                                                           X_test.shape, y_test.shape))
 
-    pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full')),
-                         ('Ridge', Ridge())])
 
-    # %%
-    # Initialize the cross-validation pipeline and grid search
-    cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{'Spoc__n_components': list(map(int, list(np.arange(2, 30, 4)))),
-                         'Ridge__alpha': [0.8, 1.0, 5, 10]}]
-
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring='neg_mean_squared_error', n_jobs=4, cv=cv, verbose=3)
-
-    #%%
-    # Tune the pipeline
     start = time.time()
     print('Start Fitting model ...')
-    clf.fit(X_train, y_train)
+    best_pipeline = None
+    best_mse_valid = np.Inf
+    best_rmse_valid = 0
+    best_r2_valid = 0
+    best_alpha = 0
+    best_n_comp = 0
+    for n_components in np.arange(2, 30, 4):
+        for alpha in [0.8, 1.0, 5, 10]:
+
+            pipeline = Pipeline([('Spoc', SPoC(log=True, reg='oas', rank='full', n_components=int(n_components))),
+                            ('Ridge', Ridge(alpha=alpha))])
+
+            pipeline.fit(X_train, y_train)
+
+            # Validate the pipeline
+            print("evaluation parameters n_comp :{}, alpha {}".format(n_components, alpha))
+            y_new = pipeline.predict(X_valid)
+            mse = mean_squared_error(y_valid, y_new)
+            rmse = mean_squared_error(y_valid, y_new, squared=False)
+            # mae = mean_absolute_error(y_test, y_new)
+            r2 = r2_score(y_valid, y_new)
+            
+            if mse < best_mse_valid:
+                print("saving new best model mse {} ---> {}".format(best_mse_valid, mse))
+                best_pipeline = pipeline
+                best_mse_valid = mse
+                best_r2_valid = r2
+                best_rmse_valid = rmse
+                best_alpha = alpha
+                best_n_comp = n_components
+                
+                
 
     print(f'Training time : {time.time() - start}s ')
-    print('Number of cross-validation splits folds/iteration: {}'.format(clf.n_splits_))
-    print('Best Score and parameter combination: ')
+    print("Best compination of parameters:")
+    print("Number of components: ", best_n_comp)
+    print("Alpha: ", best_alpha)
+    
+    print("Validation set")
+    print("mean squared error valid {}".format(best_mse_valid))
+    print("root mean squared error valid{}".format(best_rmse_valid))
+    print("r2 score {}".format(best_r2_valid))
 
-    print(clf.best_score_)
-    print(clf.best_params_['Spoc__n_components'])
-    print(clf.best_params_['Ridge__alpha'])
-    print("CV results")
-    print(clf.cv_results_)
-    print("Number of splits")
-    print(clf.n_splits_)
     #%%
-    # Validate the pipeline
-    y_new = clf.predict(X_test)
+    # Test the pipeline
+    print("Test set")
+    y_new = best_pipeline.predict(X_test)
     mse = mean_squared_error(y_test, y_new)
     rmse = mean_squared_error(y_test, y_new, squared=False)
-    mae = mean_absolute_error(y_test, y_new)
+    # mae = mean_absolute_error(y_test, y_new)
     r2 = r2_score(y_test, y_new)
     print("mean squared error {}".format(mse))
     print("root mean squared error {}".format(rmse))
-    print("mean absolute error {}".format(mae))
+    # print("mean absolute error {}".format(mae))
     print("r2 score {}".format(r2))
+    
     #%%
     # Plot the y expected vs y predicted.
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
@@ -131,26 +152,19 @@ def main(args):
     plt.savefig(os.path.join(figure_path, 'MEG_SPoC.pdf'))
     plt.show()
 
-    # %%
-    n_components = np.ma.getdata(clf.cv_results_['param_Spoc__n_components'])
-    MSEs = clf.cv_results_['mean_test_score']
-    # %%
-    # Plot the number of components.
+    # scatterplot y predicted against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    ax.plot(n_components, MSEs, color='b')
-    ax.set_xlabel('Number of SPoC components')
-    ax.set_ylabel('MSE')
-    ax.set_title('SPoC Components Analysis')
+    ax.scatter(np.array(y_test), np.array(y_new), color="b", label="Predicted")
+    ax.set_xlabel("True")
+    ax.set_ylabel("Predicted")
     # plt.legend()
-    plt.xticks(n_components, n_components)
-    viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
+    plt.savefig(os.path.join(figure_path, "Scatter.pdf"))
     plt.show()
 
     # %%
     # Save the model.
     name = 'MEG_SPoC.p'
-    save_skl_model(clf, model_path, name)
+    save_skl_model(best_pipeline, model_path, name)
 
     # log the model
     with mlflow.start_run(experiment_id=args.experiment) as run:
@@ -159,16 +173,19 @@ def main(args):
 
         mlflow.log_metric('MSE', mse)
         mlflow.log_metric('RMSE', rmse)
-        mlflow.log_metric('MAE', mae)
+        # mlflow.log_metric('MAE', mae)
         mlflow.log_metric('R2', r2)
 
-        mlflow.log_param("n_components", clf.best_params_['Spoc__n_components'])
-        mlflow.log_param("alpha", clf.best_params_['Ridge__alpha'])
+        mlflow.log_metric('RMSE_v', best_rmse_valid)
+        mlflow.log_metric('R2_v', best_r2_valid)
+        
+
+        mlflow.log_param("n_components", best_n_comp)
+        mlflow.log_param("alpha", best_alpha)
 
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_focus.pdf'))
         mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC.pdf'))
-        mlflow.log_artifact(os.path.join(figure_path, 'MEG_SPoC_Components_Analysis.pdf'))
-        mlflow.sklearn.log_model(clf, "models")
+        mlflow.sklearn.log_model(best_pipeline, "models")
 
 if __name__ == "__main__":
     # main(sys.argv[1:])
@@ -200,6 +217,8 @@ if __name__ == "__main__":
                         help='Y type reshaping (default: movement)')
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
+    parser.add_argument('--alpha', type=float, default=2, metavar='N',
+                            help='Ridge alpha value (default: 2)') # not actually used
 
     args = parser.parse_args()
 

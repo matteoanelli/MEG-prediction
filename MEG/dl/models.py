@@ -289,6 +289,83 @@ class MNet(nn.Module):
         return x.squeeze(1)
 
 
+class MNet_ivan(nn.Module):
+    """
+        Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x] integrated with bandpower.
+    """
+    def __init__(self, n_times):
+        """
+
+        Args:
+            n_times (int):
+                n_times dimension of the input data.
+        """
+        super(MNet_ivan, self).__init__()
+        if n_times == 250:  #TODO automatic n_times
+            self.n_times = 5
+        elif n_times == 601:
+            self.n_times = 18  # to check
+        elif n_times == 701:
+            self.n_times = 24  # to check
+        else:
+            raise ValueError("Network can work only with n_times = 250, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                             " got instead {}".format(n_times))
+
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 32], bias=True),
+                                    nn.ReLU(),
+                                    nn.Conv2d(32, 64, kernel_size=[1, 16], bias=True),
+                                    nn.ReLU(),
+                                    nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                    )
+
+        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
+                                              nn.ReLU(),
+                                              nn.Conv2d(32, 32, kernel_size=[7, 7], bias=True),
+                                              nn.ReLU(),
+                                              nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
+                                              nn.ReLU(),
+                                              nn.Conv2d(64, 64, kernel_size=[6, 6], bias=True),
+                                              nn.ReLU(),
+                                              nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.2),
+                                              nn.Conv2d(128, 128, kernel_size=[5, 5], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.2),
+                                              # nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.2),
+                                              nn.Conv2d(256, 256, kernel_size=[3, 3], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.2),
+                                              )
+
+        self.flatten = Flatten_MEG()
+
+        self.ff = nn.Sequential(nn.Linear(256 * 30 * self.n_times, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.2),
+                                nn.Linear(1024, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.2),
+                                nn.Linear(1024, 1))
+
+
+    def forward(self, x):
+
+        x = self.spatial(x)
+        x = torch.transpose(x, 1, 2)
+        x = self.temporal(x)
+        x = self.ff(self.flatten(x))
+
+        return x.squeeze(1)
+
+
 
 class RPS_MNet(nn.Module):
     """
@@ -402,40 +479,65 @@ class RPS_MNet_ivan(nn.Module):
         elif n_times == 701:
             self.n_times = 24  # to check
         else:
-            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+            raise ValueError("Network can work only with n_times = 250, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
                              " got instead {}".format(n_times))
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 32], bias=False),
+        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 32], bias=True),
                                     nn.ReLU(),
-                                    nn.Conv2d(32, 64, kernel_size=[1, 16], bias=False),
+                                    nn.Conv2d(32, 64, kernel_size=[1, 16], bias=True),
                                     nn.ReLU(),
                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                                     )
 
+        # self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Conv2d(32, 32, kernel_size=[7, 7], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+        #                               nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Conv2d(64, 64, kernel_size=[6, 6], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+        #                               nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Dropout2d(p=0.3),
+        #                               nn.Conv2d(128, 128, kernel_size=[5, 5], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Dropout2d(p=0.3),
+        #                               # nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+        #                               nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Dropout2d(p=0.3),
+        #                               nn.Conv2d(256, 256, kernel_size=[3, 3], bias=True),
+        #                               nn.ReLU(),
+        #                               nn.Dropout2d(p=0.3),
+        #                               )
+
         self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[7, 7], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[6, 6], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
-                                      nn.ReLU(),
-                                      nn.Dropout2d(p=0.3),
-                                      nn.Conv2d(128, 128, kernel_size=[5, 5], bias=True),
-                                      nn.ReLU(),
-                                      nn.Dropout2d(p=0.3),
-                                      # nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
-                                      nn.ReLU(),
-                                      nn.Dropout2d(p=0.3),
-                                      nn.Conv2d(256, 256, kernel_size=[3, 3], bias=True),
-                                      nn.ReLU(),
-                                      nn.Dropout2d(p=0.3),
-                                      )
+                                              nn.ReLU(),
+                                              nn.Conv2d(32, 32, kernel_size=[7, 7], bias=True),
+                                              nn.ReLU(),
+                                              nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
+                                              nn.ReLU(),
+                                              nn.Conv2d(64, 64, kernel_size=[6, 6], bias=True),
+                                              nn.ReLU(),
+                                              nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.3),
+                                              nn.Conv2d(128, 128, kernel_size=[5, 5], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.3),
+                                              # nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                                              nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.3),
+                                              nn.Conv2d(256, 256, kernel_size=[3, 3], bias=True),
+                                              nn.ReLU(),
+                                              nn.Dropout2d(p=0.3),
+                                              )
 
         # self.attention = nn.Sequential(ChannelAttention([None, 256, 30, self.n_times]),
         #                                SpatialAttention())
@@ -959,21 +1061,21 @@ class RPS_MLP(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
-                                nn.ReLU(),
-                                nn.Linear(1024, 1024),
-                                nn.ReLU(),
-                                nn.Linear(1024, 1))
-
         # self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
-        #                         nn.BatchNorm1d(num_features=1024),
         #                         nn.ReLU(),
-        #                         nn.Dropout(0.5),
         #                         nn.Linear(1024, 1024),
-        #                         nn.BatchNorm1d(num_features=1024),
         #                         nn.ReLU(),
-        #                         nn.Dropout(0.5),
         #                         nn.Linear(1024, 1))
+
+        self.ff = nn.Sequential(nn.Linear(in_channel * n_bands, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.3),
+                                nn.Linear(1024, 1024),
+                                nn.BatchNorm1d(num_features=1024),
+                                nn.ReLU(),
+                                nn.Dropout(0.3),
+                                nn.Linear(1024, 1))
 
     def forward(self, x):
         # relative power spectrum as input
