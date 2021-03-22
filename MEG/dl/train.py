@@ -11,12 +11,20 @@ import torch
 from tqdm import tqdm
 import torch.nn as nn
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+
+    def __init__(
+        self,
+        patience=7,
+        verbose=False,
+        delta=0,
+        path="checkpoint.pt",
+        trace_func=print,
+    ):
         """
         Args:
             patience (int):
@@ -54,7 +62,9 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score <= self.best_score + self.delta:
             self.counter += 1
-            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            self.trace_func(
+                f"EarlyStopping counter: {self.counter} out of {self.patience}"
+            )
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -63,13 +73,27 @@ class EarlyStopping:
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
-        '''Saves model when validation loss decrease.'''
+        """Saves model when validation loss decrease."""
         if self.verbose:
-            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ...')
+            self.trace_func(
+                f"Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ..."
+            )
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+
+def train(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
     """
     Train loop used to train all the DL solutions.
 
@@ -109,7 +133,11 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -147,8 +175,11 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -165,7 +196,19 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
 
     return net, avg_train_losses, avg_valid_losses
 
-def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+
+def train_bp(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
     """
     Train loop used to train all the DL solutions with RPS integration.
     Args:
@@ -202,7 +245,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -213,7 +260,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
         valid_losses = []
         for data, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            data, labels, bp = (
+                data.to(device),
+                labels.to(device),
+                bp.to(device),
+            )
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
@@ -232,7 +283,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
         with torch.no_grad():
             for data, labels, bp in validloader:
                 # Set data to appropiate device
-                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+                data, labels, bp = (
+                    data.to(device),
+                    labels.to(device),
+                    bp.to(device),
+                )
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data, bp)
                 # calculate the loss
@@ -240,8 +295,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -258,7 +316,19 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
 
     return net, avg_train_losses, avg_valid_losses
 
-def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+
+def train_bp_MLP(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
     """
     Train loop used to train RPS_MLP.
 
@@ -298,7 +368,11 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -336,8 +410,11 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -355,14 +432,30 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
     return net, avg_train_losses, avg_valid_losses
 
 
-def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, fs=500):
+def train_2(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+    fs=500,
+):
 
-    net = net.to(device) # TODO probably to remove
+    net = net.to(device)  # TODO probably to remove
     avg_train_losses = []
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -373,7 +466,11 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
         valid_losses = []
         for data, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            data, labels, bp = (
+                data.to(device),
+                labels.to(device),
+                bp.to(device),
+            )
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
@@ -392,7 +489,11 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
         with torch.no_grad():
             for data, labels, bp in validloader:
                 # Set data to appropiate device
-                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+                data, labels, bp = (
+                    data.to(device),
+                    labels.to(device),
+                    bp.to(device),
+                )
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data, bp)
                 # calculate the loss
@@ -400,8 +501,11 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -418,7 +522,19 @@ def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EP
 
     return net, avg_train_losses, avg_valid_losses
 
-def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, attention=True):
+
+def train_bp_transfer(
+    net,
+    trainloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+    attention=True,
+):
     """
     Train loop used to train the rps_mnet to transfer learning.
     Args:
@@ -459,14 +575,21 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
 
     # net.ff[8] = nn.Linear(1024, 1)
     for name, param in net.named_parameters():
-        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
-
+        print(
+            "param name: {}, requires_grad {}.".format(
+                name, param.requires_grad
+            )
+        )
 
     net = net.to(device)
     avg_train_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -476,7 +599,11 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
         train_losses = []
         for data, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            data, labels, bp = (
+                data.to(device),
+                labels.to(device),
+                bp.to(device),
+            )
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
@@ -488,7 +615,11 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
             train_loss.backward()
             optimizer.step()
 
-        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         avg_train_losses.append(train_loss)
@@ -504,7 +635,17 @@ def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCH
     return net, avg_train_losses
 
 
-def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+def train_bp_fine_tuning(
+    net,
+    trainloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
     """
     Train loop used to train the rps_mnet to use fine tuning.
     Args:
@@ -534,13 +675,21 @@ def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EP
     print("Transfer learning test subject...")
 
     for name, param in net.named_parameters():
-        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+        print(
+            "param name: {}, requires_grad {}.".format(
+                name, param.requires_grad
+            )
+        )
 
     net = net.to(device)
     avg_train_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -550,7 +699,11 @@ def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EP
         train_losses = []
         for data, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            data, labels, bp = (
+                data.to(device),
+                labels.to(device),
+                bp.to(device),
+            )
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
@@ -562,7 +715,11 @@ def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EP
             train_loss.backward()
             optimizer.step()
 
-        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         avg_train_losses.append(train_loss)
@@ -578,7 +735,17 @@ def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EP
     return net, avg_train_losses
 
 
-def train_mlp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+def train_mlp_transfer(
+    net,
+    trainloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
     """
     Train loop used to train the rps_mlp to transfer learning.
     Args:
@@ -614,16 +781,23 @@ def train_mlp_transfer(net, trainloader, optimizer, loss_function, device,  EPOC
         param.requires_grad = True
 
     for name, param in net.named_parameters():
-        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+        print(
+            "param name: {}, requires_grad {}.".format(
+                name, param.requires_grad
+            )
+        )
 
     # net.ff[8] = nn.Linear(1024, 1)
-
 
     net = net.to(device)
     avg_train_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -645,7 +819,11 @@ def train_mlp_transfer(net, trainloader, optimizer, loss_function, device,  EPOC
             train_loss.backward()
             optimizer.step()
 
-        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         avg_train_losses.append(train_loss)

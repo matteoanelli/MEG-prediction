@@ -10,17 +10,25 @@ import h5py
 import numpy as np
 import torch
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 if __name__ == "__main__":
     # main(sys.argv[1:])
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
+    parser.add_argument(
+        "--sub",
+        type=int,
+        default="8",
+        help="Input data directory (default= 8)",
+    )
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
 
     args = parser.parse_args()
 
@@ -52,8 +60,18 @@ if __name__ == "__main__":
     rps_test = torch.from_numpy(rps_test)
     Y_test = torch.from_numpy(Y_test)
 
-    print("Memory size of a NumPy array:", X_train.element_size() * X_train.nelement())
+    print(
+        "Memory size of a NumPy array:",
+        X_train.element_size() * X_train.nelement(),
+    )
 
-    print("The size of the training data are. X: {}, rps {}, y {}".format(X_train.shape, rps_train.shape,
-                                                                          Y_left_train.shape))
-    print("The size of the test data are. X: {}, rps {}, y {}".format(X_test.shape, rps_test.shape, Y_test.shape))
+    print(
+        "The size of the training data are. X: {}, rps {}, y {}".format(
+            X_train.shape, rps_train.shape, Y_left_train.shape
+        )
+    )
+    print(
+        "The size of the test data are. X: {}, rps {}, y {}".format(
+            X_test.shape, rps_test.shape, Y_test.shape
+        )
+    )

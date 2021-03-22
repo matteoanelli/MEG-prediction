@@ -6,7 +6,15 @@ import torch
 
 class ECoG_Dataset(Dataset):
     def __init__(
-        self, datadir, filename, finger=0, duration=1.,  overlap=0.0, sample_rate=1000, transform=None, rps=True
+        self,
+        datadir,
+        filename,
+        finger=0,
+        duration=1.0,
+        overlap=0.0,
+        sample_rate=1000,
+        transform=None,
+        rps=True,
     ):
         """
         Args:
@@ -14,11 +22,25 @@ class ECoG_Dataset(Dataset):
         """
         self.rps = rps
         if self.rps:
-            self.data, self.target, self.bp = import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate,
-                                                                 overlap, rps=self.rps)
+            self.data, self.target, self.bp = import_ECoG_Tensor(
+                datadir,
+                filename,
+                finger,
+                duration,
+                sample_rate,
+                overlap,
+                rps=self.rps,
+            )
         else:
-            self.data, self.target = import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate,
-                                                                 overlap, rps=self.rps)
+            self.data, self.target = import_ECoG_Tensor(
+                datadir,
+                filename,
+                finger,
+                duration,
+                sample_rate,
+                overlap,
+                rps=self.rps,
+            )
 
         self.transform = transform
 
@@ -36,7 +58,9 @@ class ECoG_Dataset(Dataset):
             sample_target = self.target[idx]
 
         if self.transform:
-            sample_data, sample_target = self.transform(sample_data, sample_target)
+            sample_data, sample_target = self.transform(
+                sample_data, sample_target
+            )
 
         if self.rps:
             return sample_data, sample_target, sample_bp

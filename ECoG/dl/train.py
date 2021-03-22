@@ -5,9 +5,18 @@ import os
 
 # TODO proper citation
 
+
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+
+    def __init__(
+        self,
+        patience=7,
+        verbose=False,
+        delta=0,
+        path="checkpoint.pt",
+        trace_func=print,
+    ):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -30,6 +39,7 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
+
     def __call__(self, val_loss, model):
 
         score = -val_loss
@@ -39,7 +49,9 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score <= self.best_score + self.delta:
             self.counter += 1
-            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            self.trace_func(
+                f"EarlyStopping counter: {self.counter} out of {self.patience}"
+            )
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -48,20 +60,37 @@ class EarlyStopping:
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
-        '''Saves model when validation loss decrease.'''
+        """Saves model when validation loss decrease."""
         if self.verbose:
-            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ...')
+            self.trace_func(
+                f"Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ..."
+            )
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, model_path):
 
-    net = net.to(device) # TODO probably to remove
+def train(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    model_path,
+):
+
+    net = net.to(device)  # TODO probably to remove
     avg_train_losses = []
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -99,8 +128,11 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -118,14 +150,28 @@ def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOC
     return net, avg_train_losses, avg_valid_losses
 
 
-def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, model_path):
+def train_bp(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    model_path,
+):
 
-    net = net.to(device) # TODO probably to remove
+    net = net.to(device)  # TODO probably to remove
     avg_train_losses = []
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -136,7 +182,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
         valid_losses = []
         for data, labels, bp in trainloader:
             # Set data to appropiate device
-            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            data, labels, bp = (
+                data.to(device),
+                labels.to(device),
+                bp.to(device),
+            )
             # Clear the gradients
             optimizer.zero_grad()
             # Fit the network
@@ -155,7 +205,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
         with torch.no_grad():
             for data, labels, bp in validloader:
                 # Set data to appropiate device
-                data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+                data, labels, bp = (
+                    data.to(device),
+                    labels.to(device),
+                    bp.to(device),
+                )
                 # forward pass: compute predicted outputs by passing inputs to the model
                 output = net(data, bp)
                 # calculate the loss
@@ -163,8 +217,11 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -181,7 +238,18 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  E
 
     return net, avg_train_losses, avg_valid_losses
 
-def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, model_path):
+
+def train_bp_MLP(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    model_path,
+):
     """
     Train loop used to train RPS_MLP.
 
@@ -221,7 +289,11 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
     avg_valid_losses = []
 
     # initialize the early_stopping object
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
 
     for epoch in tqdm(range(1, EPOCHS + 1)):
         ###################
@@ -259,8 +331,11 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
-              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)

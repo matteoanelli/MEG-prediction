@@ -3,9 +3,23 @@
     TODO: Different classes for each models.
 """
 
+
 class Params(object):
-    def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
-                 patience, device, y_measure):
+    def __init__(
+        self,
+        subject_n,
+        hand,
+        batch_size,
+        valid_batch_size,
+        test_batch_size,
+        epochs,
+        lr,
+        duration,
+        overlap,
+        patience,
+        device,
+        y_measure,
+    ):
         self.subject_n = subject_n
         self.hand = hand
         self.batch_size = batch_size
@@ -20,21 +34,54 @@ class Params(object):
         self.y_measure = y_measure
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.hand) + \
-               "_" + str(self.batch_size) + \
-               "_" + str(self.epochs) + \
-               "_" + str(self.lr) + \
-               "_" + str(self.duration) + \
-               "_" + str(self.overlap) + \
-               "_" + str(self.device) + \
-               "_" + str(self.y_measure)
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.batch_size)
+            + "_"
+            + str(self.epochs)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.duration)
+            + "_"
+            + str(self.overlap)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.y_measure)
+        )
 
 
 class Params_tunable(object):
-    def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, duration, overlap,
-                 patience, device, y_measure, s_n_layer, s_kernel_size, t_n_layer, t_kernel_size, max_pooling,
-                 ff_n_layer, ff_hidden_channels, dropout, activation, desc):
+    def __init__(
+        self,
+        subject_n,
+        hand,
+        batch_size,
+        valid_batch_size,
+        test_batch_size,
+        epochs,
+        lr,
+        duration,
+        overlap,
+        patience,
+        device,
+        y_measure,
+        s_n_layer,
+        s_kernel_size,
+        t_n_layer,
+        t_kernel_size,
+        max_pooling,
+        ff_n_layer,
+        ff_hidden_channels,
+        dropout,
+        activation,
+        desc,
+    ):
 
         self.subject_n = subject_n
         self.hand = hand
@@ -60,16 +107,29 @@ class Params_tunable(object):
         self.desc = desc
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.hand) + \
-               "_" + str(self.batch_size) + \
-               "_" + str(self.epochs) + \
-               "_" + str(self.lr) + \
-               "_" + str(self.duration) + \
-               "_" + str(self.overlap) + \
-               "_" + str(self.device) + \
-               "_" + str(self.y_measure) + \
-               "_" + str(self.desc)
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.batch_size)
+            + "_"
+            + str(self.epochs)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.duration)
+            + "_"
+            + str(self.overlap)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.y_measure)
+            + "_"
+            + str(self.desc)
+        )
+
 
 class SPoC_params(object):
     def __init__(self, subject_n, hand, duration, overlap, y_measure, alpha):
@@ -81,18 +141,38 @@ class SPoC_params(object):
         self.alpha = alpha
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.hand) + \
-               "_" + str(self.duration) + \
-               "_" + str(self.overlap) + \
-               "_" + str(self.y_measure) + \
-               "_" + str(self.alpha)
-
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.duration)
+            + "_"
+            + str(self.overlap)
+            + "_"
+            + str(self.y_measure)
+            + "_"
+            + str(self.alpha)
+        )
 
 
 class Params_cross(object):
-    def __init__(self, subject_n, hand, batch_size, valid_batch_size, test_batch_size, epochs, lr, wd, patience, device,
-                 y_measure, desc):
+    def __init__(
+        self,
+        subject_n,
+        hand,
+        batch_size,
+        valid_batch_size,
+        test_batch_size,
+        epochs,
+        lr,
+        wd,
+        patience,
+        device,
+        y_measure,
+        desc,
+    ):
 
         self.subject_n = subject_n
         self.hand = hand
@@ -108,15 +188,27 @@ class Params_cross(object):
         self.desc = desc
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.hand) + \
-               "_" + str(self.batch_size) + \
-               "_" + str(self.epochs) + \
-               "_" + str(self.lr) + \
-               "_" + str(self.wd) + \
-               "_" + str(self.device) + \
-               "_" + str(self.y_measure)+ \
-               "_" + str(self.desc)
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.batch_size)
+            + "_"
+            + str(self.epochs)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.wd)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.y_measure)
+            + "_"
+            + str(self.desc)
+        )
+
 
 class Params_transf(object):
     def __init__(self, subject_n, hand, test_batch_size, lr, device, desc):
@@ -129,8 +221,15 @@ class Params_transf(object):
         self.desc = desc
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.hand) + \
-               "_" + str(self.lr) + \
-               "_" + str(self.device) + \
-               "_" + str(self.desc)
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.desc)
+        )

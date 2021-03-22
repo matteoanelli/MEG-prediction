@@ -4,9 +4,10 @@ import os, sys
 import argparse
 import numpy as np
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
-from  MEG.Utils.utils import *
+from MEG.Utils.utils import *
+
 
 def main(args):
 
@@ -30,17 +31,27 @@ def main(args):
 
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
 
-    rps_train = bandpower_multi(X_train.squeeze(), fs=250, bands=bands, relative=True)
+    rps_train = bandpower_multi(
+        X_train.squeeze(), fs=250, bands=bands, relative=True
+    )
     print("train_done")
 
-    rps_val = bandpower_multi(X_val.squeeze(), fs=250, bands=bands, relative=True)
+    rps_val = bandpower_multi(
+        X_val.squeeze(), fs=250, bands=bands, relative=True
+    )
     print("valid_done")
 
-    rps_test = bandpower_multi(X_test.squeeze(), fs=250, bands=bands, relative=True)
+    rps_test = bandpower_multi(
+        X_test.squeeze(), fs=250, bands=bands, relative=True
+    )
     print("test_done")
 
-    np.savez(os.path.join(data_dir, out_file), rps_train=rps_train, rps_val=rps_val, rps_test=rps_test)
-
+    np.savez(
+        os.path.join(data_dir, out_file),
+        rps_train=rps_train,
+        rps_val=rps_val,
+        rps_test=rps_test,
+    )
 
 
 if __name__ == "__main__":
@@ -49,10 +60,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
+    parser.add_argument(
+        "--sub",
+        type=int,
+        default="8",
+        help="Input data directory (default= 8)",
+    )
 
     args = parser.parse_args()
 

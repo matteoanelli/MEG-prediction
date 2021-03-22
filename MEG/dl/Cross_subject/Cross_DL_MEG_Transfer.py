@@ -26,17 +26,39 @@ from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, Subset
 import torch.nn as nn
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
-from MEG.dl.train import train, train_bp, train_bp_MLP, train_bp_transfer, train_bp_fine_tuning, train_mlp_transfer
-from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
+from MEG.dl.train import (
+    train,
+    train_bp,
+    train_bp_MLP,
+    train_bp_transfer,
+    train_bp_fine_tuning,
+    train_mlp_transfer,
+)
+from MEG.dl.MEG_Dataset import (
+    MEG_Dataset,
+    MEG_Dataset_no_bp,
+    MEG_Cross_Dataset,
+)
+from MEG.dl.models import (
+    SCNN,
+    DNN,
+    Sample,
+    RPS_SCNN,
+    LeNet5,
+    ResNet,
+    MNet,
+    RPS_MNet,
+    RPS_MLP,
+)
 from MEG.dl.params import Params_cross
 
-from  MEG.Utils.utils import *
+from MEG.Utils.utils import *
 
 # Set the MNE logging to worning only.
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
+
 
 def main(args):
 
@@ -54,19 +76,20 @@ def main(args):
     print("Device = {}".format(device))
 
     # Initialize parameters
-    parameters = Params_cross(subject_n=args.sub,
-                              hand=args.hand,
-                              batch_size=args.batch_size,
-                              valid_batch_size=args.batch_size_valid,
-                              test_batch_size=args.batch_size_test,
-                              epochs=args.epochs,
-                              lr=args.learning_rate,
-                              wd=args.weight_decay,
-                              patience=args.patience,
-                              device=device,
-                              y_measure=args.y_measure,
-                              desc= args.desc
-                              )
+    parameters = Params_cross(
+        subject_n=args.sub,
+        hand=args.hand,
+        batch_size=args.batch_size,
+        valid_batch_size=args.batch_size_valid,
+        test_batch_size=args.batch_size_test,
+        epochs=args.epochs,
+        lr=args.learning_rate,
+        wd=args.weight_decay,
+        patience=args.patience,
+        device=device,
+        y_measure=args.y_measure,
+        desc=args.desc,
+    )
     # Import data and generate train-, valid- and test-set
     # Set if generate with RPS values or not (check network architecture used later)
 
@@ -74,11 +97,22 @@ def main(args):
 
     mlp = False
 
-    dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="train",
-                                y_measure=parameters.y_measure)
-    leave_one_out_dataset = MEG_Cross_Dataset(data_dir, file_name, parameters.subject_n, parameters.hand, mode="test",
-                                              y_measure=parameters.y_measure)
-
+    dataset = MEG_Cross_Dataset(
+        data_dir,
+        file_name,
+        parameters.subject_n,
+        parameters.hand,
+        mode="train",
+        y_measure=parameters.y_measure,
+    )
+    leave_one_out_dataset = MEG_Cross_Dataset(
+        data_dir,
+        file_name,
+        parameters.subject_n,
+        parameters.hand,
+        mode="test",
+        y_measure=parameters.y_measure,
+    )
 
     # split the dataset in train, test and valid sets.
     train_len, valid_len = len_split_cross(len(dataset))
@@ -88,23 +122,51 @@ def main(args):
 
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
+    train_dataset, valid_dataset = random_split(
+        dataset, [train_len, valid_len]
+    )
 
-    test_dataset, transfer_dataset = random_split(leave_one_out_dataset, [test_len, transfer_len])
+    test_dataset, transfer_dataset = random_split(
+        leave_one_out_dataset, [test_len, transfer_len]
+    )
 
     # transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
     # test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
 
-    print("Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
-        len(train_dataset), len(valid_dataset), len(test_dataset), len(transfer_dataset)))
-
-
+    print(
+        "Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
+            len(train_dataset),
+            len(valid_dataset),
+            len(test_dataset),
+            len(transfer_dataset),
+        )
+    )
 
     # Initialize the dataloaders
-    trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=4)
-    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
-    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=4)
-    transferloader = DataLoader(transfer_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
+    trainloader = DataLoader(
+        train_dataset,
+        batch_size=parameters.batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
+    validloader = DataLoader(
+        valid_dataset,
+        batch_size=parameters.valid_batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
+    testloader = DataLoader(
+        test_dataset,
+        batch_size=parameters.test_batch_size,
+        shuffle=False,
+        num_workers=4,
+    )
+    transferloader = DataLoader(
+        transfer_dataset,
+        batch_size=parameters.valid_batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
 
     # Initialize network
     if mlp:
@@ -137,28 +199,55 @@ def main(args):
         start_time = timer.time()
 
         if mlp:
-            net, train_loss, valid_loss = train_bp_MLP(net, trainloader, validloader, optimizer, loss_function,
-                                                       parameters.device, parameters.epochs, parameters.patience,
-                                                       parameters.hand, model_path)
+            net, train_loss, valid_loss = train_bp_MLP(
+                net,
+                trainloader,
+                validloader,
+                optimizer,
+                loss_function,
+                parameters.device,
+                parameters.epochs,
+                parameters.patience,
+                parameters.hand,
+                model_path,
+            )
         else:
-            net, train_loss, valid_loss = train_bp(net, trainloader, validloader, optimizer, loss_function,
-                                                   parameters.device, parameters.epochs, parameters.patience,
-                                                   parameters.hand, model_path)
+            net, train_loss, valid_loss = train_bp(
+                net,
+                trainloader,
+                validloader,
+                optimizer,
+                loss_function,
+                parameters.device,
+                parameters.epochs,
+                parameters.patience,
+                parameters.hand,
+                model_path,
+            )
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
 
         # visualize the loss as the network trained
         fig = plt.figure(figsize=(10, 4))
-        plt.plot(range(1, len(train_loss) + 1), train_loss, label='Training Loss')
-        plt.plot(range(1, len(valid_loss) + 1), valid_loss, label='Validation Loss')
+        plt.plot(
+            range(1, len(train_loss) + 1), train_loss, label="Training Loss"
+        )
+        plt.plot(
+            range(1, len(valid_loss) + 1), valid_loss, label="Validation Loss"
+        )
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss)) + 1
-        plt.axvline(minposs, linestyle='--', color='r', label='Early Stopping Checkpoint')
+        plt.axvline(
+            minposs,
+            linestyle="--",
+            color="r",
+            label="Early Stopping Checkpoint",
+        )
 
-        plt.xlabel('epochs')
-        plt.ylabel('loss')
+        plt.xlabel("epochs")
+        plt.ylabel("loss")
         # plt.ylim(0, 0.5) # consistent scale
         # plt.xlim(0, len(train_loss)+1) # consistent scale
         plt.grid(True)
@@ -174,7 +263,9 @@ def main(args):
     else:
         # Load the model (properly select the model architecture)
         net = RPS_MNet()
-        net = load_pytorch_model(net, os.path.join(model_path, "model.pth"), parameters.device)
+        net = load_pytorch_model(
+            net, os.path.join(model_path, "model.pth"), parameters.device
+        )
 
     # Evaluation
     print("Evaluation...")
@@ -188,25 +279,38 @@ def main(args):
     with torch.no_grad():
         if mlp:
             for _, labels, bp in testloader:
-                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                labels, bp = (
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(bp))))
 
             for _, labels, bp in validloader:
-                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                labels, bp = (
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y_valid.extend(list(labels[:, parameters.hand]))
                 y_pred_valid.extend((list(net(bp))))
         else:
             for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                data, labels, bp = (
+                    data.to(parameters.device),
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(data, bp))))
 
             for data, labels, bp in validloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                data, labels, bp = (
+                    data.to(parameters.device),
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y_valid.extend(list(labels[:, parameters.hand]))
                 y_pred_valid.extend((list(net(data, bp))))
-
 
     # Calculate Evaluation measures
     print("Evaluation measures")
@@ -237,9 +341,13 @@ def main(args):
     ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_title(
+        "Sub {}, hand {}, {} prediction".format(
+            str(parameters.subject_n),
+            "sx" if parameters.hand == 0 else "dx",
+            parameters.y_measure,
+        )
+    )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
     plt.show()
@@ -251,9 +359,13 @@ def main(args):
     ax.plot(times, y, color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_title(
+        "Sub {}, hand {}, {} prediction".format(
+            str(parameters.subject_n),
+            "sx" if parameters.hand == 0 else "dx",
+            parameters.y_measure,
+        )
+    )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
     plt.show()
@@ -269,13 +381,14 @@ def main(args):
 
     # scatterplot y predicted against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    ax.scatter(np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted")
+    ax.scatter(
+        np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted"
+    )
     ax.set_xlabel("True")
     ax.set_ylabel("Predicted")
     # plt.legend()
     plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
     plt.show()
-
 
     # Transfer learning, feature extraction.
 
@@ -285,13 +398,29 @@ def main(args):
     # loss_function_trans = torch.nn.L1Loss()
 
     if mlp:
-        net, train_loss = train_mlp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                             parameters.device, 50, parameters.patience,
-                                             parameters.hand, model_path)
+        net, train_loss = train_mlp_transfer(
+            net,
+            transferloader,
+            optimizer_trans,
+            loss_function_trans,
+            parameters.device,
+            50,
+            parameters.patience,
+            parameters.hand,
+            model_path,
+        )
     else:
-        net, train_loss = train_bp_transfer(net, transferloader, optimizer_trans, loss_function_trans,
-                                            parameters.device, 50, parameters.patience,
-                                            parameters.hand, model_path)
+        net, train_loss = train_bp_transfer(
+            net,
+            transferloader,
+            optimizer_trans,
+            loss_function_trans,
+            parameters.device,
+            50,
+            parameters.patience,
+            parameters.hand,
+            model_path,
+        )
         # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
         #                                     parameters.device, 50, 10,
         #                                     parameters.hand, model_path)
@@ -306,12 +435,19 @@ def main(args):
     with torch.no_grad():
         if mlp:
             for _, labels, bp in testloader:
-                labels, bp = labels.to(parameters.device), bp.to(parameters.device)
+                labels, bp = (
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(bp))))
         else:
             for data, labels, bp in testloader:
-                data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(parameters.device)
+                data, labels, bp = (
+                    data.to(parameters.device),
+                    labels.to(parameters.device),
+                    bp.to(parameters.device),
+                )
                 y.extend(list(labels[:, parameters.hand]))
                 y_pred.extend((list(net(data, bp))))
 
@@ -319,7 +455,9 @@ def main(args):
     rmse_trans = mean_squared_error(y, y_pred, squared=False)
     r2_trans = r2_score(y, y_pred)
 
-    print("root mean squared error after transfer learning {}".format(rmse_trans))
+    print(
+        "root mean squared error after transfer learning {}".format(rmse_trans)
+    )
     print("r2 score after transfer learning  {}".format(r2_trans))
 
     # scatterplot y predicted against the true value
@@ -331,7 +469,6 @@ def main(args):
     plt.savefig(os.path.join(figure_path, "Scatter_after_trans.pdf"))
     plt.show()
 
-
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
         for key, value in vars(parameters).items():
@@ -339,24 +476,28 @@ def main(args):
 
         mlflow.log_param("Time", train_time)
 
-        mlflow.log_metric('MSE', mse)
-        mlflow.log_metric('RMSE', rmse)
-        mlflow.log_metric('MAE', mae)
-        mlflow.log_metric('R2', r2)
+        mlflow.log_metric("MSE", mse)
+        mlflow.log_metric("RMSE", rmse)
+        mlflow.log_metric("MAE", mae)
+        mlflow.log_metric("R2", r2)
 
-        mlflow.log_metric('RMSE_Valid', rmse_valid)
-        mlflow.log_metric('R2_Valid', r2_valid)
-        mlflow.log_metric('Valid_loss', valid_loss_last)
+        mlflow.log_metric("RMSE_Valid", rmse_valid)
+        mlflow.log_metric("R2_Valid", r2_valid)
+        mlflow.log_metric("Valid_loss", valid_loss_last)
 
-        mlflow.log_metric('RMSE_T', rmse_trans)
-        mlflow.log_metric('R2_T', r2_trans)
+        mlflow.log_metric("RMSE_T", rmse_trans)
+        mlflow.log_metric("R2_T", r2_trans)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
+        mlflow.log_artifact(
+            os.path.join(figure_path, "Times_prediction_focus.pdf")
+        )
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "Scatter_after_trans.pdf"))
+        mlflow.log_artifact(
+            os.path.join(figure_path, "Scatter_after_trans.pdf")
+        )
         mlflow.pytorch.log_model(net, "models")
 
 
@@ -366,41 +507,110 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--figure_dir', type=str, default='MEG\Figures',
-                        help="Figure data directory (default= MEG\Figures)")
-    parser.add_argument('--model_dir', type=str, default='MEG\Models',
-                        help="Model data directory (default= MEG\Models\)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
+    parser.add_argument(
+        "--figure_dir",
+        type=str,
+        default="MEG\Figures",
+        help="Figure data directory (default= MEG\Figures)",
+    )
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        default="MEG\Models",
+        help="Model data directory (default= MEG\Models\)",
+    )
 
     # subject
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
-    parser.add_argument('--hand', type=int, default='0',
-                        help="Patient hands: 0 for sx, 1 for dx (default= 0)")
+    parser.add_argument(
+        "--sub",
+        type=int,
+        default="8",
+        help="Input data directory (default= 8)",
+    )
+    parser.add_argument(
+        "--hand",
+        type=int,
+        default="0",
+        help="Patient hands: 0 for sx, 1 for dx (default= 0)",
+    )
 
     # Model Parameters
-    parser.add_argument('--batch_size', type=int, default=100, metavar='N',
-                        help='input batch size for training (default: 100)')
-    parser.add_argument('--batch_size_valid', type=int, default=30, metavar='N',
-                        help='input batch size for validation (default: 100)')
-    parser.add_argument('--batch_size_test', type=int, default=30, metavar='N',
-                        help='input batch size for  (default: 100)')
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
-                        help='number of epochs to train (default: 200)')
-    parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
-                        help='Learning rate (default: 1e-3),')
-    parser.add_argument('--weight_decay', type=float, default=5e-4, metavar='wd',
-                        help='Weight dacay (default: 5e-4),')
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=100,
+        metavar="N",
+        help="input batch size for training (default: 100)",
+    )
+    parser.add_argument(
+        "--batch_size_valid",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for validation (default: 100)",
+    )
+    parser.add_argument(
+        "--batch_size_test",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for  (default: 100)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=200,
+        metavar="N",
+        help="number of epochs to train (default: 200)",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=1e-3,
+        metavar="lr",
+        help="Learning rate (default: 1e-3),",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=5e-4,
+        metavar="wd",
+        help="Weight dacay (default: 5e-4),",
+    )
 
-    parser.add_argument('--patience', type=int, default=10, metavar='N',
-                        help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="pca",
-                        help='Y type reshaping (default: pca)')
-    parser.add_argument('--experiment', type=int, default=0, metavar='N',
-                        help='Mlflow experiments id (default: 0)')
-    parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
-                        help='Experiment description (default: Normal test)')
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Early stopping patience (default: 20)",
+    )
+    parser.add_argument(
+        "--y_measure",
+        type=str,
+        default="pca",
+        help="Y type reshaping (default: pca)",
+    )
+    parser.add_argument(
+        "--experiment",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Mlflow experiments id (default: 0)",
+    )
+    parser.add_argument(
+        "--desc",
+        type=str,
+        default="Normal test",
+        metavar="N",
+        help="Experiment description (default: Normal test)",
+    )
 
     args = parser.parse_args()
 
