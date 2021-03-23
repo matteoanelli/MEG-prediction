@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "within_final_MNet_Adam_no_att_no_wd_dp03_batchN_l2_loss"
+    description = "within_final_MNet_Adam_att_wd_dp03_batchN_l2_loss"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],

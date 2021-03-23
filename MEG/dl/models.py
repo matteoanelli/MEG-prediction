@@ -208,6 +208,23 @@ class ChannelAttention(nn.Module):
         return x * attention
 
 
+class CBAM(nn.Module):
+    """
+    Attention blocked inspired by Woo et al. 2018.
+    """
+    def __init__(self, shape, reduction_factor=16):
+
+        super(CBAM, self).__init__()
+        self.channel_attention = ChannelAttention(shape, reduction_factor)
+        self.spatial_attention = SpatialAttention()
+
+    def forward(self, x):
+
+        x = self.channel_attention(x)
+        x = self.spatial_attention(x)
+
+        return x
+
 class MNet(nn.Module):
     """
         Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x]
@@ -335,15 +352,17 @@ class MNet_ivan(nn.Module):
                     nn.ReLU(),
                     nn.Conv2d(32, 64, kernel_size=[1, 16], bias=False),
                     nn.ReLU(),
+                    CBAM([None, 64, 1, 204]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                     nn.BatchNorm2d(64),
                 )
 
         self.temporal = nn.Sequential(
                     nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
-                    nn.ReLU(),
+                    nn.LeakyReLU(),
                     nn.Conv2d(32, 32, kernel_size=[7, 7], bias=False),
                     nn.ReLU(),
+                    CBAM([None, 32, 52, 90]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                     nn.BatchNorm2d(32),
                     ###########################################################
@@ -351,6 +370,7 @@ class MNet_ivan(nn.Module):
                     nn.ReLU(),
                     nn.Conv2d(64, 64, kernel_size=[6, 6], bias=False),
                     nn.ReLU(),
+                    CBAM([None, 64, 42, 35]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                     nn.BatchNorm2d(64),
                     ###########################################################
@@ -358,6 +378,7 @@ class MNet_ivan(nn.Module):
                     nn.ReLU(),
                     nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
                     nn.ReLU(),
+                    CBAM([None, 128, 34, 9]),
                     nn.Dropout2d(p=0.3),
                     nn.BatchNorm2d(128),
                     ###########################################################
@@ -365,6 +386,7 @@ class MNet_ivan(nn.Module):
                     nn.ReLU(),
                     nn.Conv2d(256, 256, kernel_size=[3, 3], bias=False),
                     nn.ReLU(),
+                    CBAM([None, 256, 30, self.n_times]),
                     nn.Dropout2d(p=0.3),
                     nn.BatchNorm2d(256),
                 )
@@ -525,6 +547,7 @@ class RPS_MNet_ivan(nn.Module):
             nn.Conv2d(32, 64, kernel_size=[1, 16], bias=True),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            Print("end spatial")
         )
 
         # self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
@@ -553,29 +576,34 @@ class RPS_MNet_ivan(nn.Module):
         #                               )
 
         self.temporal = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
+            nn.Conv2d(1, 32, kernel_size=[7, 7], bias=False),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=[7, 7], bias=True),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-            nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=[6, 6], bias=True),
+            nn.Conv2d(32, 32, kernel_size=[7, 7], bias=False),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-            nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
+            nn.BatchNorm2d(32),
+            ###################################################################
+            nn.Conv2d(32, 64, kernel_size=[6, 6], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=[6, 6], bias=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            nn.BatchNorm2d(64),
+            ###################################################################
+            nn.Conv2d(64, 128, kernel_size=[5, 5], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
             nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            nn.Conv2d(128, 128, kernel_size=[5, 5], bias=True),
+            nn.BatchNorm2d(128),
+            ###################################################################
+            nn.Conv2d(128, 256, kernel_size=[3, 3], bias=False),
+            nn.ReLU(),
+            nn.Conv2d(256, 256, kernel_size=[3, 3], bias=False),
             nn.ReLU(),
             nn.Dropout2d(p=0.3),
-            # nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-            nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
-            nn.ReLU(),
-            nn.Dropout2d(p=0.3),
-            nn.Conv2d(256, 256, kernel_size=[3, 3], bias=True),
-            nn.ReLU(),
-            nn.Dropout2d(p=0.3),
+            nn.BatchNorm2d(256),
+            Print("end cnn")
         )
 
         self.attention = nn.Sequential(
