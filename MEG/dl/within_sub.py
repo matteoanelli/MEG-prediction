@@ -15,6 +15,7 @@ import time as timer
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
+from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader, random_split, Subset
 
 sys.path.insert(1, r'')
@@ -63,7 +64,7 @@ def main(args):
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
     mlp = False
-    rps = True
+    rps = False
     print("Creating dataset")
 
     # Generate the custom dataset
@@ -117,8 +118,10 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        # optimizer = AdamW(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()

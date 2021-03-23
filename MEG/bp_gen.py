@@ -13,11 +13,19 @@ def main(args):
     data_dir = args.data_dir
 
     sub = args.sub
+    hand = args.hand
 
-    file_name = "sub_{}_right.npz".format(str(sub))
-    print("processing file :", file_name)
-    out_file = "sub_{}_right_rps.npz".format(str(sub))
-    print("output_file: ", out_file)
+
+    if hand == 0:
+        file_name = "sub_{}_left.npz".format(str(sub))
+        print("processing file :", file_name)
+        out_file = "sub_{}_left_rps.npz".format(str(sub))
+        print("output_file: ", out_file)
+    else:
+        file_name = "sub_{}_right.npz".format(str(sub))
+        print("processing file :", file_name)
+        out_file = "sub_{}_right_rps.npz".format(str(sub))
+        print("output_file: ", out_file)
 
     dataset = np.load(os.path.join(data_dir, file_name))
 
@@ -53,6 +61,9 @@ if __name__ == "__main__":
                         help="Input data directory (default= Z:\Desktop\\)")
     parser.add_argument('--sub', type=int, default='8',
                         help="Input data directory (default= 8)")
+    parser.add_argument('--hand', type=int, default='0',
+                        help="hand (default= 0)")
+
 
     args = parser.parse_args()
 
