@@ -23,7 +23,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as skScaler
 
 
-def bandpower_1d(data, sf, band, window_sec=None, relative=False):
+def bandpower_1d(data, sf, band, nperseg=250, relative=False):
     """
         Compute the average power of the signal x in a specific frequency band.
         https://raphaelvallat.com/bandpower.html
@@ -48,12 +48,6 @@ def bandpower_1d(data, sf, band, window_sec=None, relative=False):
 
     # band = np.asarray(band)
     low, high = band
-
-    # Define window length
-    if window_sec is not None:
-        nperseg = window_sec * sf
-    else:
-        nperseg = (2 / low) * sf
 
     # Compute the modified periodogram (Welch)
     freqs, psd = welch(data, sf, nperseg=nperseg)
@@ -88,7 +82,7 @@ def bandpower_1d(data, sf, band, window_sec=None, relative=False):
 #         return bp
 
 
-def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
+def bandpower(x, fs, fmin, fmax, nperseg=250, relative=True):
     """
     Compute the average power of the multi-channel signal x in a specific frequency band.
     Args:
@@ -118,14 +112,14 @@ def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
                 x[epoch, channel, :],
                 fs,
                 [fmin, fmax],
-                window_sec=window_sec,
+                nperseg=nperseg,
                 relative=relative,
             )
 
     return bp
 
 
-def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
+def bandpower_multi(x, fs, bands,  nperseg=250, relative=True):
     """
     Compute the average power of the multi-channel signal x in multiple frequency bands.
     Args:
@@ -151,7 +145,7 @@ def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
         fmin, fmax = band
         bp_list.append(
             bandpower(
-                x, fs, fmin, fmax, window_sec=window_sec, relative=relative
+                x, fs, fmin, fmax,  nperseg=nperseg, relative=relative
             )
         )
 

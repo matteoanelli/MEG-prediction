@@ -108,18 +108,16 @@ if __name__ == "__main__":
         if hand == 0:
             file_name = "sub_{}_left.npz".format(str(subject))
             print("processing file :", file_name)
-            out_file = "sub_{}_left_rps.npz".format(str(subject))
-            print("output_file: ", out_file)
+
         else:
             file_name = "sub_{}_right.npz".format(str(subject))
             print("processing file :", file_name)
-            out_file = "sub_{}_right_rps.npz".format(str(subject))
-            print("output_file: ", out_file)
+
 
         dataset = np.load(os.path.join(data_dir, file_name))
 
         X = dataset["X_train"]
-        X = np.swapaxes(X, 2, -1)
+        X = np.swapaxes(X, 2, -1).squeeze()
 
         print("training dataset of shape:", X.shape)
         print("############################################################")
@@ -131,7 +129,8 @@ if __name__ == "__main__":
         print("mean per first 100 epoch", np.mean(X[:100, ...], axis=(1, 2)))
         print("min per first 100 epoch", np.min(X[:100, ...], axis=(1, 2)))
         print("max per first 100 epoch", np.max(X[:100, ...], axis=(1, 2)))
-        print("mean per 2 epochs all channels", np.mean(X[99:101, ...], axis=(2)))
+        print("mean per 2 epochs all channels", np.mean(X[99:101, ...],
+                                                        axis=(2)))
         print("min per first 100 epoch", np.min(X[99:101, ...], axis=(2)))
         print("############################################################")
         print("max per first 100 epoch", np.max(X[99:101, ...], axis=(2)))
@@ -145,9 +144,17 @@ if __name__ == "__main__":
         if hand == 0:
             rps_name = "sub_{}_left_rps.npz".format(str(subject))
         else:
-            rps_name = "sub_{}_left_rps.npz".format(str(subject))
+            rps_name = "sub_{}_right_rps.npz".format(str(subject))
+
+        print("X.shappe: ", X.shape)
+
+
+        bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+        bp = bandpower_multi(X[1000:1002, ...].squeeze(), fs=250, bands=bands,
+                             relative=True)
 
         rps_data = np.load(os.path.join(data_dir, rps_name))
+
         print("rps :", rps_data.files)
 
         bp = rps_data["rps_train"]
@@ -156,6 +163,8 @@ if __name__ == "__main__":
         print("global min", np.min(bp))
         print("global max", np.max(bp))
         print("global std", np.std(bp))
+
+
 
     print("bp shape :", bp.shape)
     print(bp[30, ...].shape)
@@ -174,7 +183,7 @@ if __name__ == "__main__":
         )
         plt.savefig(os.path.join(figure_dir, "RPS_epoch_{}_hand_{}.pdf"
             .format(epoch, "right" if hand == 1 else "left")))
-        # plt.show()
+        plt.show()
 
     # y reshape in one pca direction. After pca the two directions it firstly reshape them and
     # eventually standard scale them.
