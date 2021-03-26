@@ -1062,3 +1062,19 @@ def test_ChannelAttention():
         print(sum(p.numel() for p in net.parameters() if p.requires_grad))
 
     print("Test LeNet5 output shape: Success.")
+
+
+def test_RPS_CNN_shape():
+
+    bp = torch.zeros([10, 204, 6])
+    net = models.RPS_CNN()
+
+    with torch.no_grad():
+        print("Shape of the rps tensor: {}".format(bp.shape))
+
+        y = net(bp)
+        assert y.shape == torch.Size(
+            [bp.shape[0]]
+        ), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")

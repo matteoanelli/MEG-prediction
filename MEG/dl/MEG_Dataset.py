@@ -510,3 +510,21 @@ class MEG_Within_Dataset_ivan(Dataset):
         sample_bp = self.bp[idx, ...]
 
         return sample_data, sample_target, sample_bp
+
+class local_Dataset(Dataset):
+    def __init__(self, data, target, bp):
+
+        self.data = data
+        self.target = target
+        self.bp = bp
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+
+        sample_data = self.data[idx, ...]
+        sample_target = self.target[idx]
+        sample_bp = self.bp[idx, ...]
+
+        return sample_data, sample_target, sample_bp

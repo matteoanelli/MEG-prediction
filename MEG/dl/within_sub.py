@@ -24,7 +24,8 @@ from MEG.dl.train import train, train_bp, train_bp_MLP
 from MEG.dl.MEG_Dataset import (MEG_Dataset, MEG_Dataset_no_bp,
                                 MEG_Within_Dataset, MEG_Within_Dataset_ivan)
 from MEG.dl.models import (SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet,
-                           RPS_MNet, RPS_MLP, RPS_MNet_ivan, MNet_ivan)
+                           RPS_MNet, RPS_MLP, RPS_MNet_ivan, MNet_ivan,
+                           RPS_CNN)
 from MEG.dl.params import Params_tunable, Params_cross
 
 from MEG.Utils.utils import *
@@ -108,7 +109,8 @@ def main(args):
     # Get the n_times dimension
 
     if mlp:
-        net = RPS_MLP()
+        # net = RPS_MLP()
+        net = RPS_CNN()
     else:
         # Get the n_times dimension
         with torch.no_grad():
@@ -127,8 +129,7 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr,
-                         weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr)
         # optimizer = AdamW(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)

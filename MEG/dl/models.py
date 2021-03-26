@@ -20,6 +20,12 @@ class Concatenate(nn.Module):
 
     def forward(self, x, bp):
 
+        # min_ = x.min(1, keepdim=True)[0]
+        # if min_[0] < 0:
+        #     x = x + min_
+        # else:
+        #     x = x - min_
+        # x = x / x.max()
         x = x.view(x.shape[0], -1)
         bp = bp.view(bp.shape[0], -1)
         x = torch.cat([x, bp], -1)
@@ -1352,3 +1358,50 @@ class RPS_MNet_2(nn.Module):
         x = self.ff(x)
 
         return x
+
+
+class RPS_CNN(nn.Module):
+    def __init__(self, in_channel=204, n_bands=6):
+        super(RPS_CNN, self).__init__()
+
+        self.flatten = Flatten_MEG()
+
+        self.convolution = nn.Sequential(nn.Conv1d(6, 16, 7,  bias=True,),
+                                         nn.ReLU(),
+                                         nn.Conv1d(16, 16, 7, bias=True),
+                                         nn.ReLU(),
+                                         nn.MaxPool1d(2),
+                                         # nn.BatchNorm1d(16),
+                                         nn.Conv1d(16, 32, 6, bias=True, ),
+                                         nn.ReLU(),
+                                         nn.Conv1d(32, 32, 6, bias=True),
+                                         nn.ReLU(),
+                                         nn.MaxPool1d(2),
+                                         # nn.BatchNorm1d(32),
+                                         nn.Conv1d(32, 64, 5, bias=True, ),
+                                         nn.ReLU(),
+                                         nn.Conv1d(64, 64, 5, bias=True),
+                                         nn.MaxPool1d(2),
+                                         # nn.BatchNorm1d(32),
+        )
+
+        self.ff = nn.Sequential(
+            nn.Linear(64 * 17, 256),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 256),
+            nn.BatchNorm1d(num_features=256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 1),
+        )
+
+    def forward(self, x):
+        # relative power spectrum as input
+        x = torch.transpose(x, 1, 2)
+        x = self.convolution(x)
+        x = self.flatten(x)
+        x = self.ff(x)
+
+        return x.squeeze(1)

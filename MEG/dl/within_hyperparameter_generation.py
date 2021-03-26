@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "within_final_MNet_Adam_att_wd_dp03_batchN_l2_loss"
+    description = "within_final_CNN_Adam_dp03_l2_loss"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         "epochs": 120,
         "patience": 20,
         "y_measure": "pca",
-        "experiment": 39,
+        "experiment": 43,
         "desc": description,
     }
 
