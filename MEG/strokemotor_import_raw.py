@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+    #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Aug 12 09:38:36 2020
@@ -11,14 +11,15 @@ import mne
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-import os
-
+import os, sys
 # import mneflow from source save_as_numpy_branch
-os.chdir("/m/nbe/project/rtmeg/problearn/mneflow")
+print(sys.path)
+print(os.path.isdir(".\mneflow\mneflow"))
+sys.path.append(".\mneflow\mneflow")
+# os.chdir("C:\\Users\\anellim1\Develop\Thesis\mnematte\mneflow\mneflow")
 import mneflow
 
-
-data_path = "/m/nbe/scratch/strokemotor/healthy_trans/"
+data_path = "C:\\Users\\anellim1\Develop\\"
 
 acc_channels_left = {
     1: ["MISC001", "MISC002"],
@@ -78,8 +79,10 @@ def process_y(y):
     # split into segments of 256 samples(1 s) and 128ms overlap (stride=64 samples)
     # no need to use mneflow if you dont want to
     y_segmented = mneflow.utils._segment(y_pca, segment_length=250, stride=50)
+    print(y_segmented.shape)
     # y_out = np.squeeze(np.sqrt(np.mean(y_segmented[..., -50:]**2, axis=-1)))
     y_out = np.squeeze(np.mean(y_segmented[..., -50:], axis=-1))
+
 
     print(
         "RMS: {} Mean: {:.2f}, range {:.2f} - {:.2f}".format(
@@ -93,74 +96,82 @@ def process_y(y):
 
     return y_out
 
+if __name__ == '__main__':
 
-for subj_n in range(1, 10):
-    subj_id = "sub" + str(subj_n) + "/ball0"
+    # for subj_n in range(1, 10):
+    for subj_n in [1]:
+        subj_id = "sub" + str(subj_n) + "/ball0"
 
-    epochs = []
+        epochs = []
 
-    raw_fnames = [
-        "".join([data_path, subj_id, str(i), "_sss_trans.fif"])
-        for i in range(1, 4)
-    ]
-    for i, fname in enumerate(raw_fnames):
-        if os.path.isfile(raw_fnames[i]):
-            raw = mne.io.Raw(raw_fnames[i], preload=True)
-            events = mne.find_events(
-                raw, stim_channel="STI101", min_duration=0.003
-            )
-            raw.pick_types(meg="grad", misc=True)
-            raw.notch_filter([50, 100])
-            raw.filter(l_freq=1.0, h_freq=70)
+        raw_fnames = [
+            "".join([data_path, subj_id, str(i), "_sss_trans.fif"])
+            for i in range(1, 4)
+        ]
+        for i, fname in enumerate(raw_fnames):
+            if os.path.isfile(raw_fnames[i]):
+                print(os.stat(raw_fnames[i]).st_size)
 
-            # %%
-            # get indices of accelerometer channels
+                raw = mne.io.Raw(raw_fnames[i], preload=True).crop(tmax=180)
+                events = mne.find_events(
+                    raw, stim_channel="STI101", min_duration=0.003
+                )
+                raw.pick_types(meg="grad", misc=True)
+                raw.notch_filter([50, 100])
+                raw.filter(l_freq=1.0, h_freq=70)
 
-            epochs.append(
-                mne.Epochs(raw, events, tmin=0.0, tmax=20.0, decim=4)
-            )
-            del raw
-        else:
-            print(raw_fnames[i], "***NOT FOUND")
-    epochs = mne.concatenate_epochs(epochs)
-    # %%
-    acc_picks = mne.pick_channels(
-        epochs.info["ch_names"], include=acc_channels_right[subj_n]
-    )
+                # %%
+                # get indices of accelerometer channels
 
-    acc_data = epochs.get_data()[:, acc_picks, :]
+                epochs.append(
+                    mne.Epochs(raw, events, tmin=0.0, tmax=20.0, decim=4,
+                               baseline=(0, 0))  # TODO remove baseline, only local
+                )
+                del raw
+            else:
+                print(raw_fnames[i], "***NOT FOUND")
+        epochs = mne.concatenate_epochs(epochs)
+        # %%
+        print("Number of epochs : ", len(epochs))
 
-    # acc_data = signal.detrend(acc_data, axis=-1)
-    acc_data -= acc_data[..., :500].mean(axis=-1, keepdims=True)
-    acc_data /= acc_data.std(axis=-1, keepdims=True)
-    acc_data = mne.filter.filter_data(
-        acc_data, sfreq=250, l_freq=0.5, h_freq=25.0
-    )
+        acc_picks = mne.pick_channels(
+            epochs.info["ch_names"], include=acc_channels_right[subj_n]
+        )
 
-    meg = epochs.get_data()[:, :204, :]
-    del epochs
+        acc_data = epochs.get_data()[:, acc_picks, :]
+        print("accelerometers shape :", acc_data.shape)
 
-    import_opt = dict(
-        fs=250,
-        savepath=data_path + "//preprocessed//",
-        out_name="sub_" + str(subj_n) + "_right",
-        input_type="trials",
-        overwrite=True,
-        n_folds=5,
-        target_type="float",
-        segment=250,
-        aug_stride=50,
-        test_set="holdout",
-        # combine_events = {3:0, 4:1, 5:0, 6:1, 2:2},
-        scale=True,
-        scale_interval=None,
-        # decimate=2,
-        seq_length=None,
-        transform_targets=process_y,
-        scale_y=True,
-        save_as_numpy=True,
-    )
+        # acc_data = signal.detrend(acc_data, axis=-1)
+        acc_data -= acc_data[..., :500].mean(axis=-1, keepdims=True)
+        acc_data /= acc_data.std(axis=-1, keepdims=True)
+        acc_data = mne.filter.filter_data(
+            acc_data, sfreq=250, l_freq=0.5, h_freq=25.0
+        )
 
-    # y = process_y(acc_data_left)
-    meta = mneflow.produce_tfrecords((meg, acc_data), **import_opt)
-    del meg, acc_data
+        meg = epochs.get_data()[:, :204, :]
+        del epochs
+
+        import_opt = dict(
+            fs=250,
+            savepath=data_path + "//preprocessed//",
+            out_name="sub_" + str(subj_n) + "_right",
+            input_type="trials",
+            overwrite=True,
+            n_folds=5,
+            target_type="float",
+            segment=250,
+            aug_stride=50,
+            test_set="holdout",
+            # combine_events = {3:0, 4:1, 5:0, 6:1, 2:2},
+            scale=True,
+            scale_interval=None,
+            # decimate=2,
+            seq_length=None,
+            transform_targets=process_y,
+            scale_y=True,
+            save_as_numpy=True,
+        )
+
+        # y = process_y(acc_data_left)
+        meta = mneflow.produce_tfrecords((meg, acc_data), **import_opt)
+        del meg, acc_data
