@@ -143,7 +143,7 @@ if __name__ == "__main__":
         help="Model data directory (default= MEG\Models\)",
     )
 
-    description = "y_pca_SCNN"
+    description = "within_final_SCNN_Adam_dp02_l2_loss"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
@@ -174,11 +174,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     fix_param = {
-        "sub": 8,
+        "sub": 7,
         "hand": 0,
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "epochs": 50,
+        "epochs": 100,
         "duration_overlap": (1.0, 0.8),
         "bias": False,
         "patience": 10,
