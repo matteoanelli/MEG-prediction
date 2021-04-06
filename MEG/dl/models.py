@@ -402,11 +402,11 @@ class MNet_ivan(nn.Module):
         self.ff = nn.Sequential(nn.Linear(32 * 8 * self.n_times, 512),
                                 nn.BatchNorm1d(num_features=512),
                                 nn.ReLU(),
-                                nn.Dropout(0.5),
+                                nn.Dropout(0.3),
                                 nn.Linear(512, 512),
                                 nn.BatchNorm1d(num_features=512),
                                 nn.ReLU(),
-                                nn.Dropout(0.5),
+                                nn.Dropout(0.3),
                                 nn.Linear(512, 1))
 
 

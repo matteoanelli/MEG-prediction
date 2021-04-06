@@ -16,7 +16,8 @@ from MEG.dl.hyperparameter_generation import (
     generate_parameters,
     parameter_test,
 )
-from MEG.dl.train import train, train_bp, train_bp_MLP, train_2
+from MEG.dl.train import (train, train_bp, train_bp_MLP, train_2,
+                          add_gaussian_noise)
 
 
 @pytest.mark.skip(reason="To implement")
@@ -1093,3 +1094,27 @@ def test_RPS_CNN_shape():
         ), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test LeNet5 output shape: Success.")
+
+
+def test_add_gaussian_noise():
+
+    data = torch.rand([10, 1, 204, 250])
+
+    noise_data = add_gaussian_noise(data)
+
+    print("data before adding the noise : ",  data[8, 0, 100, :])
+
+    print("data after adding the noise : ",  noise_data[8, 0, 100, :])
+
+    assert data.shape == noise_data.shape, "Bad shape of noised data, got {}."\
+                                     " Expected {}".format(data.shape,
+                                                          noise_data.shape)
+
+    # test real data
+
+    sample = torch.randn(50)
+    # to decide the variance (variance 0.1)
+    sample2 = torch.randn(50) * (0.1**0.5)
+
+    print("sample normal distribution : ", sample)
+    print("sample different variance (var(0.1) : ", sample2)

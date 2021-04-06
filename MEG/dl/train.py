@@ -5,6 +5,7 @@
 
 import os
 import sys
+import random
 
 import numpy as np
 import torch
@@ -13,6 +14,17 @@ import torch.nn as nn
 
 sys.path.insert(1, r"")
 
+def add_gaussian_noise(data):
+    """
+    Add gaussian noise to imput tensor:
+    Args:
+        data: data tensor in imput.
+
+    Returns:
+        data: nosed data.
+    """
+    # multiply to change variance ex (0.1**0.5) ()
+    return data + torch.randn(data.shape)
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
@@ -148,6 +160,8 @@ def train(
         valid_losses = []
         for data, labels, _ in trainloader:
             # Set data to appropiate device
+            if random.uniform(0, 1) <= 0.4:
+                data = add_gaussian_noise(data)
             data, labels = data.to(device), labels.to(device)
             # Clear the gradients
             optimizer.zero_grad()
