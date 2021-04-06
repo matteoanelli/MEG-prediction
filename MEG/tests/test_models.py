@@ -124,6 +124,21 @@ def test_MNet_shape():
     x = torch.zeros([10, 1, 204, 250])
 
     net = models.MNet_ivan(x.shape[-1])
+    print(sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    def count_parameters(model):
+        total_params = 0
+        for name, parameter in model.named_parameters():
+            if parameter.requires_grad:
+                param = parameter.numel()
+                print("param {} : {}".format(name, param))
+                total_params += param
+            else:
+                print("param {} : {}".format(name, 0))
+        print(f"Total Trainable Params: {total_params}")
+        return total_params
+
+    count_parameters(net)
 
     with torch.no_grad():
         print("Shape of the input tensor: {}".format(x.shape))
@@ -385,14 +400,14 @@ def test_MLP():
 
 
 def test_SCNN_shape():
-    x = torch.zeros([10, 1, 204, 501])
+    x = torch.zeros([10, 1, 204, 250])
 
     n_spatial_layer = 2
     spatial_kernel_size = [154, 51]
 
     temporal_n_block = 1
     # [[20, 10, 10, 8, 8, 5], [16, 8, 5, 5], [10, 10, 10, 10], [200, 200]]
-    temporal_kernel_size = [250]
+    temporal_kernel_size = [125]
     max_pool = 2
 
     mlp_n_layer = 3

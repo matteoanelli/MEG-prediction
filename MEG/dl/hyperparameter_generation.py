@@ -159,11 +159,13 @@ if __name__ == "__main__":
             [104, 51, 51],
         ],
         "t_kernel_size": [
-            [20, 10, 10, 8, 5],
+            # [20, 10, 10, 8, 5],
             [16, 8, 5, 5],
-            [10, 10, 10, 10],
-            [100, 75],
-            [250],
+            # [10, 10, 10, 10],
+            [8, 8, 8, 8],
+            # [100, 75],
+            # [250],
+            [125],
         ],
         "ff_n_layer": [2, 3, 4],
         "ff_hidden_channels": [1024, 516, 248],
@@ -185,8 +187,8 @@ if __name__ == "__main__":
         "y_measure": "movement",
         "max_pooling": 2,
         "experiment": 30,
-        "dropout": [0.2],
-        "activation": ["relu"],
+        "dropout": 0.2,
+        "activation": "relu",
         "desc": description,
     }
     random_search = generate_parameters(

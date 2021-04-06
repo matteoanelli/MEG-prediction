@@ -62,11 +62,11 @@ def main(args):
         device=device,
         y_measure=args.y_measure,
         s_n_layer=args.s_n_layer,
-        s_kernel_size=args.s_kernel_size,  # Local
-        # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+        # s_kernel_size=args.s_kernel_size,  # Local
+        s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
         t_n_layer=args.t_n_layer,
-        t_kernel_size=args.t_kernel_size,  # Local
-        # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+        # t_kernel_size=args.t_kernel_size,  # Local
+        t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
         max_pooling=args.max_pooling,
         ff_n_layer=args.ff_n_layer,
         ff_hidden_channels=args.ff_hidden_channels,
@@ -127,8 +127,8 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
@@ -197,7 +197,7 @@ def main(args):
     y_valid = []
 
     with torch.no_grad():
-        for data, labels in testloader:
+        for data, labels, _ in testloader:
             data, labels = (
                 data.to(parameters.device),
                 labels.to(parameters.device),
@@ -205,7 +205,7 @@ def main(args):
             y.extend(list(labels[:, parameters.hand]))
             y_pred.extend((list(net(data))))
 
-        for data, labels in validloader:
+        for data, labels, _ in validloader:
             data, labels = (
                 data.to(parameters.device),
                 labels.to(parameters.device),
@@ -452,17 +452,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--t_n_layer",
         type=int,
-        default=5,
+        default=4,
         metavar="N",
-        help="Temporal sub-net number of layer (default: 5)",
+        help="Temporal sub-net number of layer (default: 4)",
     )
     parser.add_argument(
         "--t_kernel_size",
         type=str,
-        default=[20, 10, 10, 8, 5],
+        default=[16, 8, 5, 5],
         metavar="N",
         nargs="+",
-        help="Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])",
+        help="Spatial sub-net kernel sizes (default: [16, 8, 5, 5])",
     )
     parser.add_argument(
         "--max_pooling",

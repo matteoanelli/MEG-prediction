@@ -123,16 +123,25 @@ def main(args):
             net = MNet_ivan(n_times)
 
     print(net)
+    total_params = 0
+    for name, parameter in net.named_parameters():
+        param = parameter.numel()
+        print("param {} : {}".format(name, param if parameter.requires_grad
+                                            else 0))
+        total_params += param
+    print(f"Total Trainable Params: {total_params}")
 
     # Training loop or model loading
     if not skip_training:
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = AdamW(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
+
+        print("optimizer : ", optimizer)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
