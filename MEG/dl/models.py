@@ -341,7 +341,7 @@ class MNet_ivan(nn.Module):
         """
         super(MNet_ivan, self).__init__()
         if n_times == 250:  # TODO automatic n_times
-            self.n_times = 10
+            self.n_times = 9
         elif n_times == 601:
             self.n_times = 18  # to check
         elif n_times == 701:
@@ -353,32 +353,34 @@ class MNet_ivan(nn.Module):
             )
 
         self.spatial = nn.Sequential(
-                    nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 32],
+                    nn.Conv2d(1, 16, stride=(1, 1), kernel_size=[204, 16],
                               bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(32, 64, kernel_size=[1, 16], bias=False),
+                    nn.Conv2d(16, 32, kernel_size=[1, 16], bias=False),
                     nn.ReLU(),
                     # CBAM([None, 64, 1, 204]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(64),
+                    nn.BatchNorm2d(32),
+                    Print("ciao")
                 )
 
         self.temporal = nn.Sequential(
-                    nn.Conv2d(1, 16, kernel_size=[7, 7], bias=True),
+                    nn.Conv2d(1, 8, kernel_size=[5, 5], bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(16, 16, kernel_size=[7, 7], bias=False),
+                    nn.Conv2d(8, 8, kernel_size=[5, 5], bias=False),
                     nn.ReLU(),
                     # CBAM([None, 16, 52, 90]),
                     nn.MaxPool2d(kernel_size=[2, 3], stride=(2, 3)),
-                    nn.BatchNorm2d(16),
+                    nn.BatchNorm2d(8),
                     ###########################################################
-                    nn.Conv2d(16, 32, kernel_size=[6, 6], bias=True),
+                    nn.Conv2d(8, 16, kernel_size=[4, 4], bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(32, 32, kernel_size=[6, 6], bias=False),
+                    nn.Conv2d(16, 16, kernel_size=[4, 4], bias=False),
                     nn.ReLU(),
                     # CBAM([None, 32, 16, 20]),
-                    nn.MaxPool2d(kernel_size=[2, 2], stride=(2, 2)),
-                    nn.BatchNorm2d(32),
+                    nn.MaxPool2d(kernel_size=[3, 3], stride=(3, 3)),
+                    nn.BatchNorm2d(16),
+                    Print("ciao")
                     ###########################################################
                     # nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
                     # nn.ReLU(),
@@ -399,15 +401,15 @@ class MNet_ivan(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(32 * 8 * self.n_times, 512),
-                                nn.BatchNorm1d(num_features=512),
+        self.ff = nn.Sequential(nn.Linear(16 * 2 * self.n_times, 256),
+                                nn.BatchNorm1d(num_features=256),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
-                                nn.Linear(512, 512),
-                                nn.BatchNorm1d(num_features=512),
+                                nn.Linear(256, 256),
+                                nn.BatchNorm1d(num_features=256),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
-                                nn.Linear(512, 1))
+                                nn.Linear(256, 1))
 
 
     def forward(self, x):
@@ -1405,3 +1407,128 @@ class RPS_CNN(nn.Module):
         x = self.ff(x)
 
         return x.squeeze(1)
+
+
+class Generator(nn.Module):
+    def __init__(self, nz=10, ngf=64, nc=1):
+        """GAN generator.
+
+        Args:
+          nz:  Number of elements in the latent code.
+          ngf: Base size (number of channels) of the generator layers.
+          nc:  Number of channels in the generated images.
+        """
+        super(Generator, self).__init__()
+
+        self.block1 = nn.Sequential(
+            nn.ConvTranspose2d(nz, 4 * ngf, (102, 10), 1, bias=False),
+            nn.BatchNorm2d(4 * ngf),
+            nn.ReLU())
+
+        self.block2 = nn.Sequential(
+            nn.ConvTranspose2d(4 * ngf, 2 * ngf, (103, 20), (1, 2),
+                               bias=False),
+            nn.BatchNorm2d(2 * ngf),
+            nn.ReLU())
+
+        self.block3 = nn.Sequential(
+            nn.ConvTranspose2d(2 * ngf, ngf, (1, 26), (1, 2), bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.ReLU())
+
+        self.block4 = nn.Sequential(
+            nn.ConvTranspose2d(ngf, nc, (1, 52), (1, 2),
+                               bias=False),
+            # nn.Tanh()
+            )  # look on which activation add here.
+
+    def forward(self, z, verbose=False):
+        """Generate images by transforming the given noise tensor.
+
+        Args:
+          z of shape (batch_size, nz, 1, 1): Tensor of noise samples. We use the last two singleton dimensions
+                          so that we can feed z to the generator without reshaping.
+          verbose (bool): Whether to print intermediate shapes (True) or not (False).
+
+        Returns:
+          out of shape (batch_size, nc, 28, 28): Generated images.
+        """
+        # YOUR CODE HERE
+
+        # x = self.net(z)
+        # if verbose:
+        # print(x.shape)
+        if verbose:
+            x = self.block1(z)
+            print('after block 1, shape: {}'.format(x.shape))
+            x = self.block2(x)
+            print('after block 2, shape: {}'.format(x.shape))
+            x = self.block3(x)
+            print('after block 3, shape: {}'.format(x.shape))
+            x = self.block4(x)
+            print('after block 4, shape: {}'.format(x.shape))
+        else:
+            x = self.block1(z)
+            x = self.block2(x)
+            x = self.block3(x)
+            x = self.block4(x)
+
+        return x
+
+
+class Discriminator(nn.Module):
+    def __init__(self, nc=1, ndf=64):
+        """GAN discriminator.
+
+        Args:
+          nc:  Number of channels in images.
+          ndf: Base size (number of channels) of the discriminator layers.
+        """
+        # YOUR CODE HERE
+        super(Discriminator, self).__init__()
+
+        self.block1 = nn.Sequential(
+            nn.Conv2d(1, ndf, (1, 50), (1, 2), bias=False),
+            nn.LeakyReLU(0.2))
+
+        self.block2 = nn.Sequential(
+            nn.Conv2d(ndf, 2 * ndf, (1, 24), (1, 2), bias=False),
+            nn.LeakyReLU(0.2))
+
+        self.block3 = nn.Sequential(
+            nn.Conv2d(2 * ndf, 4 * ndf, (103, 20), (1, 2), bias=False),
+            nn.LeakyReLU(0.2))
+
+        self.block4 = nn.Sequential(
+            nn.Conv2d(4 * ndf, nc, (102, 10), 1, bias=False),
+            nn.Sigmoid())
+
+    def forward(self, x, verbose=False):
+        """Classify given images into real/fake.
+
+        Args:
+          x of shape (batch_size, 1, 28, 28): Images to be classified.
+
+        Returns:
+          out of shape (batch_size,): Probabilities that images are real. All elements should be between 0 and 1.
+        """
+        # YOUR CODE HERE
+        if verbose:
+            print('Input data shape: {}'.format(x.shape))
+            x = self.block1(x)
+            print('after block 1, shape: {}'.format(x.shape))
+            x = self.block2(x)
+            print('after block 2, shape: {}'.format(x.shape))
+            x = self.block3(x)
+            print('after block 3, shape: {}'.format(x.shape))
+            x = self.block4(x)
+            print('after block 4, shape: {}'.format(x.shape))
+
+        else:
+            x = self.block1(x)
+            x = self.block2(x)
+            x = self.block3(x)
+            x = self.block4(x)
+
+        return x.reshape(-1)
+

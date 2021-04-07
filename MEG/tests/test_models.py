@@ -19,6 +19,7 @@ from MEG.dl.hyperparameter_generation import (
 from MEG.dl.train import (train, train_bp, train_bp_MLP, train_2,
                           add_gaussian_noise)
 
+from MEG.dl.GAN_Train import discriminator_loss, generator_loss
 
 @pytest.mark.skip(reason="To implement")
 def test_Flatten_MEG():
@@ -1118,3 +1119,131 @@ def test_add_gaussian_noise():
 
     print("sample normal distribution : ", sample)
     print("sample different variance (var(0.1) : ", sample2)
+
+
+
+def test_Generator():
+
+
+    batch_size = 10
+    nz = 10
+    netG = models.Generator(nz, ngf=12, nc=1)
+
+    z = torch.randn([batch_size, nz, 1, 1])
+    out = netG(z, verbose=True)
+
+    MEG_size = torch.Size([batch_size, 1, 204, 250])
+
+    assert out.shape == MEG_size, f"Bad shape of out: out.shape={out.shape}" \
+                                  f"expected={MEG_size}"
+
+
+def test_Discriminator():
+
+    batch_size = 10
+    netD = models.Discriminator(nc=1, ndf=12)
+
+    MEG = torch.ones([batch_size, 1, 204, 250])
+    out = netD(MEG, verbose=True)
+
+    expected_size = torch.Size([batch_size])
+
+    assert out.shape == expected_size, f"Bad shape of out: out.shape=" \
+                                       f"{out.shape}, expected={expected_size}"
+
+
+
+def test_GAN():
+
+    batch_size = 10
+    nz = 10
+
+    # generator
+
+    netG = models.Generator(nz, ngf=12, nc=1)
+
+    z = torch.randn([batch_size, nz, 1, 1])
+    out = netG(z, verbose=True)
+
+    # discriminator
+
+    netD = models.Discriminator(nc=1, ndf=12)
+    # TODO finish
+
+def test_generator_loss():
+
+    class MyDiscriminator(torch.nn.Module):
+        def forward(self, x):
+            out = torch.Tensor([0.1, 0.5, 0.8])
+            return out
+
+    with torch.no_grad():
+        netD = MyDiscriminator()
+        fake_images = torch.zeros(3, 1, 204, 250)
+        loss = generator_loss(netD, fake_images)
+        expected = torch.tensor(1.0729585886001587)
+        print('loss:', loss)
+        print('expected:', expected)
+        assert torch.allclose(loss,
+                              expected), "out does not match expected value."
+
+
+def test_discriminator_loss():
+    with torch.no_grad():
+        class MyDiscriminator(torch.nn.Module):
+            def forward(self, x):
+                if (x == 0).all():
+                    return torch.Tensor([0.1, 0.2, 0.3])
+                elif (x == 1).all():
+                    return torch.Tensor([0.6, 0.7, 0.8])
+
+        netD = MyDiscriminator()
+
+        fake_images = torch.zeros(3, 1, 204, 250)
+        real_images = torch.ones(3, 1, 204, 250)
+        d_loss_real, D_real, d_loss_fake, D_fake = discriminator_loss(
+                                                    netD, real_images,
+                                                    fake_images)
+
+        expected = torch.tensor(0.36354804039001465)
+        print('d_loss_real:', d_loss_real)
+        print('expected d_loss_real:', expected)
+        assert torch.allclose(d_loss_real, expected), \
+            "d_loss_real does not match expected value."
+
+        import numpy as np
+        expected = 0.699999988079071
+        print('D_real:', D_real)
+        print('expected D_real:', expected)
+        assert np.allclose(D_real, expected), \
+            "D_real does not match expected value."
+
+        expected = torch.tensor(0.22839301824569702)
+        print('d_loss_fake:', d_loss_fake.item())
+        print('expected d_loss_fake:', expected)
+        assert torch.allclose(d_loss_fake, expected),\
+            "d_loss_fake does not match expected value."
+
+        expected = 0.20000000298023224
+        print('D_fake:', D_fake)
+        print('expected D_fake:', expected)
+        assert np.allclose(D_fake, expected), \
+            "D_fake does not match expected value."
+
+
+def test_discriminator_loss_shape():
+
+    netD = models.Discriminator(nc=1, ndf=64)
+    _real = _fake = torch.ones(32, 1, 204, 250)
+
+    d_loss_real, D_real, d_loss_fake, D_fake = discriminator_loss(netD,
+                                                                  _real,
+                                                                  _fake)
+    assert d_loss_real.shape == torch.Size([]), \
+        "d_loss_real should be a scalar tensor."
+    assert 0 < D_real < 1, \
+        "D_real should be a scalar between 0 and 1."
+    assert d_loss_fake.shape == torch.Size([]), \
+        "d_loss_fake should be a scalar tensor."
+    assert 0 < D_fake < 1, \
+        "D_fake should be a scalar between 0 and 1."
