@@ -341,7 +341,7 @@ class MNet_ivan(nn.Module):
         """
         super(MNet_ivan, self).__init__()
         if n_times == 250:  # TODO automatic n_times
-            self.n_times = 9
+            self.n_times = 10
         elif n_times == 601:
             self.n_times = 18  # to check
         elif n_times == 701:
@@ -356,39 +356,43 @@ class MNet_ivan(nn.Module):
                     nn.Conv2d(1, 16, stride=(1, 1), kernel_size=[204, 16],
                               bias=True),
                     nn.ReLU(),
+                    nn.Dropout2d(0.2),
                     nn.Conv2d(16, 32, kernel_size=[1, 16], bias=False),
                     nn.ReLU(),
+                    nn.Dropout2d(0.2),
                     # CBAM([None, 64, 1, 204]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
                     nn.BatchNorm2d(32),
-                    Print("ciao")
                 )
 
         self.temporal = nn.Sequential(
-                    nn.Conv2d(1, 8, kernel_size=[5, 5], bias=True),
+                    nn.Conv2d(1, 16, kernel_size=[5, 5], bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(8, 8, kernel_size=[5, 5], bias=False),
+                    # nn.Dropout2d(0.2),
+                    nn.Conv2d(16, 16, kernel_size=[5, 5], bias=False),
                     nn.ReLU(),
-                    # CBAM([None, 16, 52, 90]),
+                    # nn.Dropout2d(0.2),
+                    # CBAM([None, 8, 24, 102], reduction_factor=2),
                     nn.MaxPool2d(kernel_size=[2, 3], stride=(2, 3)),
-                    nn.BatchNorm2d(8),
-                    ###########################################################
-                    nn.Conv2d(8, 16, kernel_size=[4, 4], bias=True),
-                    nn.ReLU(),
-                    nn.Conv2d(16, 16, kernel_size=[4, 4], bias=False),
-                    nn.ReLU(),
-                    # CBAM([None, 32, 16, 20]),
-                    nn.MaxPool2d(kernel_size=[3, 3], stride=(3, 3)),
                     nn.BatchNorm2d(16),
-                    Print("ciao")
                     ###########################################################
-                    # nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
-                    # nn.ReLU(),
-                    # nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                    # nn.ReLU(),
+                    nn.Conv2d(16, 32, kernel_size=[4, 4], bias=True),
+                    nn.ReLU(),
+                    # nn.Dropout2d(0.2),
+                    nn.Conv2d(32, 32, kernel_size=[4, 4], bias=False),
+                    nn.ReLU(),
+                    # nn.Dropout2d(0.2),
+                    # CBAM([None, 16, 6, 28], reduction_factor=2),
+                    nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+                    nn.BatchNorm2d(32),
+                    ###########################################################
+                    nn.Conv2d(32, 64, kernel_size=[3, 3], bias=True),
+                    nn.ReLU(),
+                    nn.Conv2d(64, 64, kernel_size=[3, 3], bias=False),
+                    nn.ReLU(),
                     # # CBAM([None, 128, 34, 9]),
                     # nn.Dropout2d(p=0.3),
-                    # nn.BatchNorm2d(128),
+                    nn.BatchNorm2d(64),
                     ###########################################################
                     # nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
                     # nn.ReLU(),
@@ -401,14 +405,14 @@ class MNet_ivan(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(16 * 2 * self.n_times, 256),
+        self.ff = nn.Sequential(nn.Linear(64 * 2 * self.n_times, 256),
                                 nn.BatchNorm1d(num_features=256),
                                 nn.ReLU(),
-                                nn.Dropout(0.3),
-                                nn.Linear(256, 256),
-                                nn.BatchNorm1d(num_features=256),
-                                nn.ReLU(),
-                                nn.Dropout(0.3),
+                                nn.Dropout(0.5),
+                                # nn.Linear(256, 256),
+                                # nn.BatchNorm1d(num_features=256),
+                                # nn.ReLU(),
+                                # nn.Dropout(0.3),
                                 nn.Linear(256, 1))
 
 

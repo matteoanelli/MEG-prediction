@@ -123,7 +123,7 @@ def test_LeNet_train():
 
 def test_MNet_shape():
 
-    x = torch.zeros([10, 1, 204, 250])
+    x = torch.ones([10, 1, 204, 250])
 
     net = models.MNet_ivan(x.shape[-1])
     print(sum(p.numel() for p in net.parameters() if p.requires_grad))
