@@ -56,7 +56,6 @@ def main(args):
     rps_val = rps_val.reshape(rps_val.shape[0], -1)
     rps_test = rps_test.reshape(rps_test.shape[0], -1)
 
-    print(y_train.shape)
     rps_train = np.array(rps_train).astype(np.float64)
     y_train = np.array(y_train[..., args.hand].squeeze()).astype(np.float64)
 
@@ -79,6 +78,7 @@ def main(args):
     best_n_comp = 0
     # for _C in [2, 10, 30, 50, 100]:
     for _C in [2, 10, 30, 50, 100]:
+        print("Processing C = ", _C)
         regressor = SVR(kernel='rbf', C=_C)
 
         regressor.fit(rps_train, y_train)
@@ -104,7 +104,7 @@ def main(args):
 
 
     print(f"Training time : {time.time() - start}s ")
-    print("Best parameter C: ", _C)
+    print("Best parameter C: ", best_C)
 
     print("Validation set")
     print("mean squared error valid {}".format(best_mse_valid))
@@ -189,9 +189,8 @@ def main(args):
         mlflow.log_metric("RMSE_v", best_rmse_valid)
         mlflow.log_metric("R2_v", best_r2_valid)
 
-        mlflow.log_param("n_components", best_n_comp)
-        mlflow.log_param("alpha", best_alpha)
-
+        mlflow.log_param("C", best_C)
+       
         mlflow.log_artifact(os.path.join(figure_path, "MEG_SVM_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "MEG_SVM.pdf"))
         mlflow.sklearn.log_model(best_pipeline, "models")

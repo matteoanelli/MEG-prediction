@@ -3,8 +3,8 @@
 #SBATCH --time=00:20:00
 #SBATCH --mem-per-cpu=12000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=6-10
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Within_MNet_out_%A_%a.log
+#SBATCH --array=1-10
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Within_RPS_MNet_out_%A_%a.log
 #SBATCH --gres=gpu:1
 # if resenet add --constraint='pascal|volta'
 n=$(($SLURM_ARRAY_TASK_ID + 1))

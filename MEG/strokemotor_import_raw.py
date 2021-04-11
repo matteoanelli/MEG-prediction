@@ -14,12 +14,12 @@ from tensorflow.keras import backend as K
 import os, sys
 # import mneflow from source save_as_numpy_branch
 print(sys.path)
-print(os.path.isdir(".\mneflow\mneflow"))
-sys.path.append(".\mneflow\mneflow")
+print(os.path.isdir("/scratch/work/anellim1/mneflow/mneflow"))
+sys.path.append("/scratch/work/anellim1/mneflow")
 # os.chdir("C:\\Users\\anellim1\Develop\Thesis\mnematte\mneflow\mneflow")
 import mneflow
 
-data_path = "C:\\Users\\anellim1\Develop\\"
+data_path = "/m/nbe/scratch/strokemotor/healthy_trans/"
 
 acc_channels_left = {
     1: ["MISC001", "MISC002"],
@@ -78,10 +78,10 @@ def process_y(y):
 
     # split into segments of 256 samples(1 s) and 128ms overlap (stride=64 samples)
     # no need to use mneflow if you dont want to
-    y_segmented = mneflow.utils._segment(y_pca, segment_length=250, stride=50)
+    y_segmented = mneflow.utils._segment(y_pca, segment_length=500, stride=100)
     print(y_segmented.shape)
     # y_out = np.squeeze(np.sqrt(np.mean(y_segmented[..., -50:]**2, axis=-1)))
-    y_out = np.squeeze(np.mean(y_segmented[..., -50:], axis=-1))
+    y_out = np.squeeze(np.mean(y_segmented[..., -100:], axis=-1))
 
 
     print(
@@ -99,7 +99,7 @@ def process_y(y):
 if __name__ == '__main__':
 
     # for subj_n in range(1, 10):
-    for subj_n in [1]:
+    for subj_n in [8]:
         subj_id = "sub" + str(subj_n) + "/ball0"
 
         epochs = []
@@ -110,9 +110,7 @@ if __name__ == '__main__':
         ]
         for i, fname in enumerate(raw_fnames):
             if os.path.isfile(raw_fnames[i]):
-                print(os.stat(raw_fnames[i]).st_size)
-
-                raw = mne.io.Raw(raw_fnames[i], preload=True).crop(tmax=180)
+                raw = mne.io.Raw(raw_fnames[i], preload=True)
                 events = mne.find_events(
                     raw, stim_channel="STI101", min_duration=0.003
                 )
@@ -124,9 +122,8 @@ if __name__ == '__main__':
                 # get indices of accelerometer channels
 
                 epochs.append(
-                    mne.Epochs(raw, events, tmin=0.0, tmax=20.0, decim=4,
-                               baseline=(0, 0))  # TODO remove baseline, only local
-                )
+                    mne.Epochs(raw, events, tmin=0., tmax=20.0, decim=2, 
+                        baseline=(0, 0)))
                 del raw
             else:
                 print(raw_fnames[i], "***NOT FOUND")
@@ -135,32 +132,32 @@ if __name__ == '__main__':
         print("Number of epochs : ", len(epochs))
 
         acc_picks = mne.pick_channels(
-            epochs.info["ch_names"], include=acc_channels_right[subj_n]
+            epochs.info["ch_names"], include=acc_channels_left[subj_n]
         )
 
         acc_data = epochs.get_data()[:, acc_picks, :]
         print("accelerometers shape :", acc_data.shape)
 
         # acc_data = signal.detrend(acc_data, axis=-1)
-        acc_data -= acc_data[..., :500].mean(axis=-1, keepdims=True)
+        acc_data -= acc_data[..., :1000].mean(axis=-1, keepdims=True)
         acc_data /= acc_data.std(axis=-1, keepdims=True)
         acc_data = mne.filter.filter_data(
-            acc_data, sfreq=250, l_freq=0.5, h_freq=25.0
+            acc_data, sfreq=500, l_freq=0.5, h_freq=25.0
         )
 
         meg = epochs.get_data()[:, :204, :]
         del epochs
 
         import_opt = dict(
-            fs=250,
+            fs=500,
             savepath=data_path + "//preprocessed//",
-            out_name="sub_" + str(subj_n) + "_right",
+            out_name="sub_" + str(subj_n) + "_left_500",
             input_type="trials",
             overwrite=True,
             n_folds=5,
             target_type="float",
-            segment=250,
-            aug_stride=50,
+            segment=500,
+            aug_stride=100,
             test_set="holdout",
             # combine_events = {3:0, 4:1, 5:0, 6:1, 2:2},
             scale=True,

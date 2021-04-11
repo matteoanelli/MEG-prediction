@@ -62,13 +62,13 @@ if __name__ == "__main__":
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "within_final_MNET_SGD_dp_spatial_l2_loss_wd"
+    description = "within_final_RPS_MNET_SGD_dp_spatial_l2_loss_wd_no_batch"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
-        "learning_rate": [1e-5, 1e-4],  # Adam
+        "learning_rate": [1e-3, 1e-4],  # Adam
         "y_measure": ["pca", "left_single_1"],
         "weight_decay": [5e-3, 5e-4, 5e-5]
     }

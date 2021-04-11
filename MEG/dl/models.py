@@ -353,46 +353,42 @@ class MNet_ivan(nn.Module):
             )
 
         self.spatial = nn.Sequential(
-                    nn.Conv2d(1, 16, stride=(1, 1), kernel_size=[204, 16],
+                    nn.Conv2d(1, 16, stride=(103, 1), kernel_size=[102, 16],
                               bias=True),
                     nn.ReLU(),
                     nn.Dropout2d(0.2),
-                    nn.Conv2d(16, 32, kernel_size=[1, 16], bias=False),
+                    nn.Conv2d(16, 32, kernel_size=[1, 16], bias=True),
                     nn.ReLU(),
                     nn.Dropout2d(0.2),
                     # CBAM([None, 64, 1, 204]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(32),
+                    # nn.BatchNorm2d(32),
                 )
 
         self.temporal = nn.Sequential(
                     nn.Conv2d(1, 16, kernel_size=[5, 5], bias=True),
                     nn.ReLU(),
-                    # nn.Dropout2d(0.2),
-                    nn.Conv2d(16, 16, kernel_size=[5, 5], bias=False),
+                    nn.Conv2d(16, 16, kernel_size=[5, 5], bias=True),
                     nn.ReLU(),
-                    # nn.Dropout2d(0.2),
-                    # CBAM([None, 8, 24, 102], reduction_factor=2),
+                    # CBAM([None, 16, 24, 102], reduction_factor=2),
                     nn.MaxPool2d(kernel_size=[2, 3], stride=(2, 3)),
-                    nn.BatchNorm2d(16),
+                    # nn.BatchNorm2d(16),
                     ###########################################################
                     nn.Conv2d(16, 32, kernel_size=[4, 4], bias=True),
                     nn.ReLU(),
-                    # nn.Dropout2d(0.2),
-                    nn.Conv2d(32, 32, kernel_size=[4, 4], bias=False),
+                    nn.Conv2d(32, 32, kernel_size=[4, 4], bias=True),
                     nn.ReLU(),
-                    # nn.Dropout2d(0.2),
-                    # CBAM([None, 16, 6, 28], reduction_factor=2),
+                    # CBAM([None, 32, 6, 28], reduction_factor=2),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(32),
+                    # nn.BatchNorm2d(32),
                     ###########################################################
                     nn.Conv2d(32, 64, kernel_size=[3, 3], bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(64, 64, kernel_size=[3, 3], bias=False),
+                    nn.Conv2d(64, 64, kernel_size=[3, 3], bias=True),
                     nn.ReLU(),
                     # # CBAM([None, 128, 34, 9]),
                     # nn.Dropout2d(p=0.3),
-                    nn.BatchNorm2d(64),
+                    # nn.BatchNorm2d(64),
                     ###########################################################
                     # nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
                     # nn.ReLU(),
@@ -542,7 +538,7 @@ class RPS_MNet_ivan(nn.Module):
         """
         super(RPS_MNet_ivan, self).__init__()
         if n_times == 250:  # TODO automatic n_times
-            self.n_times = 5
+            self.n_times = 10
         elif n_times == 601:
             self.n_times = 18  # to check
         elif n_times == 701:
@@ -588,65 +584,63 @@ class RPS_MNet_ivan(nn.Module):
         #                               )
 
         self.spatial = nn.Sequential(
-                    nn.Conv2d(1, 32, stride=(1, 1), kernel_size=[204, 32],
+                    nn.Conv2d(1, 16, stride=(1, 1), kernel_size=[204, 16],
                               bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(32, 64, kernel_size=[1, 16], bias=False),
+                    nn.Conv2d(16, 32, kernel_size=[1, 16], bias=True),
                     nn.ReLU(),
-                    CBAM([None, 64, 1, 204]),
+                    # CBAM([None, 64, 1, 204]),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(64),
+                    # nn.BatchNorm2d(64),
                 )
 
         self.temporal = nn.Sequential(
-                    nn.Conv2d(1, 32, kernel_size=[7, 7], bias=True),
-                    nn.LeakyReLU(),
-                    nn.Conv2d(32, 32, kernel_size=[7, 7], bias=False),
+                    nn.Conv2d(1, 16, kernel_size=[5, 5], bias=True),
                     nn.ReLU(),
-                    CBAM([None, 32, 52, 90]),
+                    nn.Conv2d(16, 16, kernel_size=[5, 5], bias=True),
+                    nn.ReLU(),
+                    # CBAM([None, 16, 24, 102], reduction_factor=2),
+                    nn.MaxPool2d(kernel_size=[2, 3], stride=(2, 3)),
+                    # nn.BatchNorm2d(16),
+                    ###########################################################
+                    nn.Conv2d(16, 32, kernel_size=[4, 4], bias=True),
+                    nn.ReLU(),
+                    nn.Conv2d(32, 32, kernel_size=[4, 4], bias=True),
+                    nn.ReLU(),
+                    # CBAM([None, 32, 6, 28], reduction_factor=2),
                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(32),
+                    # nn.BatchNorm2d(32),
                     ###########################################################
-                    nn.Conv2d(32, 64, kernel_size=[6, 6], bias=True),
+                    nn.Conv2d(32, 64, kernel_size=[3, 3], bias=True),
                     nn.ReLU(),
-                    nn.Conv2d(64, 64, kernel_size=[6, 6], bias=False),
+                    nn.Conv2d(64, 64, kernel_size=[3, 3], bias=True),
                     nn.ReLU(),
-                    CBAM([None, 64, 42, 35]),
-                    nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                    nn.BatchNorm2d(64),
+                    # # CBAM([None, 128, 34, 9]),
+                    # nn.Dropout2d(p=0.3),
+                    # nn.BatchNorm2d(64),
                     ###########################################################
-                    nn.Conv2d(64, 128, kernel_size=[5, 5], bias=True),
-                    nn.ReLU(),
-                    nn.Conv2d(128, 128, kernel_size=[5, 5], bias=False),
-                    nn.ReLU(),
-                    CBAM([None, 128, 34, 9]),
-                    nn.Dropout2d(p=0.5),
-                    nn.BatchNorm2d(128),
-                    ###########################################################
-                    nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
-                    nn.ReLU(),
-                    nn.Conv2d(256, 256, kernel_size=[3, 3], bias=False),
-                    nn.ReLU(),
-                    CBAM([None, 256, 30, self.n_times]),
-                    nn.Dropout2d(p=0.5),
-                    nn.BatchNorm2d(256),
+                    # nn.Conv2d(128, 256, kernel_size=[3, 3], bias=True),
+                    # nn.ReLU(),
+                    # nn.Conv2d(256, 256, kernel_size=[3, 3], bias=False),
+                    # nn.ReLU(),
+                    # # CBAM([None, 256, 30, self.n_times]),
+                    # nn.Dropout2d(p=0.3),
+                    # nn.BatchNorm2d(256),
                 )
+
         self.concatenate = Concatenate()
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(
-            nn.Linear(256 * 30 * self.n_times + 204 * 6, 1024),
-            nn.BatchNorm1d(num_features=1024),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(1024, 1024),
-            nn.BatchNorm1d(num_features=1024),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(1024, 1),
-        )
-
+        self.ff = nn.Sequential(nn.Linear(64 * 2 * self.n_times + 204 * 6, 516),
+                                nn.BatchNorm1d(num_features=516),
+                                nn.ReLU(),
+                                nn.Dropout(0.3),
+                                nn.Linear(516, 256),
+                                nn.BatchNorm1d(num_features=256),
+                                nn.ReLU(),
+                                nn.Dropout(0.3),
+                                nn.Linear(256, 1))
     def forward(self, x, pb):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)

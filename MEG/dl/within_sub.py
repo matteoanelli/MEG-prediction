@@ -67,7 +67,7 @@ def main(args):
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
     mlp = False
-    rps = False
+    rps = True
     print("Creating dataset")
 
     # Generate the custom dataset
@@ -137,8 +137,8 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         # optimizer = Adam(net.parameters(), lr=parameters.lr)
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
 
         print("optimizer : ", optimizer)
