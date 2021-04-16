@@ -14,12 +14,16 @@ from tensorflow.keras import backend as K
 import os, sys
 # import mneflow from source save_as_numpy_branch
 print(sys.path)
+# local
+# print(os.path.isdir(".\mneflow\mneflow"))
+# sys.path.append(".\mneflow\mneflow")
+
 print(os.path.isdir("/scratch/work/anellim1/mneflow/mneflow"))
 sys.path.append("/scratch/work/anellim1/mneflow")
 # os.chdir("C:\\Users\\anellim1\Develop\Thesis\mnematte\mneflow\mneflow")
 import mneflow
 
-data_path = "/m/nbe/scratch/strokemotor/healthy_trans/"
+data_path = "C:\\Users\\anellim1\Develop\\"
 
 acc_channels_left = {
     1: ["MISC001", "MISC002"],
@@ -111,6 +115,10 @@ if __name__ == '__main__':
         for i, fname in enumerate(raw_fnames):
             if os.path.isfile(raw_fnames[i]):
                 raw = mne.io.Raw(raw_fnames[i], preload=True)
+                print(os.stat(raw_fnames[i]).st_size)
+
+                raw = mne.io.Raw(raw_fnames[i], preload=True).crop(tmax=180)
+                print(raw.info)
                 events = mne.find_events(
                     raw, stim_channel="STI101", min_duration=0.003
                 )
@@ -122,7 +130,7 @@ if __name__ == '__main__':
                 # get indices of accelerometer channels
 
                 epochs.append(
-                    mne.Epochs(raw, events, tmin=0., tmax=20.0, decim=2, 
+                    mne.Epochs(raw, events, tmin=0., tmax=20.0, decim=2,
                         baseline=(0, 0)))
                 del raw
             else:

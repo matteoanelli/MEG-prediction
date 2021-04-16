@@ -625,22 +625,22 @@ class RPS_MNet_ivan(nn.Module):
                     # nn.ReLU(),
                     # # CBAM([None, 256, 30, self.n_times]),
                     # nn.Dropout2d(p=0.3),
-                    # nn.BatchNorm2d(256),
+                    # nn.BatchNorm2d(64),
                 )
 
         self.concatenate = Concatenate()
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(64 * 2 * self.n_times + 204 * 6, 516),
-                                nn.BatchNorm1d(num_features=516),
+        self.ff = nn.Sequential(nn.Linear(64 * 2 * self.n_times + 204 * 6, 512),
+                                nn.BatchNorm1d(num_features=512),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
-                                nn.Linear(516, 256),
-                                nn.BatchNorm1d(num_features=256),
+                                nn.Linear(512, 1024),
+                                nn.BatchNorm1d(num_features=1024),
                                 nn.ReLU(),
                                 nn.Dropout(0.3),
-                                nn.Linear(256, 1))
+                                nn.Linear(1024, 1))
     def forward(self, x, pb):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
@@ -1365,32 +1365,60 @@ class RPS_CNN(nn.Module):
         super(RPS_CNN, self).__init__()
 
         self.flatten = Flatten_MEG()
+        self.flatten2 = Flatten_MEG()
 
-        self.convolution = nn.Sequential(nn.Conv1d(6, 16, 7,  bias=True,),
-                                         nn.ReLU(),
-                                         nn.Conv1d(16, 16, 7, bias=True),
+        # self.convolution = nn.Sequential(nn.Conv1d(1, 16, 24, stride=4,
+        #                                  bias=True,),
+        #                                  nn.ReLU(),
+        #                                  nn.Conv1d(16, 16, 24, stride=4,
+        #                                  bias=True),
+        #                                  nn.ReLU(),
+        #                                  nn.MaxPool1d(2),
+        #                                  # nn.BatchNorm1d(16),
+        #                                  nn.Conv1d(16, 32, 3, bias=True),
+        #                                  nn.ReLU(),
+        #                                  nn.Conv1d(32, 32, 3, bias=True),
+        #                                  nn.ReLU(),
+        #                                  nn.MaxPool1d(2),
+        #                                  nn.Conv1d(32, 64, 3, bias=True),
+        #                                  nn.ReLU(),
+        #                                  nn.Conv1d(64, 64, 3, bias=True),
+        #                                  nn.ReLU(),
+        #                                  nn.MaxPool1d(2),
+        # )
+
+        self.convolution = nn.Sequential(nn.Conv1d(1, 16, 24, stride=4,
+                                         bias=True,),
                                          nn.ReLU(),
                                          nn.MaxPool1d(2),
-                                         # nn.BatchNorm1d(16),
-                                         nn.Conv1d(16, 32, 6, bias=True, ),
+                                         nn.Conv1d(16, 32, 3, bias=True),
                                          nn.ReLU(),
-                                         nn.Conv1d(32, 32, 6, bias=True),
+                                         nn.Conv1d(32, 32, 3, bias=True),
                                          nn.ReLU(),
                                          nn.MaxPool1d(2),
-                                         # nn.BatchNorm1d(32),
-                                         nn.Conv1d(32, 64, 5, bias=True, ),
+                                         nn.Conv1d(32, 32, 3, bias=True),
                                          nn.ReLU(),
-                                         nn.Conv1d(64, 64, 5, bias=True),
+                                         nn.Conv1d(32, 32, 3, bias=True),
+                                         nn.ReLU(),
                                          nn.MaxPool1d(2),
-                                         # nn.BatchNorm1d(32),
+                                         nn.Conv1d(32, 64, 3, bias=True),
+                                         nn.ReLU(),
+                                         nn.Conv1d(64, 64, 3, bias=True),
+                                         nn.ReLU(),
+                                         nn.MaxPool1d(2),
+                                         nn.Conv1d(64, 64, 3, bias=True),
+                                         nn.ReLU(),
+                                         nn.Conv1d(64, 64, 3, bias=True),
+                                         nn.ReLU(),
+                                         nn.MaxPool1d(2),
         )
 
         self.ff = nn.Sequential(
-            nn.Linear(64 * 17, 256),
-            nn.BatchNorm1d(num_features=256),
+            nn.Linear(64 * 5, 516),
+            nn.BatchNorm1d(num_features=516),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, 256),
+            nn.Linear(516, 256),
             nn.BatchNorm1d(num_features=256),
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -1399,9 +1427,9 @@ class RPS_CNN(nn.Module):
 
     def forward(self, x):
         # relative power spectrum as input
-        x = torch.transpose(x, 1, 2)
+        x = self.flatten(x).unsqueeze(1)
         x = self.convolution(x)
-        x = self.flatten(x)
+        x = self.flatten2(x)
         x = self.ff(x)
 
         return x.squeeze(1)

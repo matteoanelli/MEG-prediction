@@ -18,9 +18,9 @@ def main(args):
 
 
     if hand == 0:
-        file_name = "sub_{}_left_500.npz".format(str(sub))
+        file_name = "sub_{}_left.npz".format(str(sub))
         print("processing file :", file_name)
-        out_file = "sub_{}_left_500_rps.npz".format(str(sub))
+        out_file = "sub_{}_left_rps.npz".format(str(sub))
         print("output_file: ", out_file)
     else:
         file_name = "sub_{}_right.npz".format(str(sub))
@@ -39,16 +39,16 @@ def main(args):
 
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
 
-    rps_train = bandpower_multi(X_train.squeeze(), fs=500, bands=bands,
-                                nperseg=500/4, relative=True)
+    rps_train = bandpower_multi(X_train.squeeze(), fs=250, bands=bands,
+                                nperseg=250/2, relative=True)
     print("train_done")
 
-    rps_val = bandpower_multi(X_val.squeeze(), fs=500, bands=bands,
-                              nperseg=500/4, relative=True)
+    rps_val = bandpower_multi(X_val.squeeze(), fs=250, bands=bands,
+                              nperseg=250/2, relative=True)
     print("valid_done")
 
-    rps_test = bandpower_multi(X_test.squeeze(), fs=500, bands=bands,
-                               nperseg=500/4, relative=True)
+    rps_test = bandpower_multi(X_test.squeeze(), fs=250, bands=bands,
+                               nperseg=250/2, relative=True)
     print("test_done")
 
     np.savez(os.path.join(data_dir, out_file), rps_train=rps_train,
