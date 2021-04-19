@@ -13,7 +13,7 @@ def generate_welch(data, fmin=1, fmax=70, fs=250, n_jobs=1):
     psds, freqs = psd_array_welch(data, fs, fmin, fmax, n_per_seg=int(fs/2),
                           n_overlap=int(fs/4), n_jobs=n_jobs)
 
-    return psds
+    return np.expand_dims(psds, 1)
 
 def main(args):
 
@@ -47,15 +47,17 @@ def main(args):
 
     welch_train = generate_welch(X_train.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
-    print("welch data shape: ", welch_train.shape)
+    print("welch train data shape: ", welch_train.shape)
     print("train_done")
 
     welch_val = generate_welch(X_val.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
+    print("welch valid data shape: ", welch_val.shape)
     print("valid_done")
 
     welch_test = generate_welch(X_test.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
+    print("welch test data shape: ", welch_test.shape)
     print("test_done")
 
     np.savez(os.path.join(data_dir, out_file), welch_train=welch_train,

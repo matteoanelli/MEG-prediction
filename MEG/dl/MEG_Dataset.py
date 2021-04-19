@@ -15,6 +15,7 @@ from MEG.Utils.utils import (
     import_MEG_cross_subject_test,
     import_MEG_within_subject,
     import_MEG_within_subject_ivan,
+    import_MEG_within_subject_psd,
 )
 
 
@@ -528,3 +529,57 @@ class local_Dataset(Dataset):
         sample_bp = self.bp[idx, ...]
 
         return sample_data, sample_target, sample_bp
+
+
+class MEG_Within_Dataset_psd(Dataset):
+    def __init__(self, data_dir, sub=8, hand=0, mode="train"):
+        """
+
+        Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        sub (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        """
+
+        self.data_dir = data_dir
+        self.sub = sub
+        self.hand = hand
+        self.mode = mode
+
+        if self.mode not in ["train", "test", "val"]:
+            raise ValueError("mode mast be train or test!")
+
+        if self.hand not in [0, 1]:
+            raise ValueError(
+                "hand value must be 0 for left or 1 for right hand"
+            )
+
+        if not os.path.exists("".join([self.data_dir])):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "".join([self.data_dir]),
+            )
+
+        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError("Subject does not exist!")
+
+        self.target, self.psd = import_MEG_within_subject_psd(
+            self.data_dir, self.sub, self.hand, self.mode
+        )
+
+    def __len__(self):
+        return self.psd.shape[0]
+
+    def __getitem__(self, idx):
+
+        sample_target = self.target[idx]
+        sample_psd = self.psd[idx, ...]
+
+        return sample_target, sample_psd
+

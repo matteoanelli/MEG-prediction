@@ -1250,3 +1250,23 @@ def test_discriminator_loss_shape():
         "d_loss_fake should be a scalar tensor."
     assert 0 < D_fake < 1, \
         "D_fake should be a scalar between 0 and 1."
+
+
+
+def test_PSD_cnn():
+
+    psds = torch.zeros([10, 1, 204, 250])
+    net = models.PSD_cnn()
+
+    print(net)
+    print("total number of tunable parameters: ",
+          sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    with torch.no_grad():
+
+        out = net(psds)
+
+        assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
+                "Got insetad {}".format(torch.Size([10]), out.shape)
+
+

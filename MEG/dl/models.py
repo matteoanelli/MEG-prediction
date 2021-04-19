@@ -1558,3 +1558,54 @@ class Discriminator(nn.Module):
 
         return x.reshape(-1)
 
+
+class PSD_cnn(nn.Module):
+    def __init__(self):
+        """
+            CNN nwtwork to work from welch psd input data.
+        """
+        super(PSD_cnn, self).__init__()
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(1, 8,  kernel_size=[6, 6], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(8, 8, kernel_size=[6, 6], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(8, 16, kernel_size=[5, 5], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(16, 16, kernel_size=[5, 5], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(16, 32, kernel_size=[4, 4], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=[4, 4], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(32, 64, kernel_size=[3, 3], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=[3, 3], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+        )
+
+        self.flatten = Flatten_MEG()
+
+        self.ff = self.ff = nn.Sequential(
+                nn.Linear(64 * 7 * 10, 516),
+                nn.BatchNorm1d(num_features=516),
+                nn.ReLU(),
+                nn.Dropout(0.3),
+                nn.Linear(516, 256),
+                nn.BatchNorm1d(num_features=256),
+                nn.ReLU(),
+                nn.Dropout(0.3),
+                nn.Linear(256, 1),
+            )
+
+    def forward(self, x):
+
+        x = self.cnn(x)
+        x = self.ff(self.flatten(x))
+
+        return x.squeeze()

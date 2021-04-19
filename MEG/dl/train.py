@@ -851,3 +851,118 @@ def train_mlp_transfer(
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 
     return net, avg_train_losses
+
+
+def train_PSD(
+    net,
+    trainloader,
+    validloader,
+    optimizer,
+    loss_function,
+    device,
+    EPOCHS,
+    patience,
+    hand,
+    model_path,
+):
+    """
+    Train loop used to train RPS_MLP.
+
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        validloader (torch.utils.data.DataLoader):
+            The validation loader to load the validation set.:
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+         avg_valid_losses (list):
+            List of average validation loss per epoch as the model trains.
+
+    """
+
+    net = net.to(device)
+    avg_train_losses = []
+    avg_valid_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(
+        patience=patience,
+        verbose=True,
+        path=os.path.join(model_path, "checkpoint.pt"),
+    )
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        valid_losses = []
+        for labels, psd in trainloader:
+            # Set data to appropiate device
+            labels, psd = labels.to(device), psd.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(psd)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        ######################
+        # validate the model #
+        ######################
+        net.eval()  # prep model for evaluation
+        with torch.no_grad():
+            for labels, psd in validloader:
+                # Set data to appropiate device
+                labels, psd = labels.to(device), psd.to(device)
+                # forward pass: compute predicted outputs by passing inputs to the model
+                output = net(psd)
+                # calculate the loss
+                valid_loss = loss_function(output, labels[:, hand])
+                # record validation loss
+                valid_losses.append(valid_loss.item())
+
+        print(
+            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
+                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
+            )
+        )
+
+        train_loss = np.mean(train_losses)
+        valid_loss = np.mean(valid_losses)
+        avg_train_losses.append(train_loss)
+        avg_valid_losses.append(valid_loss)
+
+        early_stopping(valid_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses, avg_valid_losses

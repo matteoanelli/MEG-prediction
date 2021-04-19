@@ -1332,3 +1332,57 @@ def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
     y = torch.from_numpy(y).float()
 
     return X, y.repeat(1, 2), rps
+
+
+def import_MEG_within_subject_psd(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        y_test, welch_test
+    """
+    if hand == 0:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        welch_name = "sub_{}_left_welch.npz".format(str(subject))
+    else:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        welch_name = "sub_{}_left_welch.npz".format(str(subject))
+
+    print("loading dataset for {} ".format(mode))
+
+    dataset = np.load(os.path.join(data_path, file_name))
+    welch_data = np.load(os.path.join(data_path, welch_name))
+    print("datasets :", dataset.files)
+    print("welch :", welch_data.files)
+
+    if mode == "train":
+        y = dataset["y_train"]
+        welch = welch_data["welch_train"]
+
+    elif mode == "val":
+        y = dataset["y_val"]
+        welch = welch_data["welch_val"]
+
+    elif mode == "test":
+        y = dataset["y_test"]
+        welch = welch_data["welch_test"]
+
+    else:
+        raise ValueError("mode value must be train, val or test!")
+
+    welch = torch.from_numpy(welch).float()
+    y = torch.from_numpy(y).float()
+
+    return y.repeat(1, 2), welch
