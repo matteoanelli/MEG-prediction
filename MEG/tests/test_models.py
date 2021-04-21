@@ -1287,10 +1287,7 @@ def test_PSD_cnn_deep_shape():
                 "Got insetad {}".format(torch.Size([10]), out.shape)
 
 
-def test_PSD_cnn_spatial_shape():
-
-
-
+def test_PSD_cnn_spatial_shape_dev():
     # Possible kernel sizes
     # [204],
     # [104, 101],
@@ -1299,7 +1296,9 @@ def test_PSD_cnn_spatial_shape():
     kernel_size = [204]
 
     psds = torch.zeros([10, 1, 204, 70])
-    net = models.PSD_cnn_spatial()
+    net = models.PSD_cnn_spatial(kernel_size, activation="relu",
+                                batch_norm=False, s_dropout=False,
+                                mlp_layers=4, mlp_hidden=1024, mlp_drop=0.5)
 
     print(net)
     print("total number of tunable parameters: ",
@@ -1312,6 +1311,53 @@ def test_PSD_cnn_spatial_shape():
         assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
                 "Got insetad {}".format(torch.Size([10]), out.shape)
 
+
+
+def test_PSD_cnn_spatial_shape():
+    psds = torch.zeros([10, 1, 204, 70])
+    for s_kernel_size in [[204], [104, 101], [154, 51],[104, 51, 51]]:
+        net = models.PSD_cnn_spatial(s_kernel_size, activation="relu",
+                                     batch_norm=False, s_dropout=False,
+                                     mlp_layers=2, mlp_drop=0.5)
+        with torch.no_grad():
+            out = net(psds)
+            assert out.shape == torch.Size([10]),\
+                " Output shape wrong! Expected {}. Got insetad {}".format(
+                    torch.Size([10]), out.shape)
+
+    s_kernel_size = [204]
+    # with batch norm
+    net = models.PSD_cnn_spatial(s_kernel_size, activation="relu",
+                                 batch_norm=True, s_dropout=False,
+                                 mlp_layers=2, mlp_drop=0.5)
+    with torch.no_grad():
+        out = net(psds)
+        assert out.shape == torch.Size([10]), \
+            " Output shape wrong! Expected {}. Got insetad {}".format(
+                torch.Size([10]), out.shape)
+
+    # with spatial drop out
+    net = models.PSD_cnn_spatial(s_kernel_size, activation="relu",
+                                 batch_norm=True, s_dropout=True,
+                                 mlp_layers=2, mlp_drop=0.5)
+
+    with torch.no_grad():
+        out = net(psds)
+        assert out.shape == torch.Size([10]), \
+            " Output shape wrong! Expected {}. Got insetad {}".format(
+                torch.Size([10]), out.shape)
+
+    # test mlp
+    for n_layer in [1, 2, 3, 4]:
+        net = models.PSD_cnn_spatial(s_kernel_size, activation="relu",
+                                 batch_norm=True, s_dropout=True,
+                                 mlp_layers=n_layer, mlp_drop=0.5)
+
+        with torch.no_grad():
+            out = net(psds)
+            assert out.shape == torch.Size([10]), \
+                " Output shape wrong! Expected {}. Got insetad {}".format(
+                    torch.Size([10]), out.shape)
 
 def test_PSDSpatialBlock():
 

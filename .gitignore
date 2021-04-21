@@ -24,3 +24,11 @@ cross_parameters.csv
 trans_parameters.csv
 /MEG/dl/concatenate_analysis.py
 /mneflow/
+MEG/Dataset/PSD_plot.ipynb
+cross_parameters.csv
+MEG/Dataset/PSD_plot.py
+MEG/Dataset/plot_y_distr.py
+MEG/Dataset/target_analysis.py
+MEG/dl/sub1_analysis.py
+MEG/dl/ball_left_mean.npz
+MEG/Dataset/bp_analysis.ipynb

@@ -1727,22 +1727,22 @@ class PSDSpatialBlock(nn.Module):
 
 
 class PSD_cnn_spatial(nn.Module):
-    def __init__(self, s_kernel_size, activation="relu", batch_norm=False,
-                 s_dropout=False):
+    def __init__(self, s_kernel, activation="relu", batch_norm=False,
+                 s_dropout=False, mlp_layers=2, mlp_hidden=256, mlp_drop=0.5):
         """
             CNN nwtwork to work from welch psd input data.
         """
         super(PSD_cnn_spatial, self).__init__()
 
         self.spatial = nn.Sequential(
-            PSDSpatialBlock(s_kernel_size, batch_norm=batch_norm,
+            PSDSpatialBlock(s_kernel, batch_norm=batch_norm,
                  dropout=s_dropout),
             # nn.MaxPool2d(kernel_size=[1, 2]),
             Print("end spatial"),
         )
 
         self.temporal = nn.Sequential(
-            nn.Conv1d(64, 128,  kernel_size=6, bias=True),
+            nn.Conv1d(len(s_kernel)* 32, 128,  kernel_size=6, bias=True),
             nn.ReLU(),
             nn.Conv1d(128, 128, kernel_size=6, bias=False),
             nn.ReLU(),
@@ -1765,17 +1765,20 @@ class PSD_cnn_spatial(nn.Module):
 
         self.flatten = Flatten_MEG()
 
-        self.ff = self.ff = nn.Sequential(
-                nn.Linear(256 * 2, 256),
-                nn.BatchNorm1d(num_features=256),
-                nn.ReLU(),
-                nn.Dropout(0.3),
-                nn.Linear(256, 256),
-                nn.BatchNorm1d(num_features=256),
-                nn.ReLU(),
-                nn.Dropout(0.3),
-                nn.Linear(256, 1),
-            )
+        # self.ff = self.ff = nn.Sequential(
+        #         nn.Linear(256 * 2, 256),
+        #         nn.BatchNorm1d(num_features=256),
+        #         nn.ReLU(),
+        #         nn.Dropout(0.3),
+        #         nn.Linear(256, 256),
+        #         nn.BatchNorm1d(num_features=256),
+        #         nn.ReLU(),
+        #         nn.Dropout(0.3),
+        #         nn.Linear(256, 1),
+        #     )
+        self.ff = PSD_MLP(256 * 2, hidden_channel=mlp_hidden,
+                          n_layer=mlp_layers-1,  # counting the input layer
+                          dropout=mlp_drop)
 
     def forward(self, x):
 
@@ -1784,4 +1787,65 @@ class PSD_cnn_spatial(nn.Module):
         x = self.ff(self.flatten(x))
 
         return x.squeeze()
+
+
+class PSD_MLP(nn.Module):
+    """
+        FCFFNN block that composes the final part of the SCNN architecture.
+    """
+    def __init__(self, in_channel, hidden_channel, n_layer, dropout=0.5,
+                 activation="relu"):
+        """
+
+        Args:
+            in_channel (int):
+                Input channel.
+            hidden_channel (int):
+                Hidden channel.
+            n_layer (int):
+                Number of hidden layers that compose the network.
+            dropout (float):
+                Dropout percentage to apply. 0 <= mlp_dropout <= 1.
+            activation (str):
+                Which activation function to apply to each trainable layer. Values in [selu, relu, elu]
+        """
+        super(PSD_MLP, self).__init__()
+
+        self.in_channel = in_channel
+        self.hidden_channel = hidden_channel
+        self.n_layer = n_layer
+        self.dropout = dropout
+        self.activation = activation
+
+        layers = [
+            nn.Linear(self.in_channel, self.hidden_channel),
+            nn.Dropout(self.dropout),
+            # Activation(self.activation),
+            nn.ReLU(),
+            nn.BatchNorm1d(self.hidden_channel),
+            *[
+                layer
+                for i in range(n_layer)
+                for layer in [
+                    nn.Linear(self.hidden_channel if i == 0
+                                    else int(self.hidden_channel / (i * 2)),
+                              int(self.hidden_channel / 2) if i == 0
+                                    else int(self.hidden_channel / ((i+1) * 2))
+                              ),
+                    nn.Dropout(self.dropout),
+                    # Activation(self.activation),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(int(self.hidden_channel / ((i+1) * 2))),
+                ]
+            ],
+            nn.Linear(int(self.hidden_channel / (n_layer * 2)), 1),
+        ]
+
+        self.mlp = nn.Sequential(*layers)
+
+    def forward(self, x):
+
+        return self.mlp(x)
+
+
 
