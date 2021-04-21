@@ -122,7 +122,7 @@ if __name__ == "__main__":
         "patience": 30,
         "batch_norm": False,
         "s_drop": False,
-        "experiment": 47,
+        "experiment": 48,
         "desc": description,
     }
 

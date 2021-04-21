@@ -1738,7 +1738,6 @@ class PSD_cnn_spatial(nn.Module):
             PSDSpatialBlock(s_kernel, batch_norm=batch_norm,
                  dropout=s_dropout),
             # nn.MaxPool2d(kernel_size=[1, 2]),
-            Print("end spatial"),
         )
 
         self.temporal = nn.Sequential(
@@ -1748,7 +1747,6 @@ class PSD_cnn_spatial(nn.Module):
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
             nn.BatchNorm1d(128),
-            Print("end"),
             nn.Conv1d(128, 256, kernel_size=5, bias=True),
             nn.ReLU(),
             nn.Conv1d(256, 256, kernel_size=5, bias=False),
@@ -1760,7 +1758,6 @@ class PSD_cnn_spatial(nn.Module):
             nn.Conv1d(256, 256, kernel_size=4, bias=False),
             nn.ReLU(),
             nn.BatchNorm1d(256),
-            Print("end"),
         )
 
         self.flatten = Flatten_MEG()

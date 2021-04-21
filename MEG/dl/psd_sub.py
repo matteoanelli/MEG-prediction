@@ -5,6 +5,7 @@
     architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
 """
 import sys
+import json
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -23,7 +24,7 @@ sys.path.insert(1, r"")
 from MEG.dl.train import train_PSD
 from MEG.dl.MEG_Dataset import MEG_Within_Dataset_psd
 from MEG.dl.models import PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial
-from MEG.dl.params import Params_cross
+from MEG.dl.params import Param_PSD
 
 from MEG.Utils.utils import *
 
@@ -45,7 +46,7 @@ def main(args):
     print("Device = {}".format(device))
 
     # Initialize parameters
-    parameters = Params_cross(subject_n=args.sub,
+    parameters = Param_PSD(subject_n=args.sub,
                               hand=args.hand,
                               batch_size=args.batch_size,
                               valid_batch_size=args.batch_size_valid,
@@ -55,7 +56,14 @@ def main(args):
                               wd=args.weight_decay,
                               patience=args.patience,
                               device=device,
-                              y_measure=args.y_measure,
+                              batch_norm=args.batch_norm,
+                              # s_kernel_size=args.s_kernel_size,  # Local
+                              s_kernel_size=json.loads(
+                               " ".join(args.s_kernel_size)),
+                              s_drop=args.s_drop,
+                              mlp_n_layer=args.mlp_n_layer,
+                              mlp_hidden=args.mlp_hidden,
+                              mlp_drop=args.mlp_drop,
                               desc=args.desc
                               )
 
@@ -108,7 +116,12 @@ def main(args):
     # Get the n_times dimension
 
     # net = PSD_cnn()
-    net = PSD_cnn_spatial()
+    net = PSD_cnn_spatial(s_kernel=args.s_kernel_size,
+                          batch_norm=args.batch_norm,
+                          s_dropout=args.s_drop,
+                          mlp_layers=args.mlp_n_layer,
+                          mlp_hidden=args.mlp_hidden,
+                          mlp_drop=args.mlp_drop)
 
     print(net)
     total_params = 0
@@ -181,6 +194,7 @@ def main(args):
         save_pytorch_model(net, model_path, "model.pth")
     else:
         # Load the model (properly select the model architecture)
+        # TODO: fix init parameters (not used so far)
         net = PSD_cnn()
         net = load_pytorch_model(net, os.path.join(model_path, "model.pth"),
                                  parameters.device)
@@ -235,13 +249,11 @@ def main(args):
     ax.plot(times, y_pred[0:200], color="b", label="Predicted")
     ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {}, Target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
@@ -253,13 +265,11 @@ def main(args):
     ax.plot(times, y_pred, color="b", label="Predicted")
     ax.plot(times, y, color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {}, Target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
@@ -343,11 +353,26 @@ if __name__ == "__main__":
                         metavar='lr', help='Learning rate (default: 1e-3),')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         metavar='wd', help='Weight dacay (default: 5e-4),')
-
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="pca",
-                        help='Y type reshaping (default: pca)')
+
+    # Model architecture parameter
+    parser.add_argument("--s_kernel_size", type=str, default=[204],
+                        metavar="N", nargs="+", help="Spatial sub-net "
+                        "kernel sizes (default: [104, 101])")
+    parser.add_argument("--batch_norm", type=bool, default=False, metavar="N",
+                        help="Batch normalization after spatial conv layers "
+                             "(default: False)",)
+    parser.add_argument("--s_drop", type=bool, default=False, metavar="N",
+                        help="Dropout after spatial conv layers "
+                             "(default: False)", )
+    parser.add_argument("--mlp_n_layer", type=int, default=2, metavar="N",
+                        help="MLP sub-net number of layer (default: 2)")
+    parser.add_argument("--mlp_hidden", type=int, default=512, metavar="N",
+        help="MLP sub-net number of hidden channels (default: 512)")
+    parser.add_argument("--mlp_drop", type=float, default=0.4, metavar="d",
+                        help="MLP dropout (default: 0.4),")
+    # Experiment parameters
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
