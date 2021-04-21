@@ -3,8 +3,8 @@
 #SBATCH --time=00:20:00
 #SBATCH --mem-per-cpu=12000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-10
-#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Within_RPS_MNet_out_%A_%a.log
+#SBATCH --array=1-5
+#SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Within_PSD_cnn_out_%A_%a.log
 #SBATCH --gres=gpu:1
 # if resenet add --constraint='pascal|volta'
 n=$(($SLURM_ARRAY_TASK_ID + 1))
@@ -29,5 +29,6 @@ echo "desc is $desc"
 mkdir -p tmp/$SLURM_ARRAY_TASK_ID
 
 
-srun python MEG/dl/within_sub.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
+# srun python MEG/dl/within_sub.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc
 
+srun python MEG/dl/psd_sub.py --data_dir $data --figure_dir $figures --model_dir tmp/$SLURM_ARRAY_TASK_ID --sub $sub --hand $hand --batch_size $bs --batch_size_valid $bsv --batch_size_test $bst --epochs $epochs --learning_rate $lr --weight_decay $wd  --patience $patience --y_measure $y --experiment $exp --desc $desc

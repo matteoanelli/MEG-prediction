@@ -22,7 +22,7 @@ sys.path.insert(1, r"")
 
 from MEG.dl.train import train_PSD
 from MEG.dl.MEG_Dataset import MEG_Within_Dataset_psd
-from MEG.dl.models import PSD_cnn
+from MEG.dl.models import PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial
 from MEG.dl.params import Params_cross
 
 from MEG.Utils.utils import *
@@ -89,7 +89,7 @@ def main(args):
     # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
 
     # Initialize the dataloaders
-    exit(0)
+    
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size,
                              shuffle=True, num_workers=1)
     validloader = DataLoader(valid_dataset,
@@ -99,10 +99,16 @@ def main(args):
                             batch_size=parameters.test_batch_size,
                             shuffle=False, num_workers=1)
 
+    with torch.no_grad():
+        label, psd, = iter(trainloader).next()
+        print(psd.shape)
+        print(label.shape)
+
 
     # Get the n_times dimension
 
-    net = PSD_cnn()
+    # net = PSD_cnn()
+    net = PSD_cnn_spatial()
 
     print(net)
     total_params = 0
@@ -119,15 +125,16 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         # optimizer = Adam(net.parameters(), lr=parameters.lr)
-        # optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
-        optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9,
-                        weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9,
+        #                  weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
 
         print("optimizer : ", optimizer)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
+        print(loss_function)
         start_time = timer.time()
 
         net, train_loss, valid_loss = train_PSD(

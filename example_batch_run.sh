@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --time=01:45:00
+#SBATCH --time=00:25:00
 #SBATCH --mem-per-cpu=5000M
 #SBATCH --cpus-per-task=4
-#SBATCH --array=1
+#SBATCH --array=8
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/PSD_out_%A_%a.log
 #SBATCH --partition=short-hsw
 

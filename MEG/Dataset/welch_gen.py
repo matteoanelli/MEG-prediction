@@ -34,6 +34,24 @@ def main(args):
         out_file = "sub_{}_right_welch.npz".format(str(sub))
         print("output_file: ", out_file)
 
+    # dataset_welch = np.load(os.path.join(data_dir, out_file))
+
+    # welch = dataset_welch["welch_train"]
+
+    # print("shape :", welch.shape)
+    # print("mean : ", np.mean(welch))
+    # print("std : ", np.std(welch))
+    # print("min :", np.min(welch))
+    # print("max :", np.max(welch))
+
+    # welch = np.expand_dims(standard_scaling_sklearn(welch.squeeze()), 1)
+    # print("after scaling")
+    # print("shape :", welch.shape)
+    # print("mean : ", np.mean(welch))
+    # print("std : ", np.std(welch))
+    # print("min :", np.min(welch))
+    # print("max :", np.max(welch))
+
     dataset = np.load(os.path.join(data_dir, file_name))
 
     X_train = dataset["X_train"]
@@ -47,16 +65,43 @@ def main(args):
 
     welch_train = generate_welch(X_train.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
+
+    welch_train = np.expand_dims(standard_scaling_sklearn(welch_train.squeeze()), 1)
+    print("after scaling train")
+    print("shape :", welch_train.shape)
+    print("mean : ", np.mean(welch_train))
+    print("std : ", np.std(welch_train))
+    print("min :", np.min(welch_train))
+    print("max :", np.max(welch_train))
+
     print("welch train data shape: ", welch_train.shape)
     print("train_done")
 
     welch_val = generate_welch(X_val.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
+
+    welch_val = np.expand_dims(standard_scaling_sklearn(welch_val.squeeze()), 1)
+    print("after scaling val")
+    print("shape :", welch_val.shape)
+    print("mean : ", np.mean(welch_val))
+    print("std : ", np.std(welch_val))
+    print("min :", np.min(welch_val))
+    print("max :", np.max(welch_val))
+
     print("welch valid data shape: ", welch_val.shape)
     print("valid_done")
 
     welch_test = generate_welch(X_test.squeeze(), fs=250, fmin=1,
                                  fmax=70, n_jobs=1)
+
+    welch_test = np.expand_dims(standard_scaling_sklearn(welch_test.squeeze()), 1)
+    print("after scaling train")
+    print("shape :", welch_test.shape)
+    print("mean : ", np.mean(welch_test))
+    print("std : ", np.std(welch_test))
+    print("min :", np.min(welch_test))
+    print("max :", np.max(welch_test))
+
     print("welch test data shape: ", welch_test.shape)
     print("test_done")
 

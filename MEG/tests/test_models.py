@@ -1253,9 +1253,9 @@ def test_discriminator_loss_shape():
 
 
 
-def test_PSD_cnn():
+def test_PSD_cnn_shape():
 
-    psds = torch.zeros([10, 1, 204, 250])
+    psds = torch.zeros([10, 1, 204, 70])
     net = models.PSD_cnn()
 
     print(net)
@@ -1270,3 +1270,72 @@ def test_PSD_cnn():
                 "Got insetad {}".format(torch.Size([10]), out.shape)
 
 
+def test_PSD_cnn_deep_shape():
+
+    psds = torch.zeros([10, 1, 204, 70])
+    net = models.PSD_cnn_deep()
+
+    print(net)
+    print("total number of tunable parameters: ",
+          sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    with torch.no_grad():
+
+        out = net(psds)
+
+        assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
+                "Got insetad {}".format(torch.Size([10]), out.shape)
+
+
+def test_PSD_cnn_spatial_shape():
+
+
+
+    # Possible kernel sizes
+    # [204],
+    # [104, 101],
+    # [154, 51],
+    # [104, 51, 51],
+    kernel_size = [204]
+
+    psds = torch.zeros([10, 1, 204, 70])
+    net = models.PSD_cnn_spatial()
+
+    print(net)
+    print("total number of tunable parameters: ",
+          sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    with torch.no_grad():
+
+        out = net(psds)
+
+        assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
+                "Got insetad {}".format(torch.Size([10]), out.shape)
+
+
+def test_PSDSpatialBlock():
+
+    # Possible kernel sizes
+    # [204],
+    # [104, 101],
+    # [154, 51],
+    # [104, 51, 51],
+    kernel_size = [204]
+
+    net = models.PSDSpatialBlock(kernel_size, "relu", batch_norm=True,
+                                 dropout=False)
+    print(net)
+
+    x = torch.zeros([10, 1, 204, 70])
+    print(x.shape)
+
+    with torch.no_grad():
+        print("Shape of the input tensor: {}".format(x.shape))
+
+        y = net(x)
+        len_k = len(kernel_size)
+        assert y.shape == torch.Size(
+            [x.shape[0], 32 * len_k, 1, 61]
+        ), "Bad shape of y: y.shape={}".format(y.shape)
+
+    print("Test LeNet5 output shape: Success.")
