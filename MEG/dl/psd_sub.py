@@ -32,8 +32,18 @@ from MEG.Utils.utils import *
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 
-def main(args):
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
+def main(args):
     data_dir = args.data_dir
     figure_path = args.figure_dir
     model_path = args.model_dir
@@ -47,25 +57,25 @@ def main(args):
 
     # Initialize parameters
     parameters = Param_PSD(subject_n=args.sub,
-                              hand=args.hand,
-                              batch_size=args.batch_size,
-                              valid_batch_size=args.batch_size_valid,
-                              test_batch_size=args.batch_size_test,
-                              epochs=args.epochs,
-                              lr=args.learning_rate,
-                              wd=args.weight_decay,
-                              patience=args.patience,
-                              device=device,
-                              batch_norm=args.batch_norm,
-                              # s_kernel_size=args.s_kernel_size,  # Local
-                              s_kernel_size=json.loads(
+                           hand=args.hand,
+                           batch_size=args.batch_size,
+                           valid_batch_size=args.batch_size_valid,
+                           test_batch_size=args.batch_size_test,
+                           epochs=args.epochs,
+                           lr=args.learning_rate,
+                           wd=args.weight_decay,
+                           patience=args.patience,
+                           device=device,
+                           batch_norm=args.batch_norm,
+                           # s_kernel_size=args.s_kernel_size,  # Local
+                           s_kernel_size=json.loads(
                                " ".join(args.s_kernel_size)),
-                              s_drop=args.s_drop,
-                              mlp_n_layer=args.mlp_n_layer,
-                              mlp_hidden=args.mlp_hidden,
-                              mlp_drop=args.mlp_drop,
-                              desc=args.desc
-                              )
+                           s_drop=args.s_drop,
+                           mlp_n_layer=args.mlp_n_layer,
+                           mlp_hidden=args.mlp_hidden,
+                           mlp_drop=args.mlp_drop,
+                           desc=args.desc
+                           )
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
@@ -73,13 +83,13 @@ def main(args):
 
     # Generate the custom dataset
     train_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
-                                            parameters.hand, mode="train")
+                                           parameters.hand, mode="train")
 
     test_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
-                                           parameters.hand, mode="test")
+                                          parameters.hand, mode="test")
 
     valid_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
-                                            parameters.hand, mode="val")
+                                           parameters.hand, mode="val")
 
     # split the dataset in train, test and valid sets.
 
@@ -97,7 +107,7 @@ def main(args):
     # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
 
     # Initialize the dataloaders
-    
+
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size,
                              shuffle=True, num_workers=1)
     validloader = DataLoader(valid_dataset,
@@ -112,23 +122,22 @@ def main(args):
         print(psd.shape)
         print(label.shape)
 
-
     # Get the n_times dimension
 
     # net = PSD_cnn()
-    net = PSD_cnn_spatial(s_kernel=args.s_kernel_size,
-                          batch_norm=args.batch_norm,
-                          s_dropout=args.s_drop,
-                          mlp_layers=args.mlp_n_layer,
-                          mlp_hidden=args.mlp_hidden,
-                          mlp_drop=args.mlp_drop)
+    net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                          batch_norm=parameters.batch_norm,
+                          s_dropout=parameters.s_drop,
+                          mlp_layers=parameters.mlp_n_layer,
+                          mlp_hidden=parameters.mlp_hidden,
+                          mlp_drop=parameters.mlp_drop)
 
     print(net)
     total_params = 0
     for name, parameter in net.named_parameters():
         param = parameter.numel()
         print("param {} : {}".format(name, param if parameter.requires_grad
-                                            else 0))
+        else 0))
         total_params += param
     print(f"Total Trainable Params: {total_params}")
 
@@ -138,7 +147,8 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         # optimizer = Adam(net.parameters(), lr=parameters.lr)
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr,
+                         weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9,
         #                  weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
@@ -210,7 +220,8 @@ def main(args):
     # if RPS integration
     with torch.no_grad():
         for labels, psd in testloader:
-            labels, psd = labels.to(parameters.device), psd.to(parameters.device)
+            labels, psd = labels.to(parameters.device), psd.to(
+                parameters.device)
             y.extend(list(labels[:, parameters.hand]))
             y_pred.extend((list(net(psd))))
 
@@ -219,7 +230,6 @@ def main(args):
                           psd.to(parameters.device)
             y_valid.extend(list(labels[:, parameters.hand]))
             y_pred_valid.extend((list(net(psd))))
-
 
     # Calculate Evaluation measures
     print("Evaluation measures")
@@ -359,17 +369,18 @@ if __name__ == "__main__":
     # Model architecture parameter
     parser.add_argument("--s_kernel_size", type=str, default=[204],
                         metavar="N", nargs="+", help="Spatial sub-net "
-                        "kernel sizes (default: [104, 101])")
-    parser.add_argument("--batch_norm", type=bool, default=False, metavar="N",
+                                                     "kernel sizes (default: [104, 101])")
+    parser.add_argument("--batch_norm", type=str2bool, default=False,
+                        metavar="N",
                         help="Batch normalization after spatial conv layers "
-                             "(default: False)",)
-    parser.add_argument("--s_drop", type=bool, default=False, metavar="N",
+                             "(default: False)", )
+    parser.add_argument("--s_drop", type=str2bool, default=False, metavar="N",
                         help="Dropout after spatial conv layers "
                              "(default: False)", )
     parser.add_argument("--mlp_n_layer", type=int, default=2, metavar="N",
                         help="MLP sub-net number of layer (default: 2)")
     parser.add_argument("--mlp_hidden", type=int, default=512, metavar="N",
-        help="MLP sub-net number of hidden channels (default: 512)")
+                        help="MLP sub-net number of hidden channels (default: 512)")
     parser.add_argument("--mlp_drop", type=float, default=0.4, metavar="d",
                         help="MLP dropout (default: 0.4),")
     # Experiment parameters

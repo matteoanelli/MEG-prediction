@@ -251,7 +251,7 @@ class Param_PSD(object):
         self.wd = wd
         self.patience = patience
         self.device = device
-        self.batch_norm = batch_norm,
+        self.batch_norm = batch_norm
         self.s_kernel_size = s_kernel_size
         self.s_drop = s_drop
         self.mlp_n_layer = mlp_n_layer
