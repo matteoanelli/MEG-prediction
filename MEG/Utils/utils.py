@@ -1286,8 +1286,10 @@ def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
         file_name = "sub_{}_left.npz".format(str(subject))
         rps_name = "sub_{}_left_rps.npz".format(str(subject))
     else:
-        file_name = "sub_{}_left.npz".format(str(subject))
-        rps_name = "sub_{}_left_rps.npz".format(str(subject))
+        file_name = "sub_{}_right.npz".format(str(subject))
+        rps_name = "sub_{}_right_rps.npz".format(str(subject))
+
+    print("data_file :", file_name)
 
     print("loading dataset for {} ".format(mode))
 
@@ -1356,33 +1358,44 @@ def import_MEG_within_subject_psd(data_path, subject=8, hand=0, mode="train"):
     if hand == 0:
         file_name = "sub_{}_left.npz".format(str(subject))
         welch_name = "sub_{}_left_welch.npz".format(str(subject))
+        rps_name = "sub_{}_left_rps.npz".format(str(subject))
     else:
-        file_name = "sub_{}_left.npz".format(str(subject))
-        welch_name = "sub_{}_left_welch.npz".format(str(subject))
+        file_name = "sub_{}_right.npz".format(str(subject))
+        welch_name = "sub_{}_right_welch.npz".format(str(subject))
+        rps_name = "sub_{}_right_rps.npz".format(str(subject))
 
     print("loading dataset for {} ".format(mode))
 
+    print("data_file :", file_name)
+
     dataset = np.load(os.path.join(data_path, file_name))
     welch_data = np.load(os.path.join(data_path, welch_name))
+    rps_data = np.load(os.path.join(data_path, rps_name))
+
     print("datasets :", dataset.files)
     print("welch :", welch_data.files)
+    print("rps :", rps_data.files)
 
     if mode == "train":
         y = dataset["y_train"]
         welch = welch_data["welch_train"]
+        rps = rps_data["rps_train"]
 
     elif mode == "val":
         y = dataset["y_val"]
         welch = welch_data["welch_val"]
+        rps = rps_data["rps_val"]
 
     elif mode == "test":
         y = dataset["y_test"]
         welch = welch_data["welch_test"]
+        rps = rps_data["rps_test"]
 
     else:
         raise ValueError("mode value must be train, val or test!")
 
     welch = torch.from_numpy(welch).float()
     y = torch.from_numpy(y).float()
+    rps = torch.from_numpy(rps).float()
 
-    return y.repeat(1, 2), welch
+    return y.repeat(1, 2), welch, rps

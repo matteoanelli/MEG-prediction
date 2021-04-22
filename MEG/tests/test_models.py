@@ -1297,8 +1297,8 @@ def test_PSD_cnn_spatial_shape_dev():
 
     psds = torch.zeros([10, 1, 204, 70])
     net = models.PSD_cnn_spatial(kernel_size, activation="relu",
-                                batch_norm=False, s_dropout=False,
-                                mlp_layers=4, mlp_hidden=1024, mlp_drop=0.5)
+                                batch_norm=True, s_dropout=True,
+                                mlp_layers=3, mlp_hidden=512, mlp_drop=0.3)
 
     print(net)
     print("total number of tunable parameters: ",
@@ -1317,7 +1317,7 @@ def test_PSD_cnn_spatial_shape():
     psds = torch.zeros([10, 1, 204, 70])
     for s_kernel_size in [[204], [104, 101], [154, 51],[104, 51, 51]]:
         net = models.PSD_cnn_spatial(s_kernel_size, activation="relu",
-                                     batch_norm=False, s_dropout=False,
+                                     batch_norm=True, s_dropout=False,
                                      mlp_layers=2, mlp_drop=0.5)
         with torch.no_grad():
             out = net(psds)
@@ -1385,3 +1385,29 @@ def test_PSDSpatialBlock():
         ), "Bad shape of y: y.shape={}".format(y.shape)
 
     print("Test LeNet5 output shape: Success.")
+
+
+
+def test_RPS_PSD_cnn_spatial_shape_dev():
+    # Possible kernel sizes
+    # [204],
+    # [104, 101],
+    # [154, 51],
+    # [104, 51, 51],
+    kernel_size = [204]
+    rps = torch.ones([10, 204, 6])
+    psds = torch.zeros([10, 1, 204, 70])
+    net = models.RPS_PSD_cnn_spatial(kernel_size, activation="relu",
+                                batch_norm=True, s_dropout=True,
+                                mlp_layers=3, mlp_hidden=512, mlp_drop=0.3)
+
+    print(net)
+    print("total number of tunable parameters: ",
+          sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    with torch.no_grad():
+
+        out = net(psds, rps)
+
+        assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
+                "Got insetad {}".format(torch.Size([10]), out.shape)

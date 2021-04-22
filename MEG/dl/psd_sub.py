@@ -21,9 +21,10 @@ from torch.utils.data import DataLoader, random_split, Subset
 
 sys.path.insert(1, r"")
 
-from MEG.dl.train import train_PSD
+from MEG.dl.train import train_PSD, train_RPS_PSD
 from MEG.dl.MEG_Dataset import MEG_Within_Dataset_psd
-from MEG.dl.models import PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial
+from MEG.dl.models import (PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial,
+                           RPS_PSD_cnn_spatial)
 from MEG.dl.params import Param_PSD
 
 from MEG.Utils.utils import *
@@ -79,6 +80,8 @@ def main(args):
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
+
+    use_rps = True
     print("Creating dataset")
 
     # Generate the custom dataset
@@ -118,19 +121,28 @@ def main(args):
                             shuffle=False, num_workers=1)
 
     with torch.no_grad():
-        label, psd, = iter(trainloader).next()
+        label, psd, rps = iter(trainloader).next()
         print(psd.shape)
         print(label.shape)
+        print(rps.shape)
 
     # Get the n_times dimension
 
     # net = PSD_cnn()
-    net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
-                          batch_norm=parameters.batch_norm,
-                          s_dropout=parameters.s_drop,
-                          mlp_layers=parameters.mlp_n_layer,
-                          mlp_hidden=parameters.mlp_hidden,
-                          mlp_drop=parameters.mlp_drop)
+    if use_rps:
+        net = RPS_PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                              batch_norm=parameters.batch_norm,
+                              s_dropout=parameters.s_drop,
+                              mlp_layers=parameters.mlp_n_layer,
+                              mlp_hidden=parameters.mlp_hidden,
+                              mlp_drop=parameters.mlp_drop)
+    else:
+        net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                              batch_norm=parameters.batch_norm,
+                              s_dropout=parameters.s_drop,
+                              mlp_layers=parameters.mlp_n_layer,
+                              mlp_hidden=parameters.mlp_hidden,
+                              mlp_drop=parameters.mlp_drop)
 
     print(net)
     total_params = 0
@@ -157,21 +169,34 @@ def main(args):
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
-        print(loss_function)
+        print("loss : ", loss_function)
         start_time = timer.time()
-
-        net, train_loss, valid_loss = train_PSD(
-            net,
-            trainloader,
-            validloader,
-            optimizer,
-            loss_function,
-            parameters.device,
-            parameters.epochs,
-            parameters.patience,
-            parameters.hand,
-            model_path,
-        )
+        if use_rps:
+            net, train_loss, valid_loss = train_RPS_PSD(
+                net,
+                trainloader,
+                validloader,
+                optimizer,
+                loss_function,
+                parameters.device,
+                parameters.epochs,
+                parameters.patience,
+                parameters.hand,
+                model_path,
+            )
+        else:
+            net, train_loss, valid_loss = train_PSD(
+                net,
+                trainloader,
+                validloader,
+                optimizer,
+                loss_function,
+                parameters.device,
+                parameters.epochs,
+                parameters.patience,
+                parameters.hand,
+                model_path,
+            )
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
@@ -219,17 +244,31 @@ def main(args):
 
     # if RPS integration
     with torch.no_grad():
-        for labels, psd in testloader:
-            labels, psd = labels.to(parameters.device), psd.to(
-                parameters.device)
-            y.extend(list(labels[:, parameters.hand]))
-            y_pred.extend((list(net(psd))))
+        if use_rps:
+            for labels, psd, rps in testloader:
+                labels, psd, rps = labels.to(parameters.device), psd.to(
+                    parameters.device), rps.to(parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(psd, rps))))
 
-        for labels, psd in validloader:
-            labels, psd = labels.to(parameters.device), \
-                          psd.to(parameters.device)
-            y_valid.extend(list(labels[:, parameters.hand]))
-            y_pred_valid.extend((list(net(psd))))
+            for labels, psd, rps in validloader:
+                labels, psd, rps = labels.to(parameters.device), \
+                                   psd.to(parameters.device), \
+                                   rps.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(psd, rps))))
+        else:
+            for labels, psd, _ in testloader:
+                labels, psd = labels.to(parameters.device), psd.to(
+                    parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(psd))))
+
+            for labels, psd, _ in validloader:
+                labels, psd = labels.to(parameters.device), \
+                              psd.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(psd))))
 
     # Calculate Evaluation measures
     print("Evaluation measures")

@@ -569,7 +569,7 @@ class MEG_Within_Dataset_psd(Dataset):
         if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
             raise ValueError("Subject does not exist!")
 
-        self.target, self.psd = import_MEG_within_subject_psd(
+        self.target, self.psd, self.rps = import_MEG_within_subject_psd(
             self.data_dir, self.sub, self.hand, self.mode
         )
 
@@ -580,6 +580,7 @@ class MEG_Within_Dataset_psd(Dataset):
 
         sample_target = self.target[idx]
         sample_psd = self.psd[idx, ...]
+        sample_rps = self.rps[idx, ...]
 
-        return sample_target, sample_psd
+        return sample_target, sample_psd, sample_rps
 

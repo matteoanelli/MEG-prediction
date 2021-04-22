@@ -96,7 +96,7 @@ if __name__ == "__main__":
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
-        "learning_rate": [1e-5, 1e-4],
+        "learning_rate": [5e-5, 1e-3],
         "weight_decay": [5e-3, 5e-4, 5e-5],
         "s_kernel_size": [
             [204],
@@ -106,8 +106,8 @@ if __name__ == "__main__":
         ],
         "batch_norm": [True, False],
         "s_drop": [True, False],
-        "mlp_n_layer": [1, 2, 3],
-        "mlp_hidden": [1024, 512, 256, 128],
+        "mlp_n_layer": [2, 3], # add check if is 1
+        "mlp_hidden": [512, 256, 128], # maybe add 1024
         "mlp_drop": [0.3, 0.4, 0.5]
     }
 
@@ -118,15 +118,15 @@ if __name__ == "__main__":
         "batch_size_test": 30,
         "hand": 0,
         "sub": 8,
-        "epochs": 140,
+        "epochs": 200,
         "patience": 30,
-        "batch_norm": False,
+        "batch_norm": True,
         "s_drop": False,
         "experiment": 48,
         "desc": description,
     }
 
-    random_search = generate_parameters(param_grid, 10, fix_param,
+    random_search = generate_parameters(param_grid, 50, fix_param,
                                         args.data_dir, args.figure_dir,
                                         args.model_dir)
 
