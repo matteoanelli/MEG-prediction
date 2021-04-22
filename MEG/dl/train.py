@@ -858,6 +858,7 @@ def train_PSD(
     trainloader,
     validloader,
     optimizer,
+    scheduler,
     loss_function,
     device,
     EPOCHS,
@@ -952,6 +953,9 @@ def train_PSD(
             )
         )
 
+        print("Current Learning Rate value {}".format(
+            optimizer.param_groups[0]["lr"]))
+
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
         avg_train_losses.append(train_loss)
@@ -963,6 +967,8 @@ def train_PSD(
             print("Early stopping!")
             break
 
+        scheduler.step(valid_loss)
+
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 
     return net, avg_train_losses, avg_valid_losses
@@ -973,6 +979,7 @@ def train_RPS_PSD(
     trainloader,
     validloader,
     optimizer,
+    scheduler,
     loss_function,
     device,
     EPOCHS,
@@ -1069,6 +1076,9 @@ def train_RPS_PSD(
             )
         )
 
+        print("Current Learning Rate value {}".format(
+            optimizer.param_groups[0]["lr"]))
+
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
         avg_train_losses.append(train_loss)
@@ -1079,6 +1089,8 @@ def train_RPS_PSD(
         if early_stopping.early_stop:
             print("Early stopping!")
             break
+
+        scheduler.step(valid_loss)
 
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 

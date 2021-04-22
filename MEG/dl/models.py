@@ -1862,7 +1862,6 @@ class PSD_MLP(nn.Module):
         return self.mlp(x)
 
 
-
 class RPS_PSD_cnn_spatial(nn.Module):
     def __init__(self, s_kernel, activation="relu", batch_norm=False,
                  s_dropout=False, mlp_layers=2, mlp_hidden=256, mlp_drop=0.5):
@@ -1898,14 +1897,14 @@ class RPS_PSD_cnn_spatial(nn.Module):
             )
         else:
             self.temporal = nn.Sequential(
-                nn.Conv1d(len(s_kernel) * 32, 64, kernel_size=6, bias=True),
-                nn.ReLU(),
-                nn.Conv1d(64, 64, kernel_size=6, bias=True),
-                nn.ReLU(),
-                nn.MaxPool1d(kernel_size=2),
-                nn.Conv1d(64, 128, kernel_size=5, bias=True),
+                nn.Conv1d(len(s_kernel) * 32, 128, kernel_size=5, bias=True),
                 nn.ReLU(),
                 nn.Conv1d(128, 128, kernel_size=5, bias=True),
+                nn.ReLU(),
+                nn.MaxPool1d(kernel_size=2),
+                nn.Conv1d(128, 256, kernel_size=4, bias=True),
+                nn.ReLU(),
+                nn.Conv1d(256, 256, kernel_size=4, bias=True),
                 nn.ReLU(),
                 nn.MaxPool1d(kernel_size=2),
                 # nn.Conv1d(256, 256, kernel_size=3, bias=True),
@@ -1927,9 +1926,21 @@ class RPS_PSD_cnn_spatial(nn.Module):
         #         nn.Dropout(0.3),
         #         nn.Linear(256, 1),
         #     )
-        self.ff = PSD_MLP(256 * 2 + 204 * 6, hidden_channel=mlp_hidden,
-                          n_layer=mlp_layers-1,  # counting the input layer
-                          dropout=mlp_drop)
+        # self.ff = PSD_MLP(256 * 2 + 204 * 6, hidden_channel=mlp_hidden,
+        #                  n_layer=mlp_layers-1,  # counting the input layer
+        #                   dropout=mlp_drop)
+
+        self.ff = nn.Sequential(
+            nn.Linear(256 * 2 + 204 * 6, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1),
+        )
 
     def forward(self, x, rps):
 

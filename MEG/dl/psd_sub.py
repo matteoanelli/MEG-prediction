@@ -15,6 +15,7 @@ import time as timer
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.sgd import SGD
 from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader, random_split, Subset
@@ -68,9 +69,9 @@ def main(args):
                            patience=args.patience,
                            device=device,
                            batch_norm=args.batch_norm,
-                           # s_kernel_size=args.s_kernel_size,  # Local
-                           s_kernel_size=json.loads(
-                               " ".join(args.s_kernel_size)),
+                           s_kernel_size=args.s_kernel_size,  # Local
+                           # s_kernel_size=json.loads(
+                           #     " ".join(args.s_kernel_size)),
                            s_drop=args.s_drop,
                            mlp_n_layer=args.mlp_n_layer,
                            mlp_hidden=args.mlp_hidden,
@@ -81,7 +82,7 @@ def main(args):
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
 
-    use_rps = True
+    use_rps = False
     print("Creating dataset")
 
     # Generate the custom dataset
@@ -167,6 +168,9 @@ def main(args):
 
         print("optimizer : ", optimizer)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.4,
+                                      patience=10)
+
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
         print("loss : ", loss_function)
@@ -177,6 +181,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,
@@ -190,6 +195,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,
