@@ -22,6 +22,7 @@ from MEG.Utils.utils import (
     standard_scaling_sklearn,
     y_PCA,
     y_reshape,
+    bandpower_multi_bands
 )
 
 if __name__ == "__main__":
@@ -70,7 +71,7 @@ if __name__ == "__main__":
         epochs = []
         for fname in raw_fnames:
             if os.path.exists(fname):
-                raw = mne.io.Raw(fname, preload=True).crop(tmax=30)
+                raw = mne.io.Raw(fname, preload=True).crop(tmax=180)
                 # raw = mne.io.Raw(fname, preload=True)
                 # events = mne.find_events(raw, stim_channel='STI101',
                 # min_duration=0.003)
@@ -100,7 +101,7 @@ if __name__ == "__main__":
 
     # RPS
         bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-        bp = bandpower_multi(X, fs=epochs.info["sfreq"], bands=bands,
+        bp = bandpower_multi_bands(X, fs=epochs.info["sfreq"], bands=bands,
                              relative=True)
 
     else:
@@ -150,7 +151,7 @@ if __name__ == "__main__":
 
 
         bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-        bp = bandpower_multi(X[1000:1002, ...].squeeze(), fs=250, bands=bands,
+        bp = bandpower_multi_bands(X[1000:1002, ...].squeeze(), fs=250, bands=bands,
                              relative=True)
 
         rps_data = np.load(os.path.join(data_dir, rps_name))

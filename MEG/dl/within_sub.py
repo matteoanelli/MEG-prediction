@@ -109,8 +109,8 @@ def main(args):
     # Get the n_times dimension
 
     if mlp:
-        # net = RPS_MLP()
-        net = RPS_CNN()
+        net = RPS_MLP()
+        # net = RPS_CNN()
     else:
         # Get the n_times dimension
         with torch.no_grad():
