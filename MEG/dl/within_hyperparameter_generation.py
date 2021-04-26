@@ -62,13 +62,13 @@ if __name__ == "__main__":
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "within_PSD_cnn_spatial_ADAM_l2_loss_wd"
+    description = "within_PSD_cnn_spatial_ADAM_l2_loss_wd_lr_scheduler_patience_10"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
-        "learning_rate": [1e-5, 1e-4], 
+        "learning_rate": [1e-4, 4e-3],
         "y_measure": ["pca", "left_single_1"],
         "weight_decay": [5e-3, 5e-4, 5e-5]
     }
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         "epochs": 140,
         "patience": 30,
         "y_measure": "pca",
-        "experiment": 47,
+        "experiment": 48,
         "desc": description,
     }
 

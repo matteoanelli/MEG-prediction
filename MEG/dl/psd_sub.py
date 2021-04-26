@@ -69,9 +69,9 @@ def main(args):
                            patience=args.patience,
                            device=device,
                            batch_norm=args.batch_norm,
-                           s_kernel_size=args.s_kernel_size,  # Local
-                           # s_kernel_size=json.loads(
-                           #     " ".join(args.s_kernel_size)),
+                           # s_kernel_size=args.s_kernel_size,  # Local
+                           s_kernel_size=json.loads(
+                               " ".join(args.s_kernel_size)),
                            s_drop=args.s_drop,
                            mlp_n_layer=args.mlp_n_layer,
                            mlp_hidden=args.mlp_hidden,
@@ -168,8 +168,8 @@ def main(args):
 
         print("optimizer : ", optimizer)
 
-        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.4,
-                                      patience=10)
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()

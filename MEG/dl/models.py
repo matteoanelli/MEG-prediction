@@ -1741,14 +1741,16 @@ class PSD_cnn_spatial(nn.Module):
         )
         if batch_norm:
             self.temporal = nn.Sequential(
-                nn.Conv1d(len(s_kernel)* 32, 128,  kernel_size=5, bias=True),
+                nn.Conv1d(len(s_kernel)* 32, 128,  kernel_size=5, bias=False),
                 nn.ReLU(),
+                nn.BatchNorm1d(128),
                 nn.Conv1d(128, 128, kernel_size=5, bias=False),
                 nn.ReLU(),
                 nn.MaxPool1d(kernel_size=2),
                 nn.BatchNorm1d(128),
-                nn.Conv1d(128, 256, kernel_size=4, bias=True),
+                nn.Conv1d(128, 256, kernel_size=4, bias=False),
                 nn.ReLU(),
+                nn.BatchNorm1d(256),
                 nn.Conv1d(256, 256, kernel_size=4, bias=False),
                 nn.ReLU(),
                 nn.MaxPool1d(kernel_size=2),
@@ -1761,14 +1763,14 @@ class PSD_cnn_spatial(nn.Module):
             )
         else:
             self.temporal = nn.Sequential(
-                nn.Conv1d(len(s_kernel) * 32, 64, kernel_size=6, bias=True),
-                nn.ReLU(),
-                nn.Conv1d(64, 64, kernel_size=6, bias=True),
-                nn.ReLU(),
-                nn.MaxPool1d(kernel_size=2),
-                nn.Conv1d(64, 128, kernel_size=5, bias=True),
+                nn.Conv1d(len(s_kernel) * 32, 128, kernel_size=5, bias=True),
                 nn.ReLU(),
                 nn.Conv1d(128, 128, kernel_size=5, bias=True),
+                nn.ReLU(),
+                nn.MaxPool1d(kernel_size=2),
+                nn.Conv1d(128, 256, kernel_size=4, bias=True),
+                nn.ReLU(),
+                nn.Conv1d(256, 256, kernel_size=4, bias=True),
                 nn.ReLU(),
                 nn.MaxPool1d(kernel_size=2),
                 # nn.Conv1d(128, 256, kernel_size=4, bias=True),

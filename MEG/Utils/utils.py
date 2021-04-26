@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from mne.decoding import Scaler
 from mne.decoding import UnsupervisedSpatialFilter
+from mne.time_frequency import psd_array_welch
 from numpy import trapz
 from scipy.integrate import cumtrapz
 from scipy.integrate import simps
@@ -50,7 +51,9 @@ def bandpower_1d(data, sf, band, nperseg=250, relative=False):
     low, high = band
 
     # Compute the modified periodogram (Welch)
-    freqs, psd = welch(data, sf, nperseg=nperseg)
+    # TODO: generalize freq values
+    psd, freqs = psd_array_welch(data, sf, 1., 70., n_per_seg=int(250 / 2),
+                                 n_overlap=int(250 / 4), n_jobs=1)
 
     # Frequency resolution
     freq_res = freqs[1] - freqs[0]
@@ -82,7 +85,7 @@ def bandpower_1d(data, sf, band, nperseg=250, relative=False):
 #         return bp
 
 
-def bandpower(x, fs, fmin, fmax, nperseg=250, relative=True):
+def bandpower(x, fs, bands, nperseg=250, relative=True):
     """
     Compute the average power of the multi-channel signal x in a specific frequency band.
     Args:
@@ -103,18 +106,27 @@ def bandpower(x, fs, fmin, fmax, nperseg=250, relative=True):
         bp (nd-array): [n_epoch, n_channel, 1]
             Absolute or relative band power.
     """
-    n_epoch, n_channel, _ = x.shape
 
-    bp = np.zeros((n_epoch, n_channel, 1))
-    for epoch in range(n_epoch):
-        for channel in range(n_channel):
-            bp[epoch, channel] = bandpower_1d(
-                x[epoch, channel, :],
-                fs,
-                [fmin, fmax],
-                nperseg=nperseg,
-                relative=relative,
-            )
+    #TODO fix nperseg
+
+    psd, freqs = psd_array_welch(x, fs, 1., 70., n_per_seg=int(fs/2),
+                                 n_overlap=int(fs/4), n_jobs=1)
+    # Frequency resolution
+    freq_res = freqs[1] - freqs[0]
+    n_channel, _ = x.shape
+    bp = np.zeros((n_channel, len(bands)))
+    for idx, band in enumerate(bands):
+        low, high = band
+        # Find closest indices of band in frequency vector
+        idx_band = np.logical_and(freqs >= low, freqs <= high)
+
+        # Integral approximation of the spectrum using Simpson's rule.
+        _bp = simps(psd[..., idx_band], dx=freq_res, axis=-1)
+
+        if relative:
+            _bp /= simps(psd, dx=freq_res, axis=-1)
+
+        bp[:, idx] = _bp
 
     return bp
 
@@ -153,6 +165,15 @@ def bandpower_multi(x, fs, bands,  nperseg=250, relative=True):
 
     return bp
 
+
+def bandpower_multi_bands(x, fs, bands,  nperseg=250, relative=True):
+
+    n_epoch, n_channel, _ = x.shape
+    bp = np.zeros((n_epoch, n_channel, len(bands)))
+    for e in range(n_epoch):
+        bp[e] = bandpower(x[e], fs, bands, nperseg=nperseg, relative=relative)
+
+    return bp
 
 def window_stack(x, window, overlap, sample_rate):
     """
