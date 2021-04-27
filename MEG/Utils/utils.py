@@ -175,6 +175,7 @@ def bandpower_multi_bands(x, fs, bands,  nperseg=250, relative=True):
 
     return bp
 
+
 def window_stack(x, window, overlap, sample_rate):
     """
     Epoched data manually. (suggested using MNE preimplemented functions)

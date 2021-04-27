@@ -1411,3 +1411,23 @@ def test_RPS_PSD_cnn_spatial_shape_dev():
 
         assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
                 "Got insetad {}".format(torch.Size([10]), out.shape)
+
+
+
+def test_PSD_cnn_spatial_swap_shape_dev():
+
+    psds = torch.zeros([10, 1, 204, 70])
+    net = models.PSD_cnn_spatial_swap(activation="relu",
+                                batch_norm=True, s_dropout=True,
+                                mlp_layers=3, mlp_hidden=512, mlp_drop=0.3)
+
+    print(net)
+    print("total number of tunable parameters: ",
+          sum(p.numel() for p in net.parameters() if p.requires_grad))
+
+    with torch.no_grad():
+
+        out = net(psds)
+
+        assert out.shape == torch.Size([10])," Output shape wrong! Expected {}. " \
+                "Got insetad {}".format(torch.Size([10]), out.shape)

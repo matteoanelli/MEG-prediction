@@ -1951,3 +1951,91 @@ class RPS_PSD_cnn_spatial(nn.Module):
         x = self.ff(self.concatenate(x, rps))
 
         return x.squeeze()
+
+
+
+class PSD_cnn_spatial_swap(nn.Module):
+    def __init__(self, activation="relu", batch_norm=False,
+                 s_dropout=False, mlp_layers=2, mlp_hidden=256, mlp_drop=0.5):
+        """
+            CNN nwtwork to work from welch psd input data.
+        """
+        super(PSD_cnn_spatial_swap, self).__init__()
+
+        if batch_norm:
+            self.spatial = nn.Sequential(
+                nn.Conv2d(1, 61, kernel_size=[204, 10], bias=False),
+                # nn.MaxPool2d(kernel_size=[1, 2]),
+                nn.BatchNorm2d(61),
+            )
+
+            self.temporal = nn.Sequential(
+                nn.Conv2d(1, 128,  kernel_size=5, bias=False),
+                nn.ReLU(),
+                nn.BatchNorm2d(128),
+                nn.Conv2d(128, 128, kernel_size=5, bias=False),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                nn.BatchNorm2d(128),
+                nn.Conv2d(128, 256, kernel_size=4, bias=False),
+                nn.ReLU(),
+                nn.BatchNorm2d(256),
+                nn.Conv2d(256, 256, kernel_size=4, bias=False),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                nn.BatchNorm2d(256),
+                nn.Conv2d(256, 256, kernel_size=3, bias=False),
+                nn.ReLU(),
+                nn.BatchNorm2d(256),
+                nn.Conv2d(256, 256, kernel_size=3, bias=False),
+                nn.ReLU(),
+                nn.BatchNorm2d(256),
+            )
+        else:
+            self.spatial = nn.Sequential(
+                nn.Conv2d(1, 61, kernel_size=[204, 10], bias=False),
+                # nn.MaxPool2d(kernel_size=[1, 2]),
+                # nn.BatchNorm2(61),
+            )
+            self.temporal = nn.Sequential(
+                nn.Conv2d(1, 128, kernel_size=5, bias=True),
+                nn.ReLU(),
+                nn.Conv2d(128, 128, kernel_size=5, bias=True),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                nn.Conv2d(128, 256, kernel_size=4, bias=True),
+                nn.ReLU(),
+                nn.Conv2d(256, 256, kernel_size=4, bias=True),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                nn.Conv2d(256, 256, kernel_size=3, bias=True),
+                nn.ReLU(),
+                nn.Conv2d(256, 256, kernel_size=3, bias=True),
+                nn.ReLU(),
+            )
+
+        self.flatten = Flatten_MEG()
+
+        # self.ff = self.ff = nn.Sequential(
+        #         nn.Linear(256 * 2, 256),
+        #         nn.BatchNorm1d(num_features=256),
+        #         nn.ReLU(),
+        #         nn.Dropout(0.3),
+        #         nn.Linear(256, 256),
+        #         nn.BatchNorm1d(num_features=256),
+        #         nn.ReLU(),
+        #         nn.Dropout(0.3),
+        #         nn.Linear(256, 1),
+        #     )
+        self.ff = PSD_MLP(256 * 6 * 6, hidden_channel=mlp_hidden,
+                          n_layer=mlp_layers-1,  # counting the input layer
+                          dropout=mlp_drop)
+
+    def forward(self, x):
+
+        x = self.spatial(x)
+        x = torch.transpose(x, 1, 2)
+        x = self.temporal(x)
+        x = self.ff(self.flatten(x))
+
+        return x.squeeze()
