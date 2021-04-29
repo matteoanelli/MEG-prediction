@@ -50,7 +50,7 @@ from MEG.dl.models import (
     LeNet5,
     ResNet,
     MNet,
-    RPS_MNet,
+    RPS_MNet_ivan,
     RPS_MLP,
 )
 from MEG.dl.params import Params_cross
@@ -105,7 +105,7 @@ def main(args):
                                       parameters.hand, mode="test")
 
     transfer_dataset = MEG_Cross_Dataset(data_dir, parameters.subject_n,
-                                      parameters.hand, mode="trasnsf")
+                                      parameters.hand, mode="transf")
 
     print("Train dataset len {}, valid dataset len {}, test dataset len {}, "
           "transfer dataset len {}".format(len(train_dataset),
@@ -138,7 +138,7 @@ def main(args):
             sample, y, _ = iter(trainloader).next()
 
         n_times = sample.shape[-1]
-        net = RPS_MNet(n_times)
+        net = RPS_MNet_ivan(n_times)
 
     print(net)
 
@@ -152,7 +152,7 @@ def main(args):
         print("Begin training....")
 
         # Check the optimizer before running (different from model to model)
-        optimizer = Adam(net.parameters(), lr=parameters.lr)
+        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
         scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,

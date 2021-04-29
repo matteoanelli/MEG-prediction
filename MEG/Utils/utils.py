@@ -1471,8 +1471,8 @@ def import_MEG_cross_subject_ivan(data_path, subject=8, hand=0, mode="train"):
     test_dataset = np.load(os.path.join(data_path, test_file_name))
     test_rps_data = np.load(os.path.join(data_path, test_rps_name))
 
-    print("Processing train dataset ", train_dataset)
-    print("Processing test dataset ", test_dataset)
+    print("Processing train dataset ", train_file_name)
+    print("Processing test dataset ", test_file_name)
 
     if mode == "train":
         X = np.concatenate([train_dataset["X_train"], train_dataset["X_test"]],
@@ -1494,7 +1494,7 @@ def import_MEG_cross_subject_ivan(data_path, subject=8, hand=0, mode="train"):
         rps = np.concatenate([test_rps_data["rps_train"],
                               test_rps_data["rps_test"]], axis=0)
 
-    elif mode == "trasnsf":
+    elif mode == "transf":
         X = test_dataset["X_val"]
         y = test_dataset["y_val"]
         rps = test_rps_data["rps_val"]

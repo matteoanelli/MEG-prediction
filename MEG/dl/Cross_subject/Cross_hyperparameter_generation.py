@@ -76,15 +76,16 @@ if __name__ == "__main__":
         help="Model data directory (default= MEG\Models\)",
     )
 
-    description = "within_ivan_rps_mnet_att"
+    description = "Cross_rps_mnet_sub7_sub8"
 
     param_grid = {
-        "sub": [1, 2, 3, 5, 6, 7, 8, 9],
+        # "sub": [1, 2, 3, 5, 6, 7, 8, 9],
+        "sub": [7, 8],
         "hand": [0, 1],
         "batch_size": [80, 100, 120],
-        "learning_rate": [3e-3, 1e-5],
+        "learning_rate": [1e-5, 4e-4],
         "y_measure": ["pca", "left_single_1"],
-        "weight_decay": [5e-3, 5e-4, 5e-5],
+        "weight_decay": [5e-4, 5e-5],
     }
 
     args = parser.parse_args()
@@ -92,14 +93,14 @@ if __name__ == "__main__":
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "hand": 0,
-        "sub": 8,
-        "epochs": 120,
-        "patience": 20,
+        # "hand": 0,
+        # "sub": 8,
+        "epochs": 140,
+        "patience": 40,
         "y_measure": "pca",
-        "experiment": 22,
+        "experiment": 55,
         "desc": description,
-        "learning_rate": 3e-3,
+        # "learning_rate": 3e-3,
     }
 
     random_search = generate_parameters(

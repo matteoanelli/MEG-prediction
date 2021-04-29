@@ -565,7 +565,6 @@ def train_bp_transfer(
     net,
     trainloader,
     optimizer,
-    scheduler,
     loss_function,
     device,
     EPOCHS,
@@ -607,10 +606,10 @@ def train_bp_transfer(
     # set to true the grad of the MLP
     for param in net.ff.parameters():
         param.requires_grad = True
-    if attention:
-        # set to true the grad of the attention layer
-        for param in net.attention.parameters():
-            param.requires_grad = True
+    # if attention:
+    #     # set to true the grad of the attention layer
+    #     for param in net.attention.parameters():
+    #         param.requires_grad = True
 
     # net.ff[8] = nn.Linear(1024, 1)
     for name, param in net.named_parameters():
@@ -660,9 +659,6 @@ def train_bp_transfer(
             )
         )
 
-        print("Current Learning Rate value {}".format(
-            optimizer.param_groups[0]["lr"]))
-
         train_loss = np.mean(train_losses)
         avg_train_losses.append(train_loss)
 
@@ -671,8 +667,6 @@ def train_bp_transfer(
         if early_stopping.early_stop:
             print("Early stopping!")
             break
-
-        scheduler.step(valid_loss)
 
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 
