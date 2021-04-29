@@ -16,6 +16,7 @@ from MEG.Utils.utils import (
     import_MEG_within_subject,
     import_MEG_within_subject_ivan,
     import_MEG_within_subject_psd,
+    import_MEG_cross_subject_ivan,
 )
 
 
@@ -263,9 +264,7 @@ class MEG_Dataset2(Dataset):
 
 
 class MEG_Cross_Dataset(Dataset):
-    def __init__(
-        self, data_dir, file_name, sub, hand=0, mode="train", y_measure="pca"
-    ):
+    def __init__(self, data_dir, sub, hand=0, mode="train"):
         """
 
         Args:
@@ -282,45 +281,26 @@ class MEG_Cross_Dataset(Dataset):
         """
 
         self.data_dir = data_dir
-        self.file_name = file_name
         self.sub = sub
         self.hand = hand
         self.mode = mode
-        self.y_measure = y_measure
 
-        if self.mode not in ["train", "test"]:
-            raise ValueError("mode mast be train or test!")
+        if self.mode not in ["train", "test", "val", "transf"]:
+            raise ValueError("mode mast be train, val, transf or test!")
 
-        if hand not in [0, 1]:
+        if self.hand not in [0, 1]:
             raise ValueError(
                 "hand value must be 0 for left or 1 for right hand"
             )
 
-        if not os.path.exists("".join([self.data_dir, self.file_name])):
-            raise FileNotFoundError(
-                errno.ENOENT,
-                os.strerror(errno.ENOENT),
-                "".join([self.data_dir, self.file_name]),
-            )
+        if self.sub not in [7, 8]:
+            raise ValueError("Subject must be 7 or 8!")
 
-        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-            raise ValueError("Subject does not exist!")
-
-        if self.mode == "train":
-            self.data, self.target, self.bp = import_MEG_cross_subject_train(
+        self.data, self.target, self.bp = import_MEG_cross_subject_ivan(
                 self.data_dir,
-                self.file_name,
                 self.sub,
                 self.hand,
-                self.y_measure,
-            )
-        else:
-            self.data, self.target, self.bp = import_MEG_cross_subject_test(
-                self.data_dir,
-                self.file_name,
-                self.sub,
-                self.hand,
-                self.y_measure,
+                self.mode,
             )
 
     def __len__(self):
@@ -337,7 +317,7 @@ class MEG_Cross_Dataset(Dataset):
 
 class MEG_Cross_Dataset_no_bp(Dataset):
     def __init__(
-        self, data_dir, file_name, sub, hand=0, mode="train", y_measure="pca"
+        self, data_dir, sub, hand=0, mode="train",
     ):
         """
 
@@ -355,46 +335,27 @@ class MEG_Cross_Dataset_no_bp(Dataset):
         """
 
         self.data_dir = data_dir
-        self.file_name = file_name
         self.sub = sub
         self.hand = hand
         self.mode = mode
-        self.y_measure = y_measure
 
-        if self.mode not in ["train", "test"]:
-            raise ValueError("mode mast be train or test!")
+        if self.mode not in ["train", "test", "val", "transf"]:
+            raise ValueError("mode mast be train, val, transf or test!")
 
         if hand not in [0, 1]:
             raise ValueError(
                 "hand value must be 0 for left or 1 for right hand"
             )
 
-        if not os.path.exists("".join([self.data_dir, self.file_name])):
-            raise FileNotFoundError(
-                errno.ENOENT,
-                os.strerror(errno.ENOENT),
-                "".join([self.data_dir, self.file_name]),
-            )
+        if self.sub not in [7, 8]:
+            raise ValueError("Subject must be 7 or 8!")
 
-        if self.sub not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-            raise ValueError("Subject does not exist!")
-
-        if self.mode == "train":
-            self.data, self.target, _ = import_MEG_cross_subject_train(
-                self.data_dir,
-                self.file_name,
-                self.sub,
-                self.hand,
-                self.y_measure,
-            )
-        else:
-            self.data, self.target, _ = import_MEG_cross_subject_test(
-                self.data_dir,
-                self.file_name,
-                self.sub,
-                self.hand,
-                self.y_measure,
-            )
+        self.data, self.target, _ = import_MEG_cross_subject_ivan(
+            self.data_dir,
+            self.sub,
+            self.hand,
+            self.mode,
+        )
 
     def __len__(self):
         return self.data.shape[0]

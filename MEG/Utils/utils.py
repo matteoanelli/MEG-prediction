@@ -1421,3 +1421,96 @@ def import_MEG_within_subject_psd(data_path, subject=8, hand=0, mode="train"):
     rps = torch.from_numpy(rps).float()
 
     return y.repeat(1, 2), welch, rps
+
+
+def import_MEG_cross_subject_ivan(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        X_test, y_test, rps_test
+    """
+
+    # Currently working only with subject 8 and 7
+
+    if subject == 8:
+        train_subject = 8
+        test_subject = 7
+    elif subject == 7:
+        train_subject = 7
+        test_subject = 8
+    else:
+        raise ValueError("Subject cross working only with sub 7 and 8")
+
+    if hand == 0:
+        train_file_name = "sub_{}_left.npz".format(str(train_subject))
+        train_rps_name = "sub_{}_left_rps.npz".format(str(train_subject))
+        test_file_name = "sub_{}_left.npz".format(str(test_subject))
+        test_rps_name = "sub_{}_left_rps.npz".format(str(test_subject))
+    else:
+        train_file_name = "sub_{}_right.npz".format(str(train_subject))
+        train_rps_name = "sub_{}_right_rps.npz".format(str(train_subject))
+        test_file_name = "sub_{}_right.npz".format(str(test_subject))
+        test_rps_name = "sub_{}_right_rps.npz".format(str(test_subject))
+
+    train_dataset = np.load(os.path.join(data_path, train_file_name))
+    train_rps_data = np.load(os.path.join(data_path, train_rps_name))
+
+    test_dataset = np.load(os.path.join(data_path, test_file_name))
+    test_rps_data = np.load(os.path.join(data_path, test_rps_name))
+
+    print("Processing train dataset ", train_dataset)
+    print("Processing test dataset ", test_dataset)
+
+    if mode == "train":
+        X = np.concatenate([train_dataset["X_train"], train_dataset["X_test"]],
+                       axis=0)
+        y = np.concatenate([train_dataset["y_train"], train_dataset["y_test"]],
+                       axis=0)
+        rps = np.concatenate([train_rps_data["rps_train"],
+                          train_rps_data["rps_test"]], axis=0)
+    elif mode == "val":
+        X = train_dataset["X_val"]
+        y = train_dataset["y_val"]
+        rps = train_rps_data["rps_val"]
+
+    elif mode == "test":
+        X = np.concatenate([test_dataset["X_train"], test_dataset["X_test"]],
+                           axis=0)
+        y = np.concatenate([test_dataset["y_train"], test_dataset["y_test"]],
+                           axis=0)
+        rps = np.concatenate([test_rps_data["rps_train"],
+                              test_rps_data["rps_test"]], axis=0)
+
+    elif mode == "trasnsf":
+        X = test_dataset["X_val"]
+        y = test_dataset["y_val"]
+        rps = test_rps_data["rps_val"]
+
+    else:
+        raise ValueError("mode value must be train, val, transf, or test!")
+
+    X = np.swapaxes(X, 2, -1) ##  To reshape the data [n_epoch, 1, n_channel, n_times]
+
+    X = torch.from_numpy(X).float()
+    rps = torch.from_numpy(rps).float()
+    y = torch.from_numpy(y).float()
+
+    print("Imported data for mode ", mode)
+    print("X {} shape : {}".format(mode, X.shape))
+    print("y {} shape : {}".format(mode, y.shape))
+    print("rps {} shape : {}".format(mode, rps.shape))
+
+    return X, y.repeat(1, 2), rps

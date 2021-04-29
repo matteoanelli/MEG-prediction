@@ -170,7 +170,6 @@ class Params_cross(object):
         wd,
         patience,
         device,
-        y_measure,
         desc,
     ):
 
@@ -184,7 +183,6 @@ class Params_cross(object):
         self.wd = wd
         self.patience = patience
         self.device = device
-        self.y_measure = y_measure
         self.desc = desc
 
     def __str__(self):
@@ -203,8 +201,6 @@ class Params_cross(object):
             + str(self.wd)
             + "_"
             + str(self.device)
-            + "_"
-            + str(self.y_measure)
             + "_"
             + str(self.desc)
         )

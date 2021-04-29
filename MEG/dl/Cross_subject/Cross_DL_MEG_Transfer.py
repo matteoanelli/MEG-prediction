@@ -67,8 +67,6 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    file_name = "data.hdf5"
-
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
 
@@ -88,7 +86,6 @@ def main(args):
         wd=args.weight_decay,
         patience=args.patience,
         device=device,
-        y_measure=args.y_measure,
         desc=args.desc,
     )
     # Import data and generate train-, valid- and test-set
@@ -98,76 +95,39 @@ def main(args):
 
     mlp = False
 
-    dataset = MEG_Cross_Dataset(
-        data_dir,
-        file_name,
-        parameters.subject_n,
-        parameters.hand,
-        mode="train",
-        y_measure=parameters.y_measure,
-    )
-    leave_one_out_dataset = MEG_Cross_Dataset(
-        data_dir,
-        file_name,
-        parameters.subject_n,
-        parameters.hand,
-        mode="test",
-        y_measure=parameters.y_measure,
-    )
+    train_dataset = MEG_Cross_Dataset(data_dir, parameters.subject_n,
+                                      parameters.hand, mode="train")
 
-    # split the dataset in train, test and valid sets.
-    train_len, valid_len = len_split_cross(len(dataset))
+    valid_dataset = MEG_Cross_Dataset(data_dir, parameters.subject_n,
+                                      parameters.hand, mode="val")
 
-    # split the test set in fine_tunning and final testset
-    test_len, transfer_len = len_split_cross(len(leave_one_out_dataset))
+    test_dataset = MEG_Cross_Dataset(data_dir, parameters.subject_n,
+                                      parameters.hand, mode="test")
 
-    # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
-    #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_dataset = random_split(
-        dataset, [train_len, valid_len]
-    )
+    transfer_dataset = MEG_Cross_Dataset(data_dir, parameters.subject_n,
+                                      parameters.hand, mode="trasnsf")
 
-    test_dataset, transfer_dataset = random_split(
-        leave_one_out_dataset, [test_len, transfer_len]
-    )
-
-    # transfer_dataset = Subset(leave_one_out_dataset, list(range(transfer_len)))
-    # test_dataset = Subset(leave_one_out_dataset, list(range(transfer_len, transfer_len + test_len)))
-
-    print(
-        "Train dataset len {}, valid dataset len {}, test dataset len {}, transfer dataset len {}".format(
-            len(train_dataset),
-            len(valid_dataset),
-            len(test_dataset),
-            len(transfer_dataset),
-        )
-    )
+    print("Train dataset len {}, valid dataset len {}, test dataset len {}, "
+          "transfer dataset len {}".format(len(train_dataset),
+                                           len(valid_dataset),
+                                           len(test_dataset),
+                                           len(transfer_dataset),))
 
     # Initialize the dataloaders
-    trainloader = DataLoader(
-        train_dataset,
-        batch_size=parameters.batch_size,
-        shuffle=True,
-        num_workers=4,
-    )
-    validloader = DataLoader(
-        valid_dataset,
-        batch_size=parameters.valid_batch_size,
-        shuffle=True,
-        num_workers=4,
-    )
-    testloader = DataLoader(
-        test_dataset,
-        batch_size=parameters.test_batch_size,
-        shuffle=False,
-        num_workers=4,
-    )
-    transferloader = DataLoader(
-        transfer_dataset,
-        batch_size=parameters.valid_batch_size,
-        shuffle=True,
-        num_workers=4,
-    )
+    trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size,
+                             shuffle=True, num_workers=4)
+
+    validloader = DataLoader(valid_dataset,
+                             batch_size=parameters.valid_batch_size,
+                             shuffle=True,num_workers=4)
+
+    testloader = DataLoader(test_dataset,
+                            batch_size=parameters.test_batch_size,
+                            shuffle=False, num_workers=4,)
+
+    transferloader = DataLoader(transfer_dataset,
+                                batch_size=parameters.valid_batch_size,
+                                shuffle=True, num_workers=4)
 
     # Initialize network
     if mlp:
@@ -187,7 +147,7 @@ def main(args):
     #     # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
     #     net = nn.DataParallel(net)
 
-    # Training loop or model loading
+    # Training loop
     if not skip_training:
         print("Begin training....")
 
@@ -348,13 +308,11 @@ def main(args):
     ax.plot(times, y_pred[0:200], color="b", label="Predicted")
     ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {}, Target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
@@ -366,13 +324,11 @@ def main(args):
     ax.plot(times, y_pred, color="b", label="Predicted")
     ax.plot(times, y, color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {}, target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
@@ -599,6 +555,7 @@ if __name__ == "__main__":
         metavar="N",
         help="Early stopping patience (default: 20)",
     )
+    # TODO: remove y_measure from flow
     parser.add_argument(
         "--y_measure",
         type=str,
