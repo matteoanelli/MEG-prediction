@@ -25,7 +25,8 @@ sys.path.insert(1, r"")
 from MEG.dl.train import train_PSD, train_RPS_PSD
 from MEG.dl.MEG_Dataset import MEG_Within_Dataset_psd
 from MEG.dl.models import (PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial,
-                           RPS_PSD_cnn_spatial, PSD_cnn_spatial_swap)
+                           RPS_PSD_cnn_spatial, PSD_cnn_spatial_swap, 
+                           PSD_cnn_spatial_group)
 from MEG.dl.params import Param_PSD
 
 from MEG.Utils.utils import *
@@ -138,17 +139,22 @@ def main(args):
                               mlp_hidden=parameters.mlp_hidden,
                               mlp_drop=parameters.mlp_drop)
     else:
-        # net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
-        #                       batch_norm=parameters.batch_norm,
-        #                       s_dropout=parameters.s_drop,
+        net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                              batch_norm=parameters.batch_norm,
+                              s_dropout=parameters.s_drop,
+                              mlp_layers=parameters.mlp_n_layer,
+                              mlp_hidden=parameters.mlp_hidden,
+                              mlp_drop=parameters.mlp_drop)
+
+        # net = PSD_cnn_spatial_swap(batch_norm=parameters.batch_norm,
         #                       mlp_layers=parameters.mlp_n_layer,
         #                       mlp_hidden=parameters.mlp_hidden,
         #                       mlp_drop=parameters.mlp_drop)
 
-        net = PSD_cnn_spatial_swap(batch_norm=parameters.batch_norm,
-                              mlp_layers=parameters.mlp_n_layer,
-                              mlp_hidden=parameters.mlp_hidden,
-                              mlp_drop=parameters.mlp_drop)
+        #et = PSD_cnn_spatial_group(batch_norm=parameters.batch_norm,
+        #                     mlp_layers=parameters.mlp_n_layer,
+        #                     mlp_hidden=parameters.mlp_hidden,
+        #                     mlp_drop=parameters.mlp_drop)
 
     print(net)
     total_params = 0

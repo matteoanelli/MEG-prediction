@@ -405,10 +405,10 @@ class MNet_ivan(nn.Module):
                                 nn.BatchNorm1d(num_features=256),
                                 nn.ReLU(),
                                 nn.Dropout(0.5),
-                                # nn.Linear(256, 256),
-                                # nn.BatchNorm1d(num_features=256),
-                                # nn.ReLU(),
-                                # nn.Dropout(0.3),
+                                nn.Linear(256, 256),
+                                nn.BatchNorm1d(num_features=256),
+                                nn.ReLU(),
+                                nn.Dropout(0.3),
                                 nn.Linear(256, 1))
 
 
@@ -1735,13 +1735,14 @@ class PSD_cnn_spatial(nn.Module):
         super(PSD_cnn_spatial, self).__init__()
 
         self.spatial = nn.Sequential(
-            PSDSpatialBlock(s_kernel, batch_norm=batch_norm,
-                 dropout=s_dropout),
-            nn.MaxPool2d(kernel_size=[1, 2]),
+            nn.Conv1d(204, 96, kernel_size=10, bias=False, groups=12),
+            nn.MaxPool1d(kernel_size=2),
+            nn.Dropout(0.2),
+            nn.BatchNorm1d(96),
         )
         if batch_norm:
             self.temporal = nn.Sequential(
-                nn.Conv1d(len(s_kernel)* 32, 128,  kernel_size=5, bias=False),
+                nn.Conv1d(96, 128,  kernel_size=5, bias=False),
                 nn.ReLU(),
                 nn.BatchNorm1d(128),
                 nn.Conv1d(128, 128, kernel_size=5, bias=False),
@@ -1798,7 +1799,7 @@ class PSD_cnn_spatial(nn.Module):
 
     def forward(self, x):
 
-        x = self.spatial(x).squeeze()
+        x = self.spatial(x.squeeze()).squeeze()
         x = self.temporal(x)
         x = self.ff(self.flatten(x))
 
@@ -2053,7 +2054,7 @@ class PSD_cnn_spatial_group(nn.Module):
             self.spatial = nn.Sequential(
                 nn.Conv1d(204, 96, kernel_size=10, bias=False, groups=12),
                 nn.MaxPool1d(kernel_size=2),
-                # nn.Dropout(0.2),
+                nn.Dropout(0.2),
                 nn.BatchNorm1d(96),
             )
 

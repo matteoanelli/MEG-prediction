@@ -90,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_dir', type=str, default='MEG\Models',
                         help="Model data directory (default= MEG\Models\)")
 
-    description = "PSD_cnn_spatial_ADAM_l2_loss_wd_shceduler10_no_max_spatial"
+    description = "PSD_cnn_group_ADAM_l2_loss_wd_test_group_joint_norm"
 
     param_grid = {
         "sub": [1, 2, 3, 5, 6, 7, 8, 9],
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         "batch_norm": [True, False],
         "s_drop": [True, False],
         "mlp_n_layer": [2, 3], # add check if is 1
-        "mlp_hidden": [1024, 512, 256, 128], # maybe add 1024
+        "mlp_hidden": [1024, 512, 256], # maybe add 1024
         "mlp_drop": [0.3, 0.4, 0.5]
     }
 
@@ -116,17 +116,17 @@ if __name__ == "__main__":
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "hand": 0,
+        "hand": 1,
         "sub": 8,
         "epochs": 200,
         "patience": 40,
         "batch_norm": True,
         "s_drop": False,
-        "experiment": 49,
+        "experiment": 54,
         "desc": description,
     }
 
-    random_search = generate_parameters(param_grid, 20, fix_param,
+    random_search = generate_parameters(param_grid, 10, fix_param,
                                         args.data_dir, args.figure_dir,
                                         args.model_dir)
 
