@@ -47,6 +47,7 @@ from MEG.dl.params import Params_transf
 
 from MEG.Utils.utils import *
 
+
 # Set the MNE logging to worning only.
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 

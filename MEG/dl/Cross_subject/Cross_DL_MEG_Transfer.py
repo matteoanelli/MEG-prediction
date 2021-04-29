@@ -24,6 +24,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split, Subset
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn as nn
 
 sys.path.insert(1, r"")
@@ -194,6 +195,11 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
         start_time = timer.time()
@@ -204,6 +210,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,
@@ -217,6 +224,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,

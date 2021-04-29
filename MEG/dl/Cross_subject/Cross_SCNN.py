@@ -43,6 +43,7 @@ from MEG.dl.models import (
     RPS_MLP,
 )
 from MEG.dl.params import Params_tunable
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from MEG.Utils.utils import *
 
@@ -175,6 +176,11 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
 
@@ -183,6 +189,7 @@ def main(args):
             trainloader,
             validloader,
             optimizer,
+            scheduler,
             loss_function,
             parameters.device,
             parameters.epochs,

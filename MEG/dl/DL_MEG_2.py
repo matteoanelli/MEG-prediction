@@ -20,9 +20,10 @@ from torch.utils.data import DataLoader, random_split
 sys.path.insert(1, r"")
 
 from MEG.dl.train import train
-from MEG.dl.MEG_Dataset import MEG_Dataset_2
+from MEG.dl.MEG_Dataset import MEG_Dataset2
 from MEG.dl.models import RPS_MNet_2
 from MEG.dl.params import Params_tunable
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # TODO maybe better implementation
 from MEG.Utils.utils import *
@@ -80,7 +81,7 @@ def main(args):
         activation=args.activation,
     )
 
-    dataset = MEG_Dataset_2(
+    dataset = MEG_Dataset2(
         raw_fnames,
         parameters.duration,
         parameters.overlap,
@@ -136,6 +137,11 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(
@@ -143,6 +149,7 @@ def main(args):
             trainloader,
             validloader,
             optimizer,
+            scheduler,
             loss_function,
             parameters.device,
             parameters.epochs,

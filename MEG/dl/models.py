@@ -1874,9 +1874,10 @@ class RPS_PSD_cnn_spatial(nn.Module):
         super(RPS_PSD_cnn_spatial, self).__init__()
 
         self.spatial = nn.Sequential(
-            PSDSpatialBlock(s_kernel, batch_norm=batch_norm,
-                 dropout=s_dropout),
-            nn.MaxPool2d(kernel_size=[1, 2]),
+            nn.Conv1d(204, 96, kernel_size=10, bias=False, groups=12),
+            nn.MaxPool1d(kernel_size=2),
+            # nn.Dropout(0.2),
+            nn.BatchNorm1d(96),
         )
         if batch_norm:
             self.temporal = nn.Sequential(

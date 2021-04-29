@@ -182,6 +182,8 @@ def main(args):
         scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
                                       patience=15)
 
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
         print("loss : ", loss_function)

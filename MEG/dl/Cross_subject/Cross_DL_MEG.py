@@ -42,6 +42,8 @@ from MEG.dl.models import (
     RPS_MNet,
     RPS_MLP,
 )
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 from MEG.dl.params import Params_cross
 
 from MEG.Utils.utils import *
@@ -162,6 +164,9 @@ def main(args):
             weight_decay=parameters.wd,
         )
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
         start_time = timer.time()
@@ -172,6 +177,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,
@@ -185,6 +191,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,

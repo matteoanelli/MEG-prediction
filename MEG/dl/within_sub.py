@@ -14,6 +14,7 @@ import time as timer
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.sgd import SGD
 from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader, random_split, Subset
@@ -66,7 +67,7 @@ def main(args):
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
-    mlp = False
+    mlp = True
     rps = True
     print("Creating dataset")
 
@@ -143,6 +144,11 @@ def main(args):
 
         print("optimizer : ", optimizer)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
         start_time = timer.time()
@@ -153,6 +159,7 @@ def main(args):
                 trainloader,
                 validloader,
                 optimizer,
+                scheduler,
                 loss_function,
                 parameters.device,
                 parameters.epochs,
@@ -167,6 +174,7 @@ def main(args):
                     trainloader,
                     validloader,
                     optimizer,
+                    scheduler,
                     loss_function,
                     parameters.device,
                     parameters.epochs,
@@ -180,6 +188,7 @@ def main(args):
                     trainloader,
                     validloader,
                     optimizer,
+                    scheduler,
                     loss_function,
                     parameters.device,
                     parameters.epochs,

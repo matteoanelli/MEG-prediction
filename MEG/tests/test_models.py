@@ -1,6 +1,7 @@
 """
     Implemented models tests.
     TODO: finish tests.
+    TODO: add scheduler while testing the train
 """
 
 import pytest
