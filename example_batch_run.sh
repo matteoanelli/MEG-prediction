@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --time=00:20:00
+#SBATCH --time=00:15:00
 #SBATCH --mem-per-cpu=5000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=4
+#SBATCH --array=2
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/_out_%A_%a.log
 #SBATCH --partition=short-hsw
 
@@ -26,6 +26,8 @@ echo "sub is $sub"
 # srun python MEG/bp_gen.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --sub $sub --hand 1
 #  srun python MEG/Dataset/plot_y_distr.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --figure_dir /scratch/work/anellim1/Figures --sub $sub --hand 1
 # srun python MEG/Dataset/PSD_plot.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/ --figure_dir /scratch/work/anellim1/Figures --sub $sub
-srun python MEG/Dataset/welch_gen.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --sub $sub --hand 0
+# srun python MEG/Dataset/welch_gen.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --sub $sub --hand 0
 
-# srun python MEG/strokemotor_import_raw.py --sub $sub --hand 1
+srun python MEG/strokemotor_import_raw.py --sub $sub --hand 1
+srun python MEG/bp_gen.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --sub $sub --hand 1
+# srun python MEG/Dataset/welch_gen.py --data_dir /m/nbe/scratch/strokemotor/healthy_trans/preprocessed/ --sub $sub --hand 0

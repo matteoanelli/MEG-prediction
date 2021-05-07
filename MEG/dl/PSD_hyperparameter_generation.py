@@ -116,8 +116,8 @@ if __name__ == "__main__":
     fix_param = {
         "batch_size_valid": 30,
         "batch_size_test": 30,
-        "hand": 1,
-        "sub": 8,
+        # "hand": 0,
+        "sub": 1,
         "epochs": 200,
         "patience": 40,
         "batch_norm": True,

@@ -3,7 +3,7 @@
 #SBATCH --time=00:20:00
 #SBATCH --mem-per-cpu=12000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=1-20
+#SBATCH --array=1-10
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/PSD_cnn_group_out_%A_%a.log
 #SBATCH --gres=gpu:1
 # if resenet add --constraint='pascal|volta'

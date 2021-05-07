@@ -374,20 +374,20 @@ def main(args):
             model_path,
         )
     else:
-        net, train_loss = train_bp_transfer(
-            net,
-            transferloader,
-            optimizer_trans,
-            loss_function_trans,
-            parameters.device,
-            50,
-            parameters.patience,
-            parameters.hand,
-            model_path,
-        )
-        # net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
-        #                                     parameters.device, 50, 10,
-        #                                     parameters.hand, model_path)
+        # net, train_loss = train_bp_transfer(
+        #     net,
+        #     transferloader,
+        #     optimizer_trans,
+        #     loss_function_trans,
+        #     parameters.device,
+        #     50,
+        #     parameters.patience,
+        #     parameters.hand,
+        #     model_path,
+        # )
+        net, train_loss = train_bp_fine_tuning(net, transferloader, optimizer_trans, loss_function_trans,
+                                            parameters.device, 50, 10,
+                                            parameters.hand, model_path)
 
     # Evaluation
     print("Evaluation after transfer...")

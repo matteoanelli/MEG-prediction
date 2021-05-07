@@ -517,7 +517,7 @@ class RPS_MNet(nn.Module):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
         x = self.temporal(x)
-        x = self.attention(x)
+        # x = self.attention(x)
         x = self.concatenate(x, pb)
         x = self.ff(x)
 

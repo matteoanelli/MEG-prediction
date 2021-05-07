@@ -133,7 +133,8 @@ if __name__ == '__main__':
             # get indices of accelerometer channels
 
 
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., decim=4, baseline=(0, 2)))
+            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=20., decim=4, 
+                baseline=(0, 2)))
             del raw
         else:
             print(raw_fnames[i], '***NOT FOUND')

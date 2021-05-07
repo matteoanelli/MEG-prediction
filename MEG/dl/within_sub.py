@@ -61,13 +61,12 @@ def main(args):
                               wd=args.weight_decay,
                               patience=args.patience,
                               device=device,
-                              y_measure=args.y_measure,
                               desc=args.desc
                               )
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
-    mlp = True
+    mlp = False
     rps = True
     print("Creating dataset")
 
@@ -151,6 +150,7 @@ def main(args):
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
+        print("loss :",loss_function)
         start_time = timer.time()
 
         if mlp:
@@ -316,17 +316,16 @@ def main(args):
     print("last value of the validation loss: {}".format(valid_loss_last))
 
     # plot y_new against the true value focus on 200 timepoints
-    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    times = np.arange(200)
-    ax.plot(times, y_pred[0:200], color="b", label="Predicted")
-    ax.plot(times, y[0:200], color="r", label="True")
+    fig, ax = plt.subplots(1, 1, figsize=[14, 6])
+    times = np.arange(1000)
+    ax.plot(times, y_pred[:1000], color="b", label="Predicted")
+    ax.plot(times, y[:1000], color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {} prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
+            "sx" if parameters.hand == 0 else "dx"
         )
     )
     plt.legend()
@@ -339,12 +338,11 @@ def main(args):
     ax.plot(times, y_pred, color="b", label="Predicted")
     ax.plot(times, y, color="r", label="True")
     ax.set_xlabel("Times")
-    ax.set_ylabel("{}".format(parameters.y_measure))
+    ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, {} prediction".format(
+        "Sub {}, hand {}, prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx",
-            parameters.y_measure,
+            "sx" if parameters.hand == 0 else "dx"
         )
     )
     plt.legend()
@@ -370,6 +368,13 @@ def main(args):
     # plt.legend()
     plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
     plt.show()
+
+
+    # Save prediction for post analysis 
+
+    out_file = "prediction_sub{}_hand_{}.npz".format(str(parameters.subject_n), 
+                               "left" if parameters.hand == 0 else "right")
+    np.savez(os.path.join(data_dir, out_file), y_pred=y_pred, y=y)
 
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
@@ -432,8 +437,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="pca",
-                        help='Y type reshaping (default: pca)')
+   
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
