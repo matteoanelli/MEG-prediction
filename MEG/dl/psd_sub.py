@@ -5,6 +5,7 @@
     architecture parameters. Such that each run of this script generate and test a new model from a specific parameters
 """
 import sys
+import json
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -21,13 +22,12 @@ from torch.utils.data import DataLoader, random_split, Subset
 
 sys.path.insert(1, r"")
 
-from MEG.dl.train import train, train_bp, train_bp_MLP
-from MEG.dl.MEG_Dataset import (MEG_Dataset, MEG_Dataset_no_bp,
-                                MEG_Within_Dataset, MEG_Within_Dataset_ivan)
-from MEG.dl.models import (SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet,
-                           RPS_MNet, RPS_MLP, RPS_MNet_ivan, MNet_ivan,
-                           RPS_CNN)
-from MEG.dl.params import Params_tunable, Params_cross
+from MEG.dl.train import train_PSD, train_RPS_PSD
+from MEG.dl.MEG_Dataset import MEG_Within_Dataset_psd
+from MEG.dl.models import (PSD_cnn, PSD_cnn_deep, PSD_cnn_spatial,
+                           RPS_PSD_cnn_spatial, PSD_cnn_spatial_swap, 
+                           PSD_cnn_spatial_group)
+from MEG.dl.params import Param_PSD
 
 from MEG.Utils.utils import *
 
@@ -35,13 +35,21 @@ from MEG.Utils.utils import *
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
 
 
-def main(args):
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
+def main(args):
     data_dir = args.data_dir
     figure_path = args.figure_dir
     model_path = args.model_dir
-
-    file_name = "ball_left_mean.npz"
 
     # Set skip_training to False if the model has to be trained, to True if the model has to be loaded.
     skip_training = False
@@ -51,34 +59,42 @@ def main(args):
     print("Device = {}".format(device))
 
     # Initialize parameters
-    parameters = Params_cross(subject_n=args.sub,
-                              hand=args.hand,
-                              batch_size=args.batch_size,
-                              valid_batch_size=args.batch_size_valid,
-                              test_batch_size=args.batch_size_test,
-                              epochs=args.epochs,
-                              lr=args.learning_rate,
-                              wd=args.weight_decay,
-                              patience=args.patience,
-                              device=device,
-                              desc=args.desc
-                              )
+    parameters = Param_PSD(subject_n=args.sub,
+                           hand=args.hand,
+                           batch_size=args.batch_size,
+                           valid_batch_size=args.batch_size_valid,
+                           test_batch_size=args.batch_size_test,
+                           epochs=args.epochs,
+                           lr=args.learning_rate,
+                           wd=args.weight_decay,
+                           patience=args.patience,
+                           device=device,
+                           batch_norm=args.batch_norm,
+                           # s_kernel_size=args.s_kernel_size,  # Local
+                           s_kernel_size=json.loads(
+                               " ".join(args.s_kernel_size)),
+                           s_drop=args.s_drop,
+                           mlp_n_layer=args.mlp_n_layer,
+                           mlp_hidden=args.mlp_hidden,
+                           mlp_drop=args.mlp_drop,
+                           desc=args.desc
+                           )
 
     # Set if generate with RPS values or not (check network architecture used later)
     # if mlp = rps-mlp, elif rps = rps-mnet, else mnet
-    mlp = False
-    rps = True
+
+    use_rps = False
     print("Creating dataset")
 
     # Generate the custom dataset
-    train_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n,
-                                            parameters.hand, mode="train")
+    train_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
+                                           parameters.hand, mode="train")
 
-    test_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n,
-                                           parameters.hand, mode="test")
+    test_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
+                                          parameters.hand, mode="test")
 
-    valid_dataset = MEG_Within_Dataset_ivan(data_dir, parameters.subject_n,
-                                            parameters.hand, mode="val")
+    valid_dataset = MEG_Within_Dataset_psd(data_dir, parameters.subject_n,
+                                           parameters.hand, mode="val")
 
     # split the dataset in train, test and valid sets.
 
@@ -96,6 +112,7 @@ def main(args):
     # train_dataset, valid_dataset = random_split(train_valid_dataset, [train_len, valid_len])
 
     # Initialize the dataloaders
+
     trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size,
                              shuffle=True, num_workers=1)
     validloader = DataLoader(valid_dataset,
@@ -105,29 +122,46 @@ def main(args):
                             batch_size=parameters.test_batch_size,
                             shuffle=False, num_workers=1)
 
+    with torch.no_grad():
+        label, psd, rps = iter(trainloader).next()
+        print(psd.shape)
+        print(label.shape)
+        print(rps.shape)
 
     # Get the n_times dimension
 
-    if mlp:
-        net = RPS_MLP()
-        # net = RPS_CNN()
+    # net = PSD_cnn()
+    if use_rps:
+        net = RPS_PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                              batch_norm=parameters.batch_norm,
+                              s_dropout=parameters.s_drop,
+                              mlp_layers=parameters.mlp_n_layer,
+                              mlp_hidden=parameters.mlp_hidden,
+                              mlp_drop=parameters.mlp_drop)
     else:
-        # Get the n_times dimension
-        with torch.no_grad():
-            sample, y, _ = iter(trainloader).next()
+        net = PSD_cnn_spatial(s_kernel=parameters.s_kernel_size,
+                              batch_norm=parameters.batch_norm,
+                              s_dropout=parameters.s_drop,
+                              mlp_layers=parameters.mlp_n_layer,
+                              mlp_hidden=parameters.mlp_hidden,
+                              mlp_drop=parameters.mlp_drop)
 
-        n_times = sample.shape[-1]
-        if rps:
-            net = RPS_MNet_ivan(n_times)
-        else:
-            net = MNet_ivan(n_times)
+        # net = PSD_cnn_spatial_swap(batch_norm=parameters.batch_norm,
+        #                       mlp_layers=parameters.mlp_n_layer,
+        #                       mlp_hidden=parameters.mlp_hidden,
+        #                       mlp_drop=parameters.mlp_drop)
+
+        #et = PSD_cnn_spatial_group(batch_norm=parameters.batch_norm,
+        #                     mlp_layers=parameters.mlp_n_layer,
+        #                     mlp_hidden=parameters.mlp_hidden,
+        #                     mlp_drop=parameters.mlp_drop)
 
     print(net)
     total_params = 0
     for name, parameter in net.named_parameters():
         param = parameter.numel()
         print("param {} : {}".format(name, param if parameter.requires_grad
-                                            else 0))
+        else 0))
         total_params += param
     print(f"Total Trainable Params: {total_params}")
 
@@ -137,8 +171,10 @@ def main(args):
 
         # Check the optimizer before running (different from model to model)
         # optimizer = Adam(net.parameters(), lr=parameters.lr)
-        optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=parameters.wd)
-        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9, weight_decay=parameters.wd)
+        optimizer = Adam(net.parameters(), lr=parameters.lr,
+                         weight_decay=parameters.wd)
+        # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9,
+        #                  weight_decay=parameters.wd)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, momentum=0.9)
 
         print("optimizer : ", optimizer)
@@ -150,11 +186,10 @@ def main(args):
 
         loss_function = torch.nn.MSELoss()
         # loss_function = torch.nn.L1Loss()
-        print("loss :",loss_function)
+        print("loss : ", loss_function)
         start_time = timer.time()
-
-        if mlp:
-            net, train_loss, valid_loss = train_bp_MLP(
+        if use_rps:
+            net, train_loss, valid_loss = train_RPS_PSD(
                 net,
                 trainloader,
                 validloader,
@@ -168,34 +203,19 @@ def main(args):
                 model_path,
             )
         else:
-            if rps:
-                net, train_loss, valid_loss = train_bp(
-                    net,
-                    trainloader,
-                    validloader,
-                    optimizer,
-                    scheduler,
-                    loss_function,
-                    parameters.device,
-                    parameters.epochs,
-                    parameters.patience,
-                    parameters.hand,
-                    model_path,
-                )
-            else:
-                net, train_loss, valid_loss = train(
-                    net,
-                    trainloader,
-                    validloader,
-                    optimizer,
-                    scheduler,
-                    loss_function,
-                    parameters.device,
-                    parameters.epochs,
-                    parameters.patience,
-                    parameters.hand,
-                    model_path,
-                )
+            net, train_loss, valid_loss = train_PSD(
+                net,
+                trainloader,
+                validloader,
+                optimizer,
+                scheduler,
+                loss_function,
+                parameters.device,
+                parameters.epochs,
+                parameters.patience,
+                parameters.hand,
+                model_path,
+            )
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
@@ -228,7 +248,8 @@ def main(args):
         save_pytorch_model(net, model_path, "model.pth")
     else:
         # Load the model (properly select the model architecture)
-        net = RPS_MNet()
+        # TODO: fix init parameters (not used so far)
+        net = PSD_cnn()
         net = load_pytorch_model(net, os.path.join(model_path, "model.pth"),
                                  parameters.device)
 
@@ -242,56 +263,31 @@ def main(args):
 
     # if RPS integration
     with torch.no_grad():
-        if mlp:
-            for _, labels, bp in testloader:
-                labels, bp = labels.to(parameters.device), \
-                             bp.to(parameters.device)
+        if use_rps:
+            for labels, psd, rps in testloader:
+                labels, psd, rps = labels.to(parameters.device), psd.to(
+                    parameters.device), rps.to(parameters.device)
                 y.extend(list(labels[:, parameters.hand]))
-                y_pred.extend((list(net(bp))))
+                y_pred.extend((list(net(psd, rps))))
 
-            for _, labels, bp in validloader:
-                labels, bp = (
-                    labels.to(parameters.device),
-                    bp.to(parameters.device),
-                )
+            for labels, psd, rps in validloader:
+                labels, psd, rps = labels.to(parameters.device), \
+                                   psd.to(parameters.device), \
+                                   rps.to(parameters.device)
                 y_valid.extend(list(labels[:, parameters.hand]))
-                y_pred_valid.extend((list(net(bp))))
+                y_pred_valid.extend((list(net(psd, rps))))
         else:
-            if rps:
-                for data, labels, bp in testloader:
-                    data, labels, bp = (
-                        data.to(parameters.device),
-                        labels.to(parameters.device),
-                        bp.to(parameters.device),
-                    )
-                    y.extend(list(labels[:, parameters.hand]))
-                    y_pred.extend((list(net(data, bp))))
+            for labels, psd, _ in testloader:
+                labels, psd = labels.to(parameters.device), psd.to(
+                    parameters.device)
+                y.extend(list(labels[:, parameters.hand]))
+                y_pred.extend((list(net(psd))))
 
-                for data, labels, bp in validloader:
-                    data, labels, bp = (
-                        data.to(parameters.device),
-                        labels.to(parameters.device),
-                        bp.to(parameters.device),
-                    )
-                    y_valid.extend(list(labels[:, parameters.hand]))
-                    y_pred_valid.extend((list(net(data, bp))))
-
-            else:
-                for data, labels, _ in testloader:
-                    data, labels = (
-                        data.to(parameters.device),
-                        labels.to(parameters.device),
-                    )
-                    y.extend(list(labels[:, parameters.hand]))
-                    y_pred.extend((list(net(data))))
-
-                for data, labels, _ in validloader:
-                    data, labels = (
-                        data.to(parameters.device),
-                        labels.to(parameters.device),
-                    )
-                    y_valid.extend(list(labels[:, parameters.hand]))
-                    y_pred_valid.extend((list(net(data))))
+            for labels, psd, _ in validloader:
+                labels, psd = labels.to(parameters.device), \
+                              psd.to(parameters.device)
+                y_valid.extend(list(labels[:, parameters.hand]))
+                y_pred_valid.extend((list(net(psd))))
 
     # Calculate Evaluation measures
     print("Evaluation measures")
@@ -316,17 +312,16 @@ def main(args):
     print("last value of the validation loss: {}".format(valid_loss_last))
 
     # plot y_new against the true value focus on 200 timepoints
-    fig, ax = plt.subplots(1, 1, figsize=[14, 6])
-    times = np.arange(1000)
-    ax.plot(times, y_pred[:1000], color="b", label="Predicted")
-    ax.plot(times, y[:1000], color="r", label="True")
+    fig, ax = plt.subplots(1, 1, figsize=[10, 4])
+    times = np.arange(200)
+    ax.plot(times, y_pred[0:200], color="b", label="Predicted")
+    ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {} prediction".format(
+        "Sub {}, hand {}, Target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx"
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
@@ -340,10 +335,9 @@ def main(args):
     ax.set_xlabel("Times")
     ax.set_ylabel("Target")
     ax.set_title(
-        "Sub {}, hand {}, prediction".format(
+        "Sub {}, hand {}, Target prediction".format(
             str(parameters.subject_n),
-            "sx" if parameters.hand == 0 else "dx"
-        )
+            "sx" if parameters.hand == 0 else "dx")
     )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
@@ -368,13 +362,6 @@ def main(args):
     # plt.legend()
     plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
     plt.show()
-
-
-    # Save prediction for post analysis 
-
-    out_file = "prediction_sub{}_hand_{}.npz".format(str(parameters.subject_n), 
-                               "left" if parameters.hand == 0 else "right")
-    np.savez(os.path.join(data_dir, out_file), y_pred=y_pred, y=y)
 
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
@@ -434,10 +421,27 @@ if __name__ == "__main__":
                         metavar='lr', help='Learning rate (default: 1e-3),')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         metavar='wd', help='Weight dacay (default: 5e-4),')
-
     parser.add_argument('--patience', type=int, default=10, metavar='N',
                         help='Early stopping patience (default: 20)')
-   
+
+    # Model architecture parameter
+    parser.add_argument("--s_kernel_size", type=str, default=[204],
+                        metavar="N", nargs="+", help="Spatial sub-net "
+                                                     "kernel sizes (default: [104, 101])")
+    parser.add_argument("--batch_norm", type=str2bool, default=False,
+                        metavar="N",
+                        help="Batch normalization after spatial conv layers "
+                             "(default: False)", )
+    parser.add_argument("--s_drop", type=str2bool, default=False, metavar="N",
+                        help="Dropout after spatial conv layers "
+                             "(default: False)", )
+    parser.add_argument("--mlp_n_layer", type=int, default=2, metavar="N",
+                        help="MLP sub-net number of layer (default: 2)")
+    parser.add_argument("--mlp_hidden", type=int, default=512, metavar="N",
+                        help="MLP sub-net number of hidden channels (default: 512)")
+    parser.add_argument("--mlp_drop", type=float, default=0.4, metavar="d",
+                        help="MLP dropout (default: 0.4),")
+    # Experiment parameters
     parser.add_argument('--experiment', type=int, default=0, metavar='N',
                         help='Mlflow experiments id (default: 0)')
     parser.add_argument('--desc', type=str, default="Normal test", metavar='N',

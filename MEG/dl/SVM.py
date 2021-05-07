@@ -1,6 +1,6 @@
 #%%
 """
-    Main script to generate the SPoC results on the MEG dataset.
+    Main script to generate the SVM baseline model on MEG dataset.
 """
 import argparse
 import sys
@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
 from mne import viz
-from mne.decoding import SPoC
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import KFold, GridSearchCV
@@ -19,6 +18,7 @@ from sklearn.pipeline import Pipeline
 sys.path.insert(1, r"")
 from MEG.Utils.utils import *
 from MEG.dl.params import SPoC_params
+from sklearn.svm import SVR
 
 
 def main(args):
@@ -34,103 +34,77 @@ def main(args):
         duration=args.duration,
         overlap=args.overlap,
         y_measure=args.y_measure,
-        alpha=args.alpha,
+        alpha=0,
     )
 
     # Import and epoch the MEG data
-    X_train, y_train, _ = import_MEG_within_subject_ivan(
+    _, y_train, rps_train = import_MEG_within_subject_ivan(
         data_dir, args.sub, args.hand, "train"
     )
 
-    X_valid, y_valid, _ = import_MEG_within_subject_ivan(
+    _, y_val, rps_val = import_MEG_within_subject_ivan(
         data_dir, args.sub, args.hand, "val"
     )
 
-    X_test, y_test, _ = import_MEG_within_subject_ivan(
+    _, y_test, rps_test = import_MEG_within_subject_ivan(
         data_dir, args.sub, args.hand, "test"
     )
 
     # Select hand
 
-    X_train, y_train = (
-        np.array(X_train.squeeze()).astype(np.float64),
-        np.array(y_train[..., args.hand].squeeze()).astype(np.float64),
-    )
+    rps_train = rps_train.reshape(rps_train.shape[0], -1)
+    rps_val = rps_val.reshape(rps_val.shape[0], -1)
+    rps_test = rps_test.reshape(rps_test.shape[0], -1)
 
-    X_valid, y_valid = (
-        np.array(X_valid.squeeze()).astype(np.float64),
-        np.array(y_valid[..., args.hand].squeeze()).astype(np.float64),
-    )
+    rps_train = np.array(rps_train).astype(np.float64)
+    y_train = np.array(y_train[..., args.hand].squeeze()).astype(np.float64)
 
-    X_test, y_test = (
-        np.array(X_test.squeeze()).astype(np.float64),
-        np.array(y_test[..., args.hand].squeeze()).astype(np.float64),
-    )
+    rps_val = np.array(rps_val).astype(np.float64)
+    y_val = np.array(y_val[..., args.hand].squeeze()).astype(np.float64)
+
+    rps_test = np.array(rps_test).astype(np.float64)
+    y_test = np.array(y_test[..., args.hand].squeeze()).astype(np.float64)
 
     print("Processing hand {}".format("sx" if parameters.hand == 0 else "dx"))
-    print(
-        "X_train shape {}, y_train shape {} \n X_test shape {}, y_test shape {}".format(
-            X_train.shape, y_train.shape, X_test.shape, y_test.shape
-        )
-    )
 
     start = time.time()
     print("Start Fitting model ...")
+
     best_pipeline = None
     best_mse_valid = np.Inf
     best_rmse_valid = 0
     best_r2_valid = 0
     best_alpha = 0
     best_n_comp = 0
-    for n_components in np.arange(2, 30, 4):
-        for alpha in [0.8, 1.0, 5, 10]:
+    # for _C in [2, 10, 30, 50, 100]:
+    for _C in [2, 10, 30, 50, 100]:
+        print("Processing C = ", _C)
+        regressor = SVR(kernel='rbf', C=_C)
 
-            pipeline = Pipeline(
-                [
-                    (
-                        "Spoc",
-                        SPoC(
-                            log=True,
-                            reg="oas",
-                            rank="full",
-                            n_components=int(n_components),
-                        ),
-                    ),
-                    ("Ridge", Ridge(alpha=alpha)),
-                ]
-            )
+        regressor.fit(rps_train, y_train)
 
-            pipeline.fit(X_train, y_train)
+        # Validate the pipeline
+        print("evaluation parameters C :{}".format(_C))
 
-            # Validate the pipeline
-            print(
-                "evaluation parameters n_comp :{}, alpha {}".format(
-                    n_components, alpha
-                )
-            )
-            y_new = pipeline.predict(X_valid)
-            mse = mean_squared_error(y_valid, y_new)
-            rmse = mean_squared_error(y_valid, y_new, squared=False)
-            # mae = mean_absolute_error(y_test, y_new)
-            r2 = r2_score(y_valid, y_new)
+        y_new = regressor.predict(rps_val)
+        mse = mean_squared_error(y_val, y_new)
+        rmse = mean_squared_error(y_val, y_new, squared=False)
+        # mae = mean_absolute_error(y_test, y_new)
+        r2 = r2_score(y_val, y_new)
 
-            if mse < best_mse_valid:
-                print(
-                    "saving new best model mse {} ---> {}".format(
-                        best_mse_valid, mse
-                    )
-                )
-                best_pipeline = pipeline
-                best_mse_valid = mse
-                best_r2_valid = r2
-                best_rmse_valid = rmse
-                best_alpha = alpha
-                best_n_comp = n_components
+        if mse < best_mse_valid:
+            print("saving new best model mse {} ---> {}".format(best_mse_valid,
+                                                                mse))
+
+            best_regressor = regressor
+            best_mse_valid = mse
+            best_r2_valid = r2
+            best_rmse_valid = rmse
+            best_C = _C
+
 
     print(f"Training time : {time.time() - start}s ")
-    print("Best compination of parameters:")
-    print("Number of components: ", best_n_comp)
-    print("Alpha: ", best_alpha)
+    print("Best parameter C: ", best_C)
 
     print("Validation set")
     print("mean squared error valid {}".format(best_mse_valid))
@@ -140,7 +114,7 @@ def main(args):
     #%%
     # Test the pipeline
     print("Test set")
-    y_new = best_pipeline.predict(X_test)
+    y_new = best_regressor.predict(rps_test)
     mse = mean_squared_error(y_test, y_new)
     rmse = mean_squared_error(y_test, y_new, squared=False)
     # mae = mean_absolute_error(y_test, y_new)
@@ -159,7 +133,7 @@ def main(args):
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
     ax.set_title(
-        "SPoC: Sub {}, hand {}, {} prediction".format(
+        "SVM: Sub {}, hand {}, {} prediction".format(
             str(parameters.subject_n),
             "sx" if parameters.hand == 0 else "dx",
             parameters.y_measure,
@@ -167,7 +141,7 @@ def main(args):
     )
     plt.legend()
     viz.tight_layout()
-    plt.savefig(os.path.join(figure_path, "MEG_SPoC_focus.pdf"))
+    plt.savefig(os.path.join(figure_path, "MEG_SVM_focus.pdf"))
     plt.show()
 
     # plot y_new against the true value
@@ -185,7 +159,7 @@ def main(args):
         )
     )
     plt.legend()
-    plt.savefig(os.path.join(figure_path, "MEG_SPoC.pdf"))
+    plt.savefig(os.path.join(figure_path, "MEG_SVM.pdf"))
     plt.show()
 
     # scatterplot y predicted against the true value
@@ -199,7 +173,7 @@ def main(args):
 
     # %%
     # Save the model.
-    name = "MEG_SPoC.p"
+    name = "MEG_SVR.p"
     save_skl_model(best_pipeline, model_path, name)
 
     # log the model
@@ -215,11 +189,10 @@ def main(args):
         mlflow.log_metric("RMSE_v", best_rmse_valid)
         mlflow.log_metric("R2_v", best_r2_valid)
 
-        mlflow.log_param("n_components", best_n_comp)
-        mlflow.log_param("alpha", best_alpha)
-
-        mlflow.log_artifact(os.path.join(figure_path, "MEG_SPoC_focus.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "MEG_SPoC.pdf"))
+        mlflow.log_param("C", best_C)
+       
+        mlflow.log_artifact(os.path.join(figure_path, "MEG_SVM_focus.pdf"))
+        mlflow.log_artifact(os.path.join(figure_path, "MEG_SVM.pdf"))
         mlflow.sklearn.log_model(best_pipeline, "models")
 
 
@@ -289,13 +262,6 @@ if __name__ == "__main__":
         metavar="N",
         help="Mlflow experiments id (default: 0)",
     )
-    parser.add_argument(
-        "--alpha",
-        type=float,
-        default=2,
-        metavar="N",
-        help="Ridge alpha value (default: 2)",
-    )  # not actually used
 
     args = parser.parse_args()
 

@@ -15,7 +15,7 @@ import time as timer
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 from sklearn.preprocessing import StandardScaler
 from MEG.Utils.utils import standard_scaling_sklearn, y_reshape, y_PCA
 
@@ -24,12 +24,19 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--out_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
 
     args = parser.parse_args()
 
@@ -48,15 +55,20 @@ if __name__ == "__main__":
 
     for sub in subjects:
 
-        print('Processing sub:', sub)
+        print("Processing sub:", sub)
 
         subj_id = "/sub" + str(sub) + "/ball0"
-        raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in
-                     range(1 if sub != 3 else 2, 4)]
+        raw_fnames = [
+            "".join([data_dir, subj_id, str(i), "_sss_trans.fif"])
+            for i in range(1 if sub != 3 else 2, 4)
+        ]
 
         # local
-        subj_id = "/sub"+str(sub)+"/ball"
-        raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss.fif"]) for i in range(1, 2)]
+        subj_id = "/sub" + str(sub) + "/ball"
+        raw_fnames = [
+            "".join([data_dir, subj_id, str(i), "_sss.fif"])
+            for i in range(1, 2)
+        ]
 
         epochs = []
         for fname in raw_fnames:
@@ -64,13 +76,24 @@ if __name__ == "__main__":
                 # raw = mne.io.Raw(fname, preload=True).crop(tmax=60)
                 raw = mne.io.Raw(fname, preload=True)
                 # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-                events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
-                raw.pick_types(meg='grad', misc=True)
+                events = mne.make_fixed_length_events(
+                    raw, duration=duration, overlap=overlap
+                )
+                raw.pick_types(meg="grad", misc=True)
                 raw.notch_filter([50, 100])
-                raw.filter(l_freq=1., h_freq=70)
+                raw.filter(l_freq=1.0, h_freq=70)
 
                 # get indices of accelerometer channels
-                epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+                epochs.append(
+                    mne.Epochs(
+                        raw,
+                        events,
+                        tmin=0.0,
+                        tmax=duration,
+                        baseline=(0, 0),
+                        decim=2,
+                    )
+                )
                 del raw
             else:
                 print("No such file '{}'".format(fname), file=sys.stderr)
@@ -91,12 +114,11 @@ if __name__ == "__main__":
 
         else:
             # sub not properly recorded
-            y_right = np.zeros((accelermoters.shape[0], ))
-
+            y_right = np.zeros((accelermoters.shape[0],))
 
         with h5py.File("".join([out_dir, "data.hdf5"]), "a") as f:
             grp1 = f["".join(["sub" + str(sub)])]
-            grp1.create_dataset("Y_right", data=y_right, dtype='f')
+            grp1.create_dataset("Y_right", data=y_right, dtype="f")
             # data = f["sub" + str(sub) + "/Y_right"]
             # data = y_right
 
@@ -108,11 +130,6 @@ if __name__ == "__main__":
             for dset in f[group].keys():
                 print("{}/{}/{}".format(f.name, group, dset))
 
-
     # process the new y (y_trial)
 
     # add right_hand pca channel
-
-
-
-

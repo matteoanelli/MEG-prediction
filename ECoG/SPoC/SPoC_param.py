@@ -6,7 +6,13 @@ class SPoC_params(object):
         self.overlap = overlap
 
     def __str__(self):
-        return "_" + str(self.subject_n) + \
-               "_" + str(self.finger) + \
-               "_" + str(self.duration) + \
-               "_" + str(self.overlap)
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.finger)
+            + "_"
+            + str(self.duration)
+            + "_"
+            + str(self.overlap)
+        )

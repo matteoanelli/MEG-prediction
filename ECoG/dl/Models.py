@@ -4,9 +4,10 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 from MEG.dl.models import *
+
 
 class Flatten_MEG(nn.Module):
     def forward(self, x):
@@ -18,7 +19,7 @@ class Print(nn.Module):
         super(Print, self).__init__()
 
     def forward(self, x):
-        print('Inside print layer...')
+        print("Inside print layer...")
         print(x.shape)
         return x
 
@@ -29,10 +30,7 @@ class Sample(nn.Module):
         super(Sample, self).__init__()
 
         self.net = nn.Sequential(
-            Flatten_MEG(),
-            nn.Linear(62 * 1000, 1),
-            nn.ReLU(),
-            nn.Dropout(1)
+            Flatten_MEG(), nn.Linear(62 * 1000, 1), nn.ReLU(), nn.Dropout(1)
         )
 
     def forward(self, x):
@@ -57,6 +55,7 @@ class DNN(nn.Module):
     def forward(self, x):
         return self.net(x).squeeze(1)
 
+
 # LeNet-like network solution.
 class LeNet5_ECoG(nn.Module):
     def __init__(self, n_times):
@@ -75,8 +74,10 @@ class LeNet5_ECoG(nn.Module):
         elif n_times == 701:
             self.n_times = 8 * 168
         else:
-            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
-                             " got instead {}".format(n_times))
+            raise ValueError(
+                "Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                " got instead {}".format(n_times)
+            )
         self.net = nn.Sequential(
             nn.Conv2d(1, 16, 5, stride=1, bias=False),
             nn.ReLU(),
@@ -100,7 +101,6 @@ class LeNet5_ECoG(nn.Module):
             nn.Linear(120, 1),
         )
 
-
     def forward(self, x):
         return self.net(x).squeeze(1)
 
@@ -116,10 +116,19 @@ class SCNN_ECoG(nn.Module):
             * The MLP block that combine all the feature previously extracted to optimally predict the target.
     """
 
-    def __init__(self, n_spatial_layer, spatial_kernel_size,
-                 temporal_n_block, temporal_kernel_size, n_times,
-                 mlp_n_layer, mlp_hidden, mlp_dropout,
-                 max_pool=None, activation="relu"):
+    def __init__(
+        self,
+        n_spatial_layer,
+        spatial_kernel_size,
+        temporal_n_block,
+        temporal_kernel_size,
+        n_times,
+        mlp_n_layer,
+        mlp_hidden,
+        mlp_dropout,
+        max_pool=None,
+        activation="relu",
+    ):
         """
 
         Args:
@@ -147,16 +156,32 @@ class SCNN_ECoG(nn.Module):
         """
         super(SCNN_ECoG, self).__init__()
 
-        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)
+        self.spatial = SpatialBlock(
+            n_spatial_layer, spatial_kernel_size, activation
+        )
 
-        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
+        self.temporal = Temporal(
+            temporal_n_block,
+            temporal_kernel_size,
+            n_times,
+            activation,
+            max_pool,
+        )
 
         self.flatten = Flatten_MEG()
 
         # self.concatenate = Concatenate()
 
-        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ #TODO substitue the number of channel
-        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
+        self.in_channel = (
+            temporal_n_block
+            * 16
+            * n_spatial_layer
+            * 16
+            * self.temporal.n_times_
+        )  # TODO substitue the number of channel
+        self.ff = MLP(
+            self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation
+        )
 
     def forward(self, x):
         x = self.spatial(x)
@@ -180,10 +205,19 @@ class RPS_SCNN_ECoG(nn.Module):
             * The MLP block that combine all the feature previously extracted to optimally predict the target.
     """
 
-    def __init__(self, n_spatial_layer, spatial_kernel_size,
-                 temporal_n_block, temporal_kernel_size, n_times,
-                 mlp_n_layer, mlp_hidden, mlp_dropout,
-                 max_pool=None, activation="relu"):
+    def __init__(
+        self,
+        n_spatial_layer,
+        spatial_kernel_size,
+        temporal_n_block,
+        temporal_kernel_size,
+        n_times,
+        mlp_n_layer,
+        mlp_hidden,
+        mlp_dropout,
+        max_pool=None,
+        activation="relu",
+    ):
         """
 
         Args:
@@ -211,16 +245,33 @@ class RPS_SCNN_ECoG(nn.Module):
         """
         super(RPS_SCNN_ECoG, self).__init__()
 
-        self.spatial = SpatialBlock(n_spatial_layer, spatial_kernel_size, activation)
+        self.spatial = SpatialBlock(
+            n_spatial_layer, spatial_kernel_size, activation
+        )
 
-        self.temporal = Temporal(temporal_n_block, temporal_kernel_size, n_times, activation, max_pool)
+        self.temporal = Temporal(
+            temporal_n_block,
+            temporal_kernel_size,
+            n_times,
+            activation,
+            max_pool,
+        )
 
         # self.flatten = Flatten_MEG()
 
         self.concatenate = Concatenate()
 
-        self.in_channel = temporal_n_block * 16 * n_spatial_layer * 16 * self.temporal.n_times_ + 62 * 6 #TODO substitue the number of channel
-        self.ff = MLP(self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation)
+        self.in_channel = (
+            temporal_n_block
+            * 16
+            * n_spatial_layer
+            * 16
+            * self.temporal.n_times_
+            + 62 * 6
+        )  # TODO substitue the number of channel
+        self.ff = MLP(
+            self.in_channel, mlp_hidden, mlp_n_layer, mlp_dropout, activation
+        )
 
     def forward(self, x, bp):
         x = self.spatial(x)
@@ -234,7 +285,6 @@ class RPS_SCNN_ECoG(nn.Module):
 
 
 class ResNet_ECoG(nn.Module):
-
     def __init__(self, n_blocks, n_channels=64, n_times=501):
         """
         TODO: Implement for different subjects (adapt the input shape to Linear. 62 inchannel --> 2)
@@ -262,20 +312,33 @@ class ResNet_ECoG(nn.Module):
         elif n_times == 701:
             self.n_times = 55
         else:
-            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
-                             " got instead {}".format(n_times))
+            raise ValueError(
+                "Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                " got instead {}".format(n_times)
+            )
 
         assert len(n_blocks) == 3, "The number of groups should be three."
         super(ResNet_ECoG, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=n_channels, kernel_size=10, stride=1, padding=2, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels=1,
+            out_channels=n_channels,
+            kernel_size=10,
+            stride=1,
+            padding=2,
+            bias=False,
+        )
         self.bn1 = nn.BatchNorm2d(n_channels)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=[3, 5], stride=3, padding=1)
 
         self.group1 = GroupOfBlocks(n_channels, n_channels, n_blocks[0])
-        self.group2 = GroupOfBlocks(n_channels, 2 * n_channels, n_blocks[1], stride=2)
-        self.group3 = GroupOfBlocks(2 * n_channels, 4 * n_channels, n_blocks[2], stride=2)
+        self.group2 = GroupOfBlocks(
+            n_channels, 2 * n_channels, n_blocks[1], stride=2
+        )
+        self.group3 = GroupOfBlocks(
+            2 * n_channels, 4 * n_channels, n_blocks[2], stride=2
+        )
 
         self.avgpool = nn.AvgPool2d(kernel_size=4, stride=1)
         self.flatten = Flatten_MEG()
@@ -303,47 +366,61 @@ class ResNet_ECoG(nn.Module):
         y of shape (batch_size, 10): Outputs of the network.
         """
 
-        if verbose: print(x.shape)
+        if verbose:
+            print(x.shape)
         x = self.conv1(x)
 
-        if verbose: print('conv1: ', x.shape)
+        if verbose:
+            print("conv1: ", x.shape)
         x = self.bn1(x)
 
-        if verbose: print('bn1: ', x.shape)
+        if verbose:
+            print("bn1: ", x.shape)
         x = self.relu(x)
 
-        if verbose: print('relu: ', x.shape)
+        if verbose:
+            print("relu: ", x.shape)
         x = self.maxpool(x)
 
-        if verbose: print('maxpool:', x.shape)
+        if verbose:
+            print("maxpool:", x.shape)
         x = self.group1(x)
 
-        if verbose: print('group1: ', x.shape)
+        if verbose:
+            print("group1: ", x.shape)
         x = self.group2(x)
 
-        if verbose: print('group2: ', x.shape)
+        if verbose:
+            print("group2: ", x.shape)
         x = self.group3(x)
 
-        if verbose: print('group3: ', x.shape)
+        if verbose:
+            print("group3: ", x.shape)
         x = self.avgpool(x)
 
-        if verbose: print('avgpool:', x.shape)
+        if verbose:
+            print("avgpool:", x.shape)
         x = self.flatten(x)
 
-        if verbose: print('x.view: ', x.shape)
+        if verbose:
+            print("x.view: ", x.shape)
         x = self.dropout(self.fc1(x))
 
-        if verbose: print('fc1: ', x.shape)
+        if verbose:
+            print("fc1: ", x.shape)
         x = self.fc2(x)
 
-        if verbose: print('out: ', x.shape)
+        if verbose:
+            print("out: ", x.shape)
 
         return x.squeeze()
+
 
 class MNet_ECoG(nn.Module):
     """
         Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x]
     """
+
     def __init__(self, n_times):
         """
 
@@ -352,58 +429,64 @@ class MNet_ECoG(nn.Module):
                 n_times dimension of the input data.
         """
         super(MNet_ECoG, self).__init__()
-        if n_times == 501:  #TODO automatic n_times
+        if n_times == 501:  # TODO automatic n_times
             self.n_times = 1
         elif n_times == 601:
             self.n_times = 2
         elif n_times == 701:
             self.n_times = 4
         else:
-            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
-                             " got instead {}".format(n_times))
+            raise ValueError(
+                "Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                " got instead {}".format(n_times)
+            )
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
-                                     nn.ReLU(),
-                                     nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
-                                     nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                     )
+        self.spatial = nn.Sequential(
+            nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+        )
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
-                                      nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      )
+        self.temporal = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
+            nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+        )
 
         self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times, 1024),
-                                nn.BatchNorm1d(num_features=1024),
-                                nn.ReLU(),
-                                nn.Dropout(0.5),
-                                nn.Linear(1024, 1024),
-                                nn.BatchNorm1d(num_features=1024),
-                                nn.ReLU(),
-                                nn.Dropout(0.5),
-                                nn.Linear(1024, 1))
+        self.ff = nn.Sequential(
+            nn.Linear(256 * 46 * self.n_times, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1),
+        )
 
     def forward(self, x):
         x = self.spatial(x)
         x = torch.transpose(x, 1, 2)
-        
+
         x = self.temporal(x)
         x = self.flatten(x)
         x = self.ff(x)
@@ -415,6 +498,7 @@ class RPS_MNet_ECoG(nn.Module):
     """
         Model inspired by [Aoe at al., 10.1038/s41598-019-41500-x] integrated with bandpower.
     """
+
     def __init__(self, n_times):
         """
 
@@ -423,55 +507,61 @@ class RPS_MNet_ECoG(nn.Module):
                 n_times dimension of the input data.
         """
         super(RPS_MNet_ECoG, self).__init__()
-        if n_times == 501:  #TODO automatic n_times
+        if n_times == 501:  # TODO automatic n_times
             self.n_times = 1
         elif n_times == 601:
             self.n_times = 2
         elif n_times == 701:
             self.n_times = 4
         else:
-            raise ValueError("Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
-                             " got instead {}".format(n_times))
+            raise ValueError(
+                "Network can work only with n_times = 501, 601, 701 (epoch duration of 1., 1.2, 1.4 sec),"
+                " got instead {}".format(n_times)
+            )
 
-        self.spatial = nn.Sequential(nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
-                                     nn.ReLU(),
-                                     nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
-                                     nn.ReLU(),
-                                     nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                     )
+        self.spatial = nn.Sequential(
+            nn.Conv2d(1, 32, stride=(1, 2), kernel_size=[62, 64], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, stride=(1, 2), kernel_size=[1, 16], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+        )
 
-        self.temporal = nn.Sequential(nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
-                                      nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
-                                      nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
-                                      nn.ReLU(),
-                                      )
+        self.temporal = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=[8, 8], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=[8, 8], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[5, 3], stride=(1, 2)),
+            nn.Conv2d(32, 64, kernel_size=[1, 4], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=[1, 4], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            nn.Conv2d(64, 128, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=[1, 2], stride=(1, 2)),
+            nn.Conv2d(128, 256, kernel_size=[1, 2], bias=True),
+            nn.ReLU(),
+        )
 
         self.concatenate = Concatenate()
 
         # self.flatten = Flatten_MEG()
 
-        self.ff = nn.Sequential(nn.Linear(256 * 46 * self.n_times + 62 * 6, 1024),
-                                nn.BatchNorm1d(num_features=1024),
-                                nn.ReLU(),
-                                nn.Dropout(0.5),
-                                nn.Linear(1024, 1024),
-                                nn.BatchNorm1d(num_features=1024),
-                                nn.ReLU(),
-                                nn.Dropout(0.5),
-                                nn.Linear(1024, 1))
+        self.ff = nn.Sequential(
+            nn.Linear(256 * 46 * self.n_times + 62 * 6, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1024),
+            nn.BatchNorm1d(num_features=1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1),
+        )
 
     def forward(self, x, pb):
         x = self.spatial(x)
@@ -481,4 +571,3 @@ class RPS_MNet_ECoG(nn.Module):
         x = self.ff(x)
 
         return x.squeeze(1)
-

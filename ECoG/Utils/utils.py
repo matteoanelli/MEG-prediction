@@ -9,38 +9,54 @@ import scipy.io as sio
 from sklearn.model_selection import train_test_split
 from mne.decoding import Scaler
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 from MEG.Utils.utils import *
 
 
 def create_raw(X, y, n_channels, sampling_rate):
 
-    info = mne.create_info(n_channels+1, sampling_rate, "ecog")
+    info = mne.create_info(n_channels + 1, sampling_rate, "ecog")
     info["description"] = "ECoG dataset IV BCI competition"
 
-    return mne.io.RawArray(np.concatenate((X, np.expand_dims(y, axis=0)), axis=0), info)
+    return mne.io.RawArray(
+        np.concatenate((X, np.expand_dims(y, axis=0)), axis=0), info
+    )
 
 
-def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"):
+def import_ECoG(
+    datadir,
+    filename,
+    finger,
+    duration,
+    overlap,
+    normalize_input=True,
+    y_measure="mean",
+):
     # TODO add finger choice dict
     path = "".join([datadir, filename])
     if os.path.exists(path):
         dataset = sio.loadmat(path)
         X = dataset["train_data"].astype(np.float).T
-        assert finger >= 0 and finger < 5, "Finger input not valid, range value from 0 to 4."
+        assert (
+            finger >= 0 and finger < 5
+        ), "Finger input not valid, range value from 0 to 4."
         y = dataset["train_dg"][:, finger]  #
 
         raw = create_raw(X, y, X.shape[0], sampling_rate=1000)
 
         # Generate fixed length events.
-        events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+        events = mne.make_fixed_length_events(
+            raw, duration=duration, overlap=overlap
+        )
         # Notch filter out some specific noisy bands
         raw.notch_filter([50, 100])
         # Band pass the input data
-        raw.filter(l_freq=1., h_freq=70)
+        raw.filter(l_freq=1.0, h_freq=70)
 
-        epochs = mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2)
+        epochs = mne.Epochs(
+            raw, events, tmin=0.0, tmax=duration, baseline=(0, 0), decim=2
+        )
 
         X = epochs.get_data()[:, :-1, :]
         y = epochs.get_data()[:, -1, :]
@@ -65,31 +81,47 @@ def import_ECoG(datadir, filename, finger, duration, overlap, normalize_input=Tr
         print("No such file '{}'".format(path), file=sys.stderr)
 
 
-def import_ECoG_rps(datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"):
+def import_ECoG_rps(
+    datadir,
+    filename,
+    finger,
+    duration,
+    overlap,
+    normalize_input=True,
+    y_measure="mean",
+):
     # TODO add finger choice dict
     path = "".join([datadir, filename])
     if os.path.exists(path):
         dataset = sio.loadmat(path)
         X = dataset["train_data"].astype(np.float).T
-        assert finger >= 0 and finger < 5, "Finger input not valid, range value from 0 to 4."
+        assert (
+            finger >= 0 and finger < 5
+        ), "Finger input not valid, range value from 0 to 4."
         y = dataset["train_dg"][:, finger]  #
 
         raw = create_raw(X, y, X.shape[0], sampling_rate=1000)
 
         # Generate fixed length events.
-        events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+        events = mne.make_fixed_length_events(
+            raw, duration=duration, overlap=overlap
+        )
         # Notch filter out some specific noisy bands
         raw.notch_filter([50, 100])
         # Band pass the input data
-        raw.filter(l_freq=1., h_freq=70)
+        raw.filter(l_freq=1.0, h_freq=70)
 
-        epochs = mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2)
+        epochs = mne.Epochs(
+            raw, events, tmin=0.0, tmax=duration, baseline=(0, 0), decim=2
+        )
 
         X = epochs.get_data()[:, :-1, :]
         y = epochs.get_data()[:, -1, :]
 
         bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-        bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
+        bp = bandpower_multi(
+            X, fs=epochs.info["sfreq"], bands=bands, relative=True
+        )
 
         # Normalize data
         if normalize_input:
@@ -108,14 +140,36 @@ def import_ECoG_rps(datadir, filename, finger, duration, overlap, normalize_inpu
         print("No such file '{}'".format(path), file=sys.stderr)
 
 
-def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, overlap=0.0, rps=True):
+def import_ECoG_Tensor(
+    datadir,
+    filename,
+    finger,
+    duration,
+    sample_rate=1000,
+    overlap=0.0,
+    rps=True,
+):
 
     if rps:
-        X, y, bp = import_ECoG_rps(datadir, filename, finger, duration, overlap=overlap, normalize_input=True,
-                                   y_measure="mean")
+        X, y, bp = import_ECoG_rps(
+            datadir,
+            filename,
+            finger,
+            duration,
+            overlap=overlap,
+            normalize_input=True,
+            y_measure="mean",
+        )
     else:
-        X, y = import_ECoG(datadir, filename, finger, duration, overlap=overlap, normalize_input=True,
-                           y_measure="mean")
+        X, y = import_ECoG(
+            datadir,
+            filename,
+            finger,
+            duration,
+            overlap=overlap,
+            normalize_input=True,
+            y_measure="mean",
+        )
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
 
@@ -127,6 +181,7 @@ def import_ECoG_Tensor(datadir, filename, finger, duration, sample_rate=1000, ov
         return X, y, bp
     else:
         return X, y
+
 
 #
 # def filter_data(X, sampling_rate):

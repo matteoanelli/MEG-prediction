@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from mne.decoding import Scaler
 from mne.decoding import UnsupervisedSpatialFilter
+from mne.time_frequency import psd_array_welch
 from numpy import trapz
 from scipy.integrate import cumtrapz
 from scipy.integrate import simps
@@ -23,7 +24,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as skScaler
 
 
-def bandpower_1d(data, sf, band, window_sec=None, relative=False):
+def bandpower_1d(data, sf, band, nperseg=250, relative=False):
     """
         Compute the average power of the signal x in a specific frequency band.
         https://raphaelvallat.com/bandpower.html
@@ -49,14 +50,10 @@ def bandpower_1d(data, sf, band, window_sec=None, relative=False):
     # band = np.asarray(band)
     low, high = band
 
-    # Define window length
-    if window_sec is not None:
-        nperseg = window_sec * sf
-    else:
-        nperseg = (2 / low) * sf
-
     # Compute the modified periodogram (Welch)
-    freqs, psd = welch(data, sf, nperseg=nperseg)
+    # TODO: generalize freq values
+    psd, freqs = psd_array_welch(data, sf, 1., 70., n_per_seg=int(250 / 2),
+                                 n_overlap=int(250 / 4), n_jobs=1)
 
     # Frequency resolution
     freq_res = freqs[1] - freqs[0]
@@ -88,7 +85,7 @@ def bandpower_1d(data, sf, band, window_sec=None, relative=False):
 #         return bp
 
 
-def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
+def bandpower(x, fs, bands, nperseg=250, relative=True):
     """
     Compute the average power of the multi-channel signal x in a specific frequency band.
     Args:
@@ -109,18 +106,32 @@ def bandpower(x, fs, fmin, fmax, window_sec=None, relative=True):
         bp (nd-array): [n_epoch, n_channel, 1]
             Absolute or relative band power.
     """
-    n_epoch, n_channel, _ = x.shape
 
-    bp = np.zeros((n_epoch, n_channel, 1))
-    for epoch in range(n_epoch):
-        for channel in range(n_channel):
-            bp[epoch, channel] = bandpower_1d(x[epoch, channel, :], fs, [fmin, fmax],
-                                              window_sec=window_sec, relative=relative)
+    #TODO fix nperseg
+
+    psd, freqs = psd_array_welch(x, fs, 1., 70., n_per_seg=int(fs/2),
+                                 n_overlap=int(fs/4), n_jobs=1)
+    # Frequency resolution
+    freq_res = freqs[1] - freqs[0]
+    n_channel, _ = x.shape
+    bp = np.zeros((n_channel, len(bands)))
+    for idx, band in enumerate(bands):
+        low, high = band
+        # Find closest indices of band in frequency vector
+        idx_band = np.logical_and(freqs >= low, freqs <= high)
+
+        # Integral approximation of the spectrum using Simpson's rule.
+        _bp = simps(psd[..., idx_band], dx=freq_res, axis=-1)
+
+        if relative:
+            _bp /= simps(psd, dx=freq_res, axis=-1)
+
+        bp[:, idx] = _bp
 
     return bp
 
 
-def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
+def bandpower_multi(x, fs, bands,  nperseg=250, relative=True):
     """
     Compute the average power of the multi-channel signal x in multiple frequency bands.
     Args:
@@ -144,9 +155,23 @@ def bandpower_multi(x, fs, bands, window_sec=None, relative=True):
     bp_list = []
     for idx, band in enumerate(bands):
         fmin, fmax = band
-        bp_list.append(bandpower(x, fs, fmin, fmax, window_sec=window_sec, relative=relative))
+        bp_list.append(
+            bandpower(
+                x, fs, fmin, fmax,  nperseg=nperseg, relative=relative
+            )
+        )
 
     bp = np.concatenate(bp_list, -1)
+
+    return bp
+
+
+def bandpower_multi_bands(x, fs, bands,  nperseg=250, relative=True):
+
+    n_epoch, n_channel, _ = x.shape
+    bp = np.zeros((n_epoch, n_channel, len(bands)))
+    for e in range(n_epoch):
+        bp[e] = bandpower(x[e], fs, bands, nperseg=nperseg, relative=relative)
 
     return bp
 
@@ -170,12 +195,27 @@ def window_stack(x, window, overlap, sample_rate):
     window_size = round(window * sample_rate)
     stride = round((window - overlap) * sample_rate)
     print(x.shape)
-    print("window {}, stride {}, x.shape {}".format(window_size, stride, x.shape))
+    print(
+        "window {}, stride {}, x.shape {}".format(window_size, stride, x.shape)
+    )
 
-    return torch.cat([x[:, i: min(x.shape[1], i + window_size)] for i in range(0, x.shape[1], stride)], dim=1, )
+    return torch.cat(
+        [
+            x[:, i : min(x.shape[1], i + window_size)]
+            for i in range(0, x.shape[1], stride)
+        ],
+        dim=1,
+    )
 
 
-def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement", rps=True):
+def import_MEG(
+    raw_fnames,
+    duration,
+    overlap,
+    normalize_input=True,
+    y_measure="movement",
+    rps=True,
+):
     """
         Function that read the input files and epochs them using fix length overlapping windows. It returns the an
         array-like of the raw epoched data. It generates 1 event each (duration-overlap) s. Therefore, this value
@@ -217,20 +257,33 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
             raw = mne.io.Raw(fname, preload=True)
             # Generate fixed length events.
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            events = mne.make_fixed_length_events(
+                raw, duration=duration, overlap=overlap
+            )
             # Isolate analysis to gradiometer and misc channels only
-            raw.pick_types(meg='grad', misc=True)
+            raw.pick_types(meg="grad", misc=True)
             # Notch filter out some specific noisy bands
             raw.notch_filter([50, 100])
             # Band pass the input data
-            raw.filter(l_freq=1., h_freq=70)
+            raw.filter(l_freq=1.0, h_freq=70)
             # Get indices of accelerometer channels (y data)
-            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                         include=["MISC001", "MISC002"])
-            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                          include=["MISC003", "MISC004"])
+            accelerometer_picks_left = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC001", "MISC002"]
+            )
+            accelerometer_picks_right = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC003", "MISC004"]
+            )
             # Genrate eochs
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            epochs.append(
+                mne.Epochs(
+                    raw,
+                    events,
+                    tmin=0.0,
+                    tmax=duration,
+                    baseline=(0, 0),
+                    decim=2,
+                )
+            )
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -242,25 +295,36 @@ def import_MEG(raw_fnames, duration, overlap, normalize_input=True, y_measure="m
     X = epochs.get_data()[:, :204, :]
 
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
+    bp = bandpower_multi(
+        X, fs=epochs.info["sfreq"], bands=bands, relative=True
+    )
 
     # Normalize data
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
     # Pick the y vales per each hand
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
-    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+    y_left = y_reshape(
+        y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]),
+        measure=y_measure,
+    )
+    y_right = y_reshape(
+        y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]),
+        measure=y_measure,
+    )
 
     print(
-        "The input data are of shape: {}, the corresponding y_left shape is: {}," \
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"
         "the corresponding y_right shape is: {}".format(
             X.shape, y_left.shape, y_right.shape
         )
     )
     return X, y_left, y_right, bp
 
-def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
+
+def import_MEG_no_bp(
+    raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"
+):
     """
         Function that read the input files and epochs them using fix length overlapping windows. It returns the an
         array-like of the raw epoched data. It generates 1 event each (duration-overlap) s. Therefore, this value
@@ -299,20 +363,33 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
             raw = mne.io.Raw(fname, preload=True)
             # Generate fixed length events.
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
+            events = mne.make_fixed_length_events(
+                raw, duration=duration, overlap=overlap
+            )
             # Isolate analysis to gradiometer and misc channels only
-            raw.pick_types(meg='grad', misc=True)
+            raw.pick_types(meg="grad", misc=True)
             # Notch filter out some specific noisy bands
             raw.notch_filter([50, 100])
             # Band pass the input data
-            raw.filter(l_freq=1., h_freq=70)
+            raw.filter(l_freq=1.0, h_freq=70)
             # Get indices of accelerometer channels (y data)
-            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                         include=["MISC001", "MISC002"])
-            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                          include=["MISC003", "MISC004"])
+            accelerometer_picks_left = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC001", "MISC002"]
+            )
+            accelerometer_picks_right = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC003", "MISC004"]
+            )
             # Genrate eochs
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            epochs.append(
+                mne.Epochs(
+                    raw,
+                    events,
+                    tmin=0.0,
+                    tmax=duration,
+                    baseline=(0, 0),
+                    decim=2,
+                )
+            )
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -328,11 +405,17 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
         X = standard_scaling(X, scalings="mean", log=True)
 
     # Pick the y vales per each hand
-    y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
-    y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
+    y_left = y_reshape(
+        y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]),
+        measure=y_measure,
+    )
+    y_right = y_reshape(
+        y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]),
+        measure=y_measure,
+    )
 
     print(
-        "The input data are of shape: {}, the corresponding y_left shape is: {}," \
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"
         "the corresponding y_right shape is: {}".format(
             X.shape, y_left.shape, y_right.shape
         )
@@ -340,8 +423,14 @@ def import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=True, y_meas
     return X, y_left, y_right
 
 
-
-def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement", rps=True):
+def import_MEG_Tensor(
+    raw_fnames,
+    duration,
+    overlap,
+    normalize_input=True,
+    y_measure="movement",
+    rps=True,
+):
     """
     Generate the epoched data as tensor to create the custom dataset for DL processing.
     TODO: Check X_out shape: may be [n_epochs,, 1, n_channels, n_times]
@@ -373,11 +462,21 @@ def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_mea
     """
     # Genrate the epoched data
     if rps:
-        X, y_left, y_right, bp = import_MEG(raw_fnames, duration, overlap, normalize_input=normalize_input,
-                                        y_measure=y_measure)
+        X, y_left, y_right, bp = import_MEG(
+            raw_fnames,
+            duration,
+            overlap,
+            normalize_input=normalize_input,
+            y_measure=y_measure,
+        )
     else:
-        X, y_left, y_right = import_MEG_no_bp(raw_fnames, duration, overlap, normalize_input=normalize_input,
-                                            y_measure=y_measure)
+        X, y_left, y_right = import_MEG_no_bp(
+            raw_fnames,
+            duration,
+            overlap,
+            normalize_input=normalize_input,
+            y_measure=y_measure,
+        )
 
     # Convert from Numpy nd-arrays to Pytorch Tensor.
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
@@ -391,7 +490,9 @@ def import_MEG_Tensor(raw_fnames, duration, overlap, normalize_input=True, y_mea
         return X, torch.stack([y_left, y_right], dim=1)
 
 
-def import_MEG_Tensor_form_file(data_dir, normalize_input=True, y_measure="movement"):
+def import_MEG_Tensor_form_file(
+    data_dir, normalize_input=True, y_measure="movement"
+):
     """
     Import pre-epoched data. Data depends on previous values of duration and overlap.
     TODO: integrate bandpowers values.
@@ -423,7 +524,7 @@ def import_MEG_Tensor_form_file(data_dir, normalize_input=True, y_measure="movem
     y_right = y_reshape(y_PCA(y_right), measure=y_measure)
 
     print(
-        "The input data are of shape: {}, the corresponding y_left shape is: {}," \
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"
         "the corresponding y_right shape is: {}".format(
             X.shape, y_left.shape, y_right.shape
         )
@@ -453,9 +554,13 @@ def filter_data(X, sampling_rate):
 
     # careful with x shape, the last dimension should be n_times
     band_ranges = [(60, 200)]
-    X_filtered = np.zeros((X.shape[0], X.shape[1] * len(band_ranges)), dtype=float)
+    X_filtered = np.zeros(
+        (X.shape[0], X.shape[1] * len(band_ranges)), dtype=float
+    )
     for index, band in enumerate(band_ranges):
-        X_filtered[:, X.shape[1] * index: X.shape[1] * (index + 1)] = filter.filter_data(
+        X_filtered[
+            :, X.shape[1] * index : X.shape[1] * (index + 1)
+        ] = filter.filter_data(
             X, sampling_rate, band[0], band[1], method="fir"
         )
 
@@ -483,7 +588,9 @@ def split_data(X, y, test_size=0.3, random_state=0):
         y_train (nd-array): [n_epochs*(1-test_size), n_direction*2, n_times]
         y_test (nd-array): [n_epochs*test_size, n_direction*2, n_times]
     """
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
 
     return X_train, X_test, y_train, y_test
 
@@ -543,29 +650,31 @@ def y_reshape(y, measure="movement", scaling=True):
 
     """
     # Reshape using the mean of the n_times
-    if measure == 'mean':
+    if measure == "mean":
         y = np.sqrt(np.mean(np.power(y, 2), axis=-1))
         if scaling:
             y = standard_scaling(y, log=False)
     # Reshape summing across the n_times
-    elif measure == 'movement':
+    elif measure == "movement":
         y = np.sum(np.abs(y), axis=-1)
         if scaling:
             y = standard_scaling(y, log=False)
     # Reshape integrating across the n_times
-    elif measure == 'velocity':
+    elif measure == "velocity":
         y = trapz(y, axis=-1) / y.shape[-1]
         if scaling:
             y = standard_scaling(y, log=False)
     # Reshape integrating twice across the n_times
-    elif measure == 'position':
+    elif measure == "position":
         vel = cumtrapz(y, axis=-1)
         y = trapz(vel, axis=-1) / y.shape[-1]
         if scaling:
             y = standard_scaling(y, log=False)
 
     else:
-        raise ValueError("measure should be one of: mean, movement, velocity, position")
+        raise ValueError(
+            "measure should be one of: mean, movement, velocity, position"
+        )
 
     return y.squeeze()
 
@@ -601,9 +710,9 @@ def y_reshape_final(y):
     pca = UnsupervisedSpatialFilter(PCA(1), average=False)
     y = pca.fit_transform(y)  # [n_epoch, 1, n_times]
     # sum abs values
-    y = np.sum(np.abs(y), axis=-1) # [n_epoch, ]
+    y = np.sum(np.abs(y), axis=-1)  # [n_epoch, ]
     # standard-scale the values
-    scaler = Scaler(scalings='mean')
+    scaler = Scaler(scalings="mean")
     y = scaler.fit_transform(y)  # [n_epoch, ]
 
     return y.squeeze()
@@ -622,7 +731,7 @@ def save_pytorch_model(model, path, filename):
     """
     if os.path.exists(path):
         # do_save = input("Do you want to save the model (type yes to confirm)? ").lower()
-        do_save = 'y'
+        do_save = "y"
         if do_save == "yes" or do_save == "y":
             torch.save(model.state_dict(), os.path.join(path, filename))
             print("Model saved to {}.".format(os.path.join(path, filename)))
@@ -707,7 +816,6 @@ def standard_scaling(data, scalings="mean", log=False):
     return data
 
 
-
 def standard_scaling_sklearn(data):
     """
     Standard scale the input data on last dimension. It center the data to 0 and scale to unit variance.
@@ -726,6 +834,7 @@ def standard_scaling_sklearn(data):
         data[e, ...] = scaler.fit_transform(data[e, ...])
 
     return data
+
 
 def transform_data():
     pass
@@ -800,7 +909,10 @@ def len_split(len):
 
     return train, valid, test
 
-def import_MEG_2(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
+
+def import_MEG_2(
+    raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"
+):
     """
             Function that read the input files and epochs them using fix length overlapping windows. It returns the an
             array-like of the raw epoched data. It generates 1 event each (duration-overlap) s. Therefore, this value
@@ -839,17 +951,30 @@ def import_MEG_2(raw_fnames, duration, overlap, normalize_input=True, y_measure=
         if os.path.exists(fname):
             raw = mne.io.Raw(fname, preload=True)
             # events = mne.find_events(raw, stim_channel='STI101', min_duration=0.003)
-            events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
-            raw.pick_types(meg='grad', misc=True)
+            events = mne.make_fixed_length_events(
+                raw, duration=duration, overlap=overlap
+            )
+            raw.pick_types(meg="grad", misc=True)
             raw.notch_filter([50, 100])
-            raw.filter(l_freq=1., h_freq=70)
+            raw.filter(l_freq=1.0, h_freq=70)
 
             # get indices of accelerometer channels
-            accelerometer_picks_left = mne.pick_channels(raw.info['ch_names'],
-                                                         include=["MISC001", "MISC002"])
-            accelerometer_picks_right = mne.pick_channels(raw.info['ch_names'],
-                                                          include=["MISC003", "MISC004"])
-            epochs.append(mne.Epochs(raw, events, tmin=0., tmax=duration, baseline=(0, 0), decim=2))
+            accelerometer_picks_left = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC001", "MISC002"]
+            )
+            accelerometer_picks_right = mne.pick_channels(
+                raw.info["ch_names"], include=["MISC003", "MISC004"]
+            )
+            epochs.append(
+                mne.Epochs(
+                    raw,
+                    events,
+                    tmin=0.0,
+                    tmax=duration,
+                    baseline=(0, 0),
+                    decim=2,
+                )
+            )
             del raw
         else:
             print("No such file '{}'".format(fname), file=sys.stderr)
@@ -861,19 +986,25 @@ def import_MEG_2(raw_fnames, duration, overlap, normalize_input=True, y_measure=
     X = epochs.get_data()[:, :204, :]
 
     bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
-    bp = bandpower_multi(X, fs=epochs.info['sfreq'], bands=bands, relative=True)
+    bp = bandpower_multi(
+        X, fs=epochs.info["sfreq"], bands=bands, relative=True
+    )
 
     if normalize_input:
         X = standard_scaling(X, scalings="mean", log=True)
 
-    y_left = y_reshape(epochs.get_data()[:, accelerometer_picks_left, :], measure=y_measure)
-    y_right = y_reshape(epochs.get_data()[:, accelerometer_picks_right, :], measure=y_measure)
+    y_left = y_reshape(
+        epochs.get_data()[:, accelerometer_picks_left, :], measure=y_measure
+    )
+    y_right = y_reshape(
+        epochs.get_data()[:, accelerometer_picks_right, :], measure=y_measure
+    )
 
     # y_left = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_left, :]), measure=y_measure)
     # y_right = y_reshape(y_PCA(epochs.get_data()[:, accelerometer_picks_right, :]), measure=y_measure)
 
     print(
-        "The input data are of shape: {}, the corresponding y_left shape is: {},"\
+        "The input data are of shape: {}, the corresponding y_left shape is: {},"
         "the corresponding y_right shape is: {}".format(
             X.shape, y_left.shape, y_right.shape
         )
@@ -881,7 +1012,9 @@ def import_MEG_2(raw_fnames, duration, overlap, normalize_input=True, y_measure=
     return X, y_left, y_right, bp
 
 
-def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"):
+def import_MEG_Tensor_2(
+    raw_fnames, duration, overlap, normalize_input=True, y_measure="movement"
+):
     """
         Generate the epoched data as tensor to create the custom dataset for DL processing with the 2 directions as
         target.
@@ -913,7 +1046,13 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
                 Bandpowers values.
         """
 
-    X, y_left, y_right, bp = import_MEG_2(raw_fnames, duration, overlap, normalize_input=normalize_input, y_measure=y_measure)
+    X, y_left, y_right, bp = import_MEG_2(
+        raw_fnames,
+        duration,
+        overlap,
+        normalize_input=normalize_input,
+        y_measure=y_measure,
+    )
 
     X = torch.from_numpy(X.astype(np.float32)).unsqueeze(1)
 
@@ -924,7 +1063,9 @@ def import_MEG_Tensor_2(raw_fnames, duration, overlap, normalize_input=True, y_m
     return X, torch.stack([y_left, y_right], dim=1), bp
 
 
-def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"):
+def import_MEG_cross_subject_train(
+    data_dir, file_name, subject, hand=0, y="pca"
+):
     """
     Import the data and generate the train set.
     Test set composed by input subject.
@@ -974,11 +1115,20 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"
                 if sub != ("sub" + str(subject)) and sub != "sub4":
                     X_train.append(f[sub]["MEG"][...])
                     rps_train.append(f[sub]["RPS"][...])
-                    y_train.append(y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True))
+                    y_train.append(
+                        y_reshape(
+                            np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1),
+                            scaling=True,
+                        )
+                    )
 
         if y == "right_pca":
             for sub in subjects:
-                if sub != ("sub" + str(subject)) and sub != "sub3" and sub != "sub5":
+                if (
+                    sub != ("sub" + str(subject))
+                    and sub != "sub3"
+                    and sub != "sub5"
+                ):
                     X_train.append(f[sub]["MEG"][...])
                     rps_train.append(f[sub]["RPS"][...])
                     y_train.append(f[sub]["Y_right"][...])
@@ -990,11 +1140,12 @@ def import_MEG_cross_subject_train(data_dir, file_name, subject, hand=0, y="pca"
     print(X_train.shape)
     print(y_train.shape)
 
-
     return X_train.unsqueeze(1), y_train.unsqueeze(-1).repeat(1, 2), rps_train
 
 
-def import_MEG_cross_subject_test(data_dir, file_name, subject, hand = 0,  y="pca"):
+def import_MEG_cross_subject_test(
+    data_dir, file_name, subject, hand=0, y="pca"
+):
     """
     Import the data and generate the test set.
     Test set composed by input subject.
@@ -1037,20 +1188,22 @@ def import_MEG_cross_subject_test(data_dir, file_name, subject, hand = 0,  y="pc
         if y == "left_single_1":
             X_test = f[sub]["MEG"][...]
             rps_test = f[sub]["RPS"][...]
-            y_test = y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True)
+            y_test = y_reshape(
+                np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1),
+                scaling=True,
+            )
 
         if y == "right_pca":
             X_test = f[sub]["MEG"][...]
             rps_test = f[sub]["RPS"][...]
             y_test = f[sub]["Y_right"][...]
 
-
-
     X_test = torch.from_numpy(X_test)
     rps_test = torch.from_numpy(rps_test)
     y_test = torch.from_numpy(y_test)
 
     return X_test.unsqueeze(1), y_test.unsqueeze(-1).repeat(1, 2), rps_test
+
 
 def len_split_cross(len):
     """
@@ -1074,7 +1227,7 @@ def len_split_cross(len):
     return train, valid
 
 
-def import_MEG_within_subject(data_dir, file_name, subject, hand=0,  y="pca"):
+def import_MEG_within_subject(data_dir, file_name, subject, hand=0, y="pca"):
     """
     Import the data and generate the X, y, and bp tensors.
     Args:
@@ -1115,17 +1268,249 @@ def import_MEG_within_subject(data_dir, file_name, subject, hand=0,  y="pca"):
         if y == "left_single_1":
             X = f[sub]["MEG"][...]
             rps = f[sub]["RPS"][...]
-            y = y_reshape(np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1), scaling=True)
+            y = y_reshape(
+                np.expand_dims(f[sub]["ACC_original"][:, 0, :], 1),
+                scaling=True,
+            )
 
         if y == "right_pca":
             X = f[sub]["MEG"][...]
             rps = f[sub]["RPS"][...]
             y = f[sub]["Y_right"][...]
 
-
-
     X = torch.from_numpy(X)
     rps = torch.from_numpy(rps)
     y = torch.from_numpy(y)
 
     return X.unsqueeze(1), y.unsqueeze(-1).repeat(1, 2), rps
+
+
+def import_MEG_within_subject_ivan(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        X_test, y_test, rps_test
+    """
+    if hand == 0:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        rps_name = "sub_{}_left_rps.npz".format(str(subject))
+    else:
+        file_name = "sub_{}_right.npz".format(str(subject))
+        rps_name = "sub_{}_right_rps.npz".format(str(subject))
+
+    print("data_file :", file_name)
+
+    print("loading dataset for {} ".format(mode))
+
+    dataset = np.load(os.path.join(data_path, file_name))
+    rps_data = np.load(os.path.join(data_path, rps_name))
+    print("datasets :", dataset.files)
+    print("rps :", rps_data.files)
+
+    if mode == "train":
+        X = dataset["X_train"]
+        y = dataset["y_train"]
+        rps = rps_data["rps_train"]
+
+    elif mode == "val":
+        X = dataset["X_val"]
+        y = dataset["y_val"]
+        rps = rps_data["rps_val"]
+
+    elif mode == "test":
+        X = dataset["X_test"]
+        y = dataset["y_test"]
+        rps = rps_data["rps_test"]
+
+    else:
+        raise ValueError("mode value must be train, val or test!")
+
+    X = np.swapaxes(
+        X, 2, -1
+    )  # To reshape the data [n_epoch, 1, n_channel, n_times]
+    print(X.shape)
+
+    # bands = [(1, 4), (4, 8), (8, 10), (10, 13), (13, 30), (30, 70)]
+    # rps = bandpower_multi(X.squeeze(), fs=250, bands=bands, relative=True)
+
+    # local
+    # rps = np.ones([X.shape[0], 204, 6])
+
+    # generate rps
+
+    X = torch.from_numpy(X).float()
+    rps = torch.from_numpy(rps).float()
+    y = torch.from_numpy(y).float()
+
+    return X, y.repeat(1, 2), rps
+
+
+def import_MEG_within_subject_psd(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        y_test, welch_test
+    """
+    if hand == 0:
+        file_name = "sub_{}_left.npz".format(str(subject))
+        welch_name = "sub_{}_left_welch.npz".format(str(subject))
+        rps_name = "sub_{}_left_rps.npz".format(str(subject))
+    else:
+        file_name = "sub_{}_right.npz".format(str(subject))
+        welch_name = "sub_{}_right_welch.npz".format(str(subject))
+        rps_name = "sub_{}_right_rps.npz".format(str(subject))
+
+    print("loading dataset for {} ".format(mode))
+
+    print("data_file :", file_name)
+
+    dataset = np.load(os.path.join(data_path, file_name))
+    welch_data = np.load(os.path.join(data_path, welch_name))
+    rps_data = np.load(os.path.join(data_path, rps_name))
+
+    print("datasets :", dataset.files)
+    print("welch :", welch_data.files)
+    print("rps :", rps_data.files)
+
+    if mode == "train":
+        y = dataset["y_train"]
+        welch = welch_data["welch_train"]
+        rps = rps_data["rps_train"]
+
+    elif mode == "val":
+        y = dataset["y_val"]
+        welch = welch_data["welch_val"]
+        rps = rps_data["rps_val"]
+
+    elif mode == "test":
+        y = dataset["y_test"]
+        welch = welch_data["welch_test"]
+        rps = rps_data["rps_test"]
+
+    else:
+        raise ValueError("mode value must be train, val or test!")
+
+    welch = torch.from_numpy(welch).float()
+    y = torch.from_numpy(y).float()
+    rps = torch.from_numpy(rps).float()
+
+    return y.repeat(1, 2), welch, rps
+
+
+def import_MEG_cross_subject_ivan(data_path, subject=8, hand=0, mode="train"):
+    """
+    Import the data and generate the X, y, and bp tensors.
+    Args:
+        data_dir (string):
+            Path of the data directory.
+        file_name (string):
+            Data file name. file.hdf5.
+        subject (int):
+            Number of the test subject.
+        hand (int):
+            Which hand to use during. 0 = left, 1 = right.
+        y (string):
+            The target variable. The value can be left_pca, left_single.
+            Left_pca: pca to combine the 2 direction of the left hand. Standard scaled channel-wised. Abs-sum to epoch.
+
+    Returns:
+        X_test, y_test, rps_test
+    """
+
+    # Currently working only with subject 8 and 7
+
+    if subject == 8:
+        train_subject = 8
+        test_subject = 7
+    elif subject == 7:
+        train_subject = 7
+        test_subject = 8
+    else:
+        raise ValueError("Subject cross working only with sub 7 and 8")
+
+    if hand == 0:
+        train_file_name = "sub_{}_left.npz".format(str(train_subject))
+        train_rps_name = "sub_{}_left_rps.npz".format(str(train_subject))
+        test_file_name = "sub_{}_left.npz".format(str(test_subject))
+        test_rps_name = "sub_{}_left_rps.npz".format(str(test_subject))
+    else:
+        train_file_name = "sub_{}_right.npz".format(str(train_subject))
+        train_rps_name = "sub_{}_right_rps.npz".format(str(train_subject))
+        test_file_name = "sub_{}_right.npz".format(str(test_subject))
+        test_rps_name = "sub_{}_right_rps.npz".format(str(test_subject))
+
+    train_dataset = np.load(os.path.join(data_path, train_file_name))
+    train_rps_data = np.load(os.path.join(data_path, train_rps_name))
+
+    test_dataset = np.load(os.path.join(data_path, test_file_name))
+    test_rps_data = np.load(os.path.join(data_path, test_rps_name))
+
+    print("Processing train dataset ", train_file_name)
+    print("Processing test dataset ", test_file_name)
+
+    if mode == "train":
+        X = np.concatenate([train_dataset["X_train"], train_dataset["X_test"]],
+                       axis=0)
+        y = np.concatenate([train_dataset["y_train"], train_dataset["y_test"]],
+                       axis=0)
+        rps = np.concatenate([train_rps_data["rps_train"],
+                          train_rps_data["rps_test"]], axis=0)
+    elif mode == "val":
+        X = train_dataset["X_val"]
+        y = train_dataset["y_val"]
+        rps = train_rps_data["rps_val"]
+
+    elif mode == "test":
+        X = np.concatenate([test_dataset["X_train"], test_dataset["X_test"]],
+                           axis=0)
+        y = np.concatenate([test_dataset["y_train"], test_dataset["y_test"]],
+                           axis=0)
+        rps = np.concatenate([test_rps_data["rps_train"],
+                              test_rps_data["rps_test"]], axis=0)
+
+    elif mode == "transf":
+        X = test_dataset["X_val"]
+        y = test_dataset["y_val"]
+        rps = test_rps_data["rps_val"]
+
+    else:
+        raise ValueError("mode value must be train, val, transf, or test!")
+
+    X = np.swapaxes(X, 2, -1) ##  To reshape the data [n_epoch, 1, n_channel, n_times]
+
+    X = torch.from_numpy(X).float()
+    rps = torch.from_numpy(rps).float()
+    y = torch.from_numpy(y).float()
+
+    print("Imported data for mode ", mode)
+    print("X {} shape : {}".format(mode, X.shape))
+    print("y {} shape : {}".format(mode, y.shape))
+    print("rps {} shape : {}".format(mode, rps.shape))
+
+    return X, y.repeat(1, 2), rps

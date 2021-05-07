@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --time=04:00:00
+#SBATCH --time=00:30:00
 #SBATCH --mem-per-cpu=64000M
 #SBATCH --cpus-per-task=1
-#SBATCH --array=11-15
+#SBATCH --array=8
 #SBATCH --output=/scratch/work/anellim1/MEG-prediction/slurm/Cross_RPS_MNET_out_%A_%a.log
 #SBATCH --gres=gpu:1
-#SBATCH --constraint='pascal|volta'
+#### SBATCH --constraint='pascal|volta'
 # if resenet add --constraint='pascal|volta'
 n=$(($SLURM_ARRAY_TASK_ID + 1))
 iteration=`sed -n "${n} p" cross_parameters.csv`

@@ -22,17 +22,34 @@ from torch.optim.adam import Adam
 from torch.optim.sgd import SGD
 from torch.utils.data import DataLoader, random_split
 
-sys.path.insert(1, r'')
+sys.path.insert(1, r"")
 
 from MEG.dl.train import train, train_bp, train_bp_MLP
-from MEG.dl.MEG_Dataset import MEG_Dataset, MEG_Dataset_no_bp, MEG_Cross_Dataset, MEG_Cross_Dataset_no_bp
-from MEG.dl.models import SCNN, DNN, Sample, RPS_SCNN, LeNet5, ResNet, MNet, RPS_MNet, RPS_MLP
+from MEG.dl.MEG_Dataset import (
+    MEG_Dataset,
+    MEG_Dataset_no_bp,
+    MEG_Cross_Dataset,
+    MEG_Cross_Dataset_no_bp,
+)
+from MEG.dl.models import (
+    SCNN,
+    DNN,
+    Sample,
+    RPS_SCNN,
+    LeNet5,
+    ResNet,
+    MNet,
+    RPS_MNet,
+    RPS_MLP,
+)
 from MEG.dl.params import Params_tunable
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from  MEG.Utils.utils import *
+from MEG.Utils.utils import *
 
 # Set the MNE logging to worning only.
 mne.set_config("MNE_LOGGING_LEVEL", "WARNING")
+
 
 def main(args):
 
@@ -50,56 +67,86 @@ def main(args):
     print("Device = {}".format(device))
 
     # Initialize parameters
-    parameters = Params_tunable(subject_n=args.sub,
-                                hand=args.hand,
-                                batch_size=args.batch_size,
-                                valid_batch_size=args.batch_size_valid,
-                                test_batch_size=args.batch_size_test,
-                                epochs=args.epochs,
-                                lr=args.learning_rate,
-                                duration=args.duration,
-                                overlap=args.overlap,
-                                patience=args.patience,
-                                device=device,
-                                y_measure=args.y_measure,
-                                s_n_layer=args.s_n_layer,
-                                s_kernel_size=args.s_kernel_size,  # Local
-                                # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
-                                t_n_layer=args.t_n_layer,
-                                t_kernel_size=args.t_kernel_size,  # Local
-                                # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
-                                max_pooling=args.max_pooling,
-                                ff_n_layer=args.ff_n_layer,
-                                ff_hidden_channels=args.ff_hidden_channels,
-                                dropout=args.dropout,
-                                activation=args.activation,
-                                desc=args.desc
-                                )
+    parameters = Params_tunable(
+        subject_n=args.sub,
+        hand=args.hand,
+        batch_size=args.batch_size,
+        valid_batch_size=args.batch_size_valid,
+        test_batch_size=args.batch_size_test,
+        epochs=args.epochs,
+        lr=args.learning_rate,
+        duration=args.duration,
+        overlap=args.overlap,
+        patience=args.patience,
+        device=device,
+        y_measure=args.y_measure,
+        s_n_layer=args.s_n_layer,
+        s_kernel_size=args.s_kernel_size,  # Local
+        # s_kernel_size=json.loads(' '.join(args.s_kernel_size)),
+        t_n_layer=args.t_n_layer,
+        t_kernel_size=args.t_kernel_size,  # Local
+        # t_kernel_size=json.loads(' '.join(args.t_kernel_size)),
+        max_pooling=args.max_pooling,
+        ff_n_layer=args.ff_n_layer,
+        ff_hidden_channels=args.ff_hidden_channels,
+        dropout=args.dropout,
+        activation=args.activation,
+        desc=args.desc,
+    )
     # Import data and generate train-, valid- and test-set
     # Set if generate with RPS values or not (check network architecture used later)
 
     print("Testing: {} ".format(parameters.desc))
 
-    dataset = MEG_Cross_Dataset_no_bp(data_dir, file_name, parameters.subject_n, mode="train",
-                                y_measure=parameters.y_measure)
-    test_dataset = MEG_Cross_Dataset_no_bp(data_dir, file_name, parameters.subject_n, mode="test",
-                                     y_measure=parameters.y_measure)
-
+    dataset = MEG_Cross_Dataset_no_bp(
+        data_dir,
+        file_name,
+        parameters.subject_n,
+        mode="train",
+        y_measure=parameters.y_measure,
+    )
+    test_dataset = MEG_Cross_Dataset_no_bp(
+        data_dir,
+        file_name,
+        parameters.subject_n,
+        mode="test",
+        y_measure=parameters.y_measure,
+    )
 
     # split the dataset in train, test and valid sets.
     train_len, valid_len = len_split_cross(len(dataset))
 
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len],
     #                                                        generator=torch.Generator().manual_seed(42))
-    train_dataset, valid_dataset = random_split(dataset, [train_len, valid_len])
+    train_dataset, valid_dataset = random_split(
+        dataset, [train_len, valid_len]
+    )
 
-    print("Train dataset len {}, valid dataset len {}, test dataset len {}".format(
-        len(train_dataset), len(valid_dataset), len(test_dataset)))
+    print(
+        "Train dataset len {}, valid dataset len {}, test dataset len {}".format(
+            len(train_dataset), len(valid_dataset), len(test_dataset)
+        )
+    )
 
     # Initialize the dataloaders
-    trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=4)
-    validloader = DataLoader(valid_dataset, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=4)
-    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=4)
+    trainloader = DataLoader(
+        train_dataset,
+        batch_size=parameters.batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
+    validloader = DataLoader(
+        valid_dataset,
+        batch_size=parameters.valid_batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
+    testloader = DataLoader(
+        test_dataset,
+        batch_size=parameters.test_batch_size,
+        shuffle=False,
+        num_workers=4,
+    )
 
     # Initialize network
 
@@ -107,17 +154,18 @@ def main(args):
         sample, y = iter(trainloader).next()
 
     n_times = sample.shape[-1]
-    net = SCNN(parameters.s_n_layer,
-               parameters.s_kernel_size,
-               parameters.t_n_layer,
-               parameters.t_kernel_size,
-               n_times,
-               parameters.ff_n_layer,
-               parameters.ff_hidden_channels,
-               parameters.dropout,
-               parameters.max_pooling,
-               parameters.activation)
-
+    net = SCNN(
+        parameters.s_n_layer,
+        parameters.s_kernel_size,
+        parameters.t_n_layer,
+        parameters.t_kernel_size,
+        n_times,
+        parameters.ff_n_layer,
+        parameters.ff_hidden_channels,
+        parameters.dropout,
+        parameters.max_pooling,
+        parameters.activation,
+    )
 
     print(net)
     # Training loop or model loading
@@ -128,28 +176,51 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
 
-        net, train_loss, valid_loss = train(net, trainloader, validloader, optimizer, loss_function,
-                                                   parameters.device, parameters.epochs, parameters.patience,
-                                                   parameters.hand, model_path)
-
+        net, train_loss, valid_loss = train(
+            net,
+            trainloader,
+            validloader,
+            optimizer,
+            scheduler,
+            loss_function,
+            parameters.device,
+            parameters.epochs,
+            parameters.patience,
+            parameters.hand,
+            model_path,
+        )
 
         train_time = timer.time() - start_time
         print("Training done in {:.4f}".format(train_time))
 
         # visualize the loss as the network trained
         fig = plt.figure(figsize=(10, 4))
-        plt.plot(range(1, len(train_loss) + 1), train_loss, label='Training Loss')
-        plt.plot(range(1, len(valid_loss) + 1), valid_loss, label='Validation Loss')
+        plt.plot(
+            range(1, len(train_loss) + 1), train_loss, label="Training Loss"
+        )
+        plt.plot(
+            range(1, len(valid_loss) + 1), valid_loss, label="Validation Loss"
+        )
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss)) + 1
-        plt.axvline(minposs, linestyle='--', color='r', label='Early Stopping Checkpoint')
+        plt.axvline(
+            minposs,
+            linestyle="--",
+            color="r",
+            label="Early Stopping Checkpoint",
+        )
 
-        plt.xlabel('epochs')
-        plt.ylabel('loss')
+        plt.xlabel("epochs")
+        plt.ylabel("loss")
         # plt.ylim(0, 0.5) # consistent scale
         # plt.xlim(0, len(train_loss)+1) # consistent scale
         plt.grid(True)
@@ -165,7 +236,9 @@ def main(args):
     else:
         # Load the model (properly select the model architecture)
         net = MNet()
-        net = load_pytorch_model(net, os.path.join(model_path, "model.pth"), parameters.device)
+        net = load_pytorch_model(
+            net, os.path.join(model_path, "model.pth"), parameters.device
+        )
 
     # Evaluation
     print("Evaluation...")
@@ -176,16 +249,21 @@ def main(args):
     y_valid = []
 
     with torch.no_grad():
-            for data, labels in testloader:
-                data, labels = data.to(parameters.device), labels.to(parameters.device)
-                y.extend(list(labels[:, parameters.hand]))
-                y_pred.extend((list(net(data))))
+        for data, labels in testloader:
+            data, labels = (
+                data.to(parameters.device),
+                labels.to(parameters.device),
+            )
+            y.extend(list(labels[:, parameters.hand]))
+            y_pred.extend((list(net(data))))
 
-            for data, labels in validloader:
-                data, labels = data.to(parameters.device), labels.to(parameters.device)
-                y_valid.extend(list(labels[:, parameters.hand]))
-                y_pred_valid.extend((list(net(data))))
-
+        for data, labels in validloader:
+            data, labels = (
+                data.to(parameters.device),
+                labels.to(parameters.device),
+            )
+            y_valid.extend(list(labels[:, parameters.hand]))
+            y_pred_valid.extend((list(net(data))))
 
     # Calculate Evaluation measures
     print("Evaluation measures")
@@ -205,9 +283,13 @@ def main(args):
     ax.plot(times, y[0:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_title(
+        "Sub {}, hand {}, {} prediction".format(
+            str(parameters.subject_n),
+            "sx" if parameters.hand == 0 else "dx",
+            parameters.y_measure,
+        )
+    )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction_focus.pdf"))
     plt.show()
@@ -219,9 +301,13 @@ def main(args):
     ax.plot(times, y, color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("{}".format(parameters.y_measure))
-    ax.set_title("Sub {}, hand {}, {} prediction".format(str(parameters.subject_n),
-                                                         "sx" if parameters.hand == 0 else "dx",
-                                                         parameters.y_measure))
+    ax.set_title(
+        "Sub {}, hand {}, {} prediction".format(
+            str(parameters.subject_n),
+            "sx" if parameters.hand == 0 else "dx",
+            parameters.y_measure,
+        )
+    )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "Times_prediction.pdf"))
     plt.show()
@@ -237,15 +323,14 @@ def main(args):
 
     # scatterplot y predicted against the true value
     fig, ax = plt.subplots(1, 1, figsize=[10, 4])
-    ax.scatter(np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted")
+    ax.scatter(
+        np.array(y_valid), np.array(y_pred_valid), color="b", label="Predicted"
+    )
     ax.set_xlabel("True")
     ax.set_ylabel("Predicted")
     # plt.legend()
     plt.savefig(os.path.join(figure_path, "Scatter_valid.pdf"))
     plt.show()
-
-
-
 
     # log the model and parameters using mlflow tracker
     with mlflow.start_run(experiment_id=args.experiment) as run:
@@ -254,13 +339,15 @@ def main(args):
 
         mlflow.log_param("Time", train_time)
 
-        mlflow.log_metric('MSE', mse)
-        mlflow.log_metric('RMSE', rmse)
-        mlflow.log_metric('MAE', mae)
-        mlflow.log_metric('R2', r2)
+        mlflow.log_metric("MSE", mse)
+        mlflow.log_metric("RMSE", rmse)
+        mlflow.log_metric("MAE", mae)
+        mlflow.log_metric("R2", r2)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
+        mlflow.log_artifact(
+            os.path.join(figure_path, "Times_prediction_focus.pdf")
+        )
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "Scatter_valid.pdf"))
@@ -273,71 +360,197 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Directories
-    parser.add_argument('--data_dir', type=str, default='Z:\Desktop\\',
-                        help="Input data directory (default= Z:\Desktop\\)")
-    parser.add_argument('--figure_dir', type=str, default='MEG\Figures',
-                        help="Figure data directory (default= MEG\Figures)")
-    parser.add_argument('--model_dir', type=str, default='MEG\Models',
-                        help="Model data directory (default= MEG\Models\)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
+    )
+    parser.add_argument(
+        "--figure_dir",
+        type=str,
+        default="MEG\Figures",
+        help="Figure data directory (default= MEG\Figures)",
+    )
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        default="MEG\Models",
+        help="Model data directory (default= MEG\Models\)",
+    )
 
     # subject
-    parser.add_argument('--sub', type=int, default='8',
-                        help="Input data directory (default= 8)")
-    parser.add_argument('--hand', type=int, default='0',
-                        help="Patient hands: 0 for sx, 1 for dx (default= 0)")
+    parser.add_argument(
+        "--sub",
+        type=int,
+        default="8",
+        help="Input data directory (default= 8)",
+    )
+    parser.add_argument(
+        "--hand",
+        type=int,
+        default="0",
+        help="Patient hands: 0 for sx, 1 for dx (default= 0)",
+    )
 
     # Model Parameters
-    parser.add_argument('--batch_size', type=int, default=100, metavar='N',
-                        help='input batch size for training (default: 100)')
-    parser.add_argument('--batch_size_valid', type=int, default=30, metavar='N',
-                        help='input batch size for validation (default: 100)')
-    parser.add_argument('--batch_size_test', type=int, default=30, metavar='N',
-                        help='input batch size for  (default: 100)')
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
-                        help='number of epochs to train (default: 200)')
-    parser.add_argument('--learning_rate', type=float, default=1e-3, metavar='lr',
-                        help='Learning rate (default: 1e-3),')
-    parser.add_argument('--bias', type=bool, default=False, metavar='N',
-                        help='Convolutional layers with bias(default: False)')
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=100,
+        metavar="N",
+        help="input batch size for training (default: 100)",
+    )
+    parser.add_argument(
+        "--batch_size_valid",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for validation (default: 100)",
+    )
+    parser.add_argument(
+        "--batch_size_test",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for  (default: 100)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=200,
+        metavar="N",
+        help="number of epochs to train (default: 200)",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=1e-3,
+        metavar="lr",
+        help="Learning rate (default: 1e-3),",
+    )
+    parser.add_argument(
+        "--bias",
+        type=bool,
+        default=False,
+        metavar="N",
+        help="Convolutional layers with bias(default: False)",
+    )
 
-    parser.add_argument('--duration', type=float, default=1., metavar='N',
-                        help='Duration of the time window  (default: 1s)')
-    parser.add_argument('--overlap', type=float, default=0.8, metavar='N',
-                        help='overlap of time window (default: 0.8s)')
-    parser.add_argument('--patience', type=int, default=10, metavar='N',
-                        help='Early stopping patience (default: 20)')
-    parser.add_argument('--y_measure', type=str, default="pca",
-                        help='Y type reshaping (default: pca)')
-    parser.add_argument('--experiment', type=int, default=0, metavar='N',
-                        help='Mlflow experiments id (default: 0)')
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=1.0,
+        metavar="N",
+        help="Duration of the time window  (default: 1s)",
+    )
+    parser.add_argument(
+        "--overlap",
+        type=float,
+        default=0.8,
+        metavar="N",
+        help="overlap of time window (default: 0.8s)",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Early stopping patience (default: 20)",
+    )
+    parser.add_argument(
+        "--y_measure",
+        type=str,
+        default="pca",
+        help="Y type reshaping (default: pca)",
+    )
+    parser.add_argument(
+        "--experiment",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Mlflow experiments id (default: 0)",
+    )
 
     # Model architecture parameters
     # Spatial sub-net
-    parser.add_argument('--s_n_layer', type=int, default=2, metavar='N',
-                        help='Spatial sub-net number of layer (default: 2)')
-    parser.add_argument('--s_kernel_size', type=str, default=[104, 101], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [104, 101])')
+    parser.add_argument(
+        "--s_n_layer",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Spatial sub-net number of layer (default: 2)",
+    )
+    parser.add_argument(
+        "--s_kernel_size",
+        type=str,
+        default=[104, 101],
+        metavar="N",
+        nargs="+",
+        help="Spatial sub-net kernel sizes (default: [104, 101])",
+    )
     # Temporal sub-net
-    parser.add_argument('--t_n_layer', type=int, default=5, metavar='N',
-                        help='Temporal sub-net number of layer (default: 5)')
-    parser.add_argument('--t_kernel_size', type=str, default=[20, 10, 10, 8, 5], metavar='N', nargs='+',
-                        help='Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])')
-    parser.add_argument('--max_pooling', type=int, default=2, metavar='lr',
-                        help='Spatial sub-net max-pooling (default: 2)')
+    parser.add_argument(
+        "--t_n_layer",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Temporal sub-net number of layer (default: 5)",
+    )
+    parser.add_argument(
+        "--t_kernel_size",
+        type=str,
+        default=[20, 10, 10, 8, 5],
+        metavar="N",
+        nargs="+",
+        help="Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])",
+    )
+    parser.add_argument(
+        "--max_pooling",
+        type=int,
+        default=2,
+        metavar="lr",
+        help="Spatial sub-net max-pooling (default: 2)",
+    )
 
     # MLP
-    parser.add_argument('--ff_n_layer', type=int, default=3, metavar='N',
-                        help='MLP sub-net number of layer (default: 3)')
-    parser.add_argument('--ff_hidden_channels', type=int, default=1024, metavar='N',
-                        help='MLP sub-net number of hidden channels (default: 1024)')
-    parser.add_argument('--dropout', type=float, default=0.5, metavar='d',
-                        help='MLP dropout (default: 0.5),')
+    parser.add_argument(
+        "--ff_n_layer",
+        type=int,
+        default=3,
+        metavar="N",
+        help="MLP sub-net number of layer (default: 3)",
+    )
+    parser.add_argument(
+        "--ff_hidden_channels",
+        type=int,
+        default=1024,
+        metavar="N",
+        help="MLP sub-net number of hidden channels (default: 1024)",
+    )
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=0.5,
+        metavar="d",
+        help="MLP dropout (default: 0.5),",
+    )
 
     # Activation
-    parser.add_argument('--activation', type=str, default="relu", metavar='N',
-                        help='Activation function ti apply (default: relu)')
-    parser.add_argument('--desc', type=str, default="Normal test", metavar='N',
-                        help='Experiment description (default: Normal test)')
+    parser.add_argument(
+        "--activation",
+        type=str,
+        default="relu",
+        metavar="N",
+        help="Activation function ti apply (default: relu)",
+    )
+    parser.add_argument(
+        "--desc",
+        type=str,
+        default="Normal test",
+        metavar="N",
+        help="Experiment description (default: Normal test)",
+    )
 
     args = parser.parse_args()
 
