@@ -80,6 +80,7 @@ class Params_tunable(object):
         ff_hidden_channels,
         dropout,
         activation,
+        desc,
     ):
 
         self.subject_n = subject_n
@@ -103,6 +104,7 @@ class Params_tunable(object):
         self.ff_hidden_channels = ff_hidden_channels
         self.dropout = dropout
         self.activation = activation
+        self.desc = desc
 
     def __str__(self):
         return (
@@ -124,16 +126,19 @@ class Params_tunable(object):
             + str(self.device)
             + "_"
             + str(self.y_measure)
+            + "_"
+            + str(self.desc)
         )
 
 
 class SPoC_params(object):
-    def __init__(self, subject_n, hand, duration, overlap, y_measure):
+    def __init__(self, subject_n, hand, duration, overlap, y_measure, alpha):
         self.subject_n = subject_n
         self.hand = hand
         self.duration = duration
         self.overlap = overlap
         self.y_measure = y_measure
+        self.alpha = alpha
 
     def __str__(self):
         return (
@@ -147,4 +152,125 @@ class SPoC_params(object):
             + str(self.overlap)
             + "_"
             + str(self.y_measure)
+            + "_"
+            + str(self.alpha)
+        )
+
+
+class Params_cross(object):
+    def __init__(
+        self,
+        subject_n,
+        hand,
+        batch_size,
+        valid_batch_size,
+        test_batch_size,
+        epochs,
+        lr,
+        wd,
+        patience,
+        device,
+        desc,
+    ):
+
+        self.subject_n = subject_n
+        self.hand = hand
+        self.batch_size = batch_size
+        self.valid_batch_size = valid_batch_size
+        self.test_batch_size = test_batch_size
+        self.epochs = epochs
+        self.lr = lr
+        self.wd = wd
+        self.patience = patience
+        self.device = device
+        self.desc = desc
+
+    def __str__(self):
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.batch_size)
+            + "_"
+            + str(self.epochs)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.wd)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.desc)
+        )
+
+
+class Params_transf(object):
+    def __init__(self, subject_n, hand, test_batch_size, lr, device, desc):
+
+        self.subject_n = subject_n
+        self.hand = hand
+        self.test_batch_size = test_batch_size
+        self.lr = lr
+        self.device = device
+        self.desc = desc
+
+    def __str__(self):
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.desc)
+        )
+
+
+class Param_PSD(object):
+    def __init__(self, subject_n, hand, batch_size, valid_batch_size,
+        test_batch_size, epochs, lr, wd, patience, device, batch_norm,
+                 s_kernel_size, s_drop, mlp_n_layer, mlp_hidden, mlp_drop,
+                 desc):
+
+        self.subject_n = subject_n
+        self.hand = hand
+        self.batch_size = batch_size
+        self.valid_batch_size = valid_batch_size
+        self.test_batch_size = test_batch_size
+        self.epochs = epochs
+        self.lr = lr
+        self.wd = wd
+        self.patience = patience
+        self.device = device
+        self.batch_norm = batch_norm
+        self.s_kernel_size = s_kernel_size
+        self.s_drop = s_drop
+        self.mlp_n_layer = mlp_n_layer
+        self.mlp_hidden = mlp_hidden
+        self.mlp_drop = mlp_drop
+        self.desc = desc
+
+    def __str__(self):
+        return (
+            "_"
+            + str(self.subject_n)
+            + "_"
+            + str(self.hand)
+            + "_"
+            + str(self.batch_size)
+            + "_"
+            + str(self.epochs)
+            + "_"
+            + str(self.lr)
+            + "_"
+            + str(self.wd)
+            + "_"
+            + str(self.device)
+            + "_"
+            + str(self.desc)
         )

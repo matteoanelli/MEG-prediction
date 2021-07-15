@@ -20,9 +20,10 @@ from torch.utils.data import DataLoader, random_split
 sys.path.insert(1, r"")
 
 from MEG.dl.train import train
-from MEG.dl.MEG_Dataset import MEG_Dataset_2
+from MEG.dl.MEG_Dataset import MEG_Dataset2
 from MEG.dl.models import RPS_MNet_2
 from MEG.dl.params import Params_tunable
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # TODO maybe better implementation
 from MEG.Utils.utils import *
@@ -38,7 +39,10 @@ def main(args):
 
     # Generate the data input path list. Each subject has 3 runs stored in 3 different files.
     subj_id = "/sub" + str(args.sub) + "/ball0"
-    raw_fnames = ["".join([data_dir, subj_id, str(i), "_sss_trans.fif"]) for i in range(1 if args.sub != 3 else 2, 4)]
+    raw_fnames = [
+        "".join([data_dir, subj_id, str(i), "_sss_trans.fif"])
+        for i in range(1 if args.sub != 3 else 2, 4)
+    ]
 
     # local
     # subj_id = "/sub"+str(args.sub)+"/ball"
@@ -77,19 +81,44 @@ def main(args):
         activation=args.activation,
     )
 
-    dataset = MEG_Dataset_2(
-        raw_fnames, parameters.duration, parameters.overlap, parameters.y_measure, normalize_input=True
+    dataset = MEG_Dataset2(
+        raw_fnames,
+        parameters.duration,
+        parameters.overlap,
+        parameters.y_measure,
+        normalize_input=True,
     )
 
     train_len, valid_len, test_len = len_split(len(dataset))
-    print("{} + {} + {} = {}?".format(train_len, valid_len, test_len, len(dataset)))
+    print(
+        "{} + {} + {} = {}?".format(
+            train_len, valid_len, test_len, len(dataset)
+        )
+    )
 
     # train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len], generator = torch.Generator().manual_seed(42))
-    train_dataset, valid_test, test_dataset = random_split(dataset, [train_len, valid_len, test_len])
+    train_dataset, valid_test, test_dataset = random_split(
+        dataset, [train_len, valid_len, test_len]
+    )
 
-    trainloader = DataLoader(train_dataset, batch_size=parameters.batch_size, shuffle=True, num_workers=1)
-    validloader = DataLoader(valid_test, batch_size=parameters.valid_batch_size, shuffle=True, num_workers=1)
-    testloader = DataLoader(test_dataset, batch_size=parameters.test_batch_size, shuffle=False, num_workers=1)
+    trainloader = DataLoader(
+        train_dataset,
+        batch_size=parameters.batch_size,
+        shuffle=True,
+        num_workers=1,
+    )
+    validloader = DataLoader(
+        valid_test,
+        batch_size=parameters.valid_batch_size,
+        shuffle=True,
+        num_workers=1,
+    )
+    testloader = DataLoader(
+        test_dataset,
+        batch_size=parameters.test_batch_size,
+        shuffle=False,
+        num_workers=1,
+    )
 
     with torch.no_grad():
         # Change if RPS itegration
@@ -108,6 +137,11 @@ def main(args):
         optimizer = Adam(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
         # optimizer = SGD(net.parameters(), lr=parameters.lr, weight_decay=5e-4)
 
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
+                                      patience=15)
+
+        print("scheduler : ", scheduler)
+
         loss_function = torch.nn.MSELoss()
         start_time = timer.time()
         net, train_loss, valid_loss = train(
@@ -115,6 +149,7 @@ def main(args):
             trainloader,
             validloader,
             optimizer,
+            scheduler,
             loss_function,
             parameters.device,
             parameters.epochs,
@@ -128,12 +163,21 @@ def main(args):
 
         # visualize the loss as the network trained
         fig = plt.figure(figsize=(10, 4))
-        plt.plot(range(1, len(train_loss) + 1), train_loss, label="Training Loss")
-        plt.plot(range(1, len(valid_loss) + 1), valid_loss, label="Validation Loss")
+        plt.plot(
+            range(1, len(train_loss) + 1), train_loss, label="Training Loss"
+        )
+        plt.plot(
+            range(1, len(valid_loss) + 1), valid_loss, label="Validation Loss"
+        )
 
         # find position of lowest validation loss
         minposs = valid_loss.index(min(valid_loss)) + 1
-        plt.axvline(minposs, linestyle="--", color="r", label="Early Stopping Checkpoint")
+        plt.axvline(
+            minposs,
+            linestyle="--",
+            color="r",
+            label="Early Stopping Checkpoint",
+        )
 
         plt.xlabel("epochs")
         plt.ylabel("loss")
@@ -152,7 +196,9 @@ def main(args):
     else:
         # Load the model
         net = RPS_MNet_2()
-        net = load_pytorch_model(net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu")
+        net = load_pytorch_model(
+            net, os.path.join(model_path, "Baselinemodel_SCNN_swap.pth"), "cpu"
+        )
 
     # Evaluation
     print("Evaluation...")
@@ -161,7 +207,11 @@ def main(args):
     y = []
     with torch.no_grad():
         for data, labels, bp in testloader:
-            data, labels, bp = data.to(parameters.device), labels.to(parameters.device), bp.to(device)
+            data, labels, bp = (
+                data.to(parameters.device),
+                labels.to(parameters.device),
+                bp.to(device),
+            )
             y.extend(list(labels[:, parameters.hand, :]))
             y_pred.extend((list(net(data, bp))))
 
@@ -206,7 +256,9 @@ def main(args):
     ax[0].set_xlabel("Times")
     ax[0].set_ylabel("RMSE")
     ax[0].set_title(
-        "Sub {}, hand {} x prediction".format(str(parameters.subject_n), "sx" if parameters.hand == 0 else "dx")
+        "Sub {}, hand {} x prediction".format(
+            str(parameters.subject_n), "sx" if parameters.hand == 0 else "dx"
+        )
     )
     ax[0].legend()
 
@@ -214,7 +266,9 @@ def main(args):
     ax[1].plot(times, y[:limit, 1], color="r", label="True")
     ax[1].set_xlabel("Times")
     ax[1].set_title(
-        "Sub {}, hand {} y prediction".format(str(parameters.subject_n), "sx" if parameters.hand == 0 else "dx")
+        "Sub {}, hand {} y prediction".format(
+            str(parameters.subject_n), "sx" if parameters.hand == 0 else "dx"
+        )
     )
     ax[1].legend()
 
@@ -230,7 +284,9 @@ def main(args):
     ax.set_ylabel("{}".format(parameters.y_measure))
     ax.set_title(
         "Sub {}, hand {}, {} prediction".format(
-            str(parameters.subject_n), "sx" if parameters.hand == 0 else "dx", parameters.y_measure
+            str(parameters.subject_n),
+            "sx" if parameters.hand == 0 else "dx",
+            parameters.y_measure,
         )
     )
     plt.legend()
@@ -249,7 +305,9 @@ def main(args):
         mlflow.log_metric("MAE", mae)
 
         mlflow.log_artifact(os.path.join(figure_path, "Times_prediction.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "Times_prediction_focus.pdf"))
+        mlflow.log_artifact(
+            os.path.join(figure_path, "Times_prediction_focus.pdf")
+        )
         mlflow.log_artifact(os.path.join(figure_path, "loss_plot.pdf"))
         mlflow.pytorch.log_model(net, "models")
 
@@ -261,51 +319,125 @@ if __name__ == "__main__":
 
     # Directories
     parser.add_argument(
-        "--data_dir", type=str, default="Z:\Desktop\\", help="Input data directory (default= Z:\Desktop\\)"
+        "--data_dir",
+        type=str,
+        default="Z:\Desktop\\",
+        help="Input data directory (default= Z:\Desktop\\)",
     )
     parser.add_argument(
-        "--figure_dir", type=str, default="MEG\Figures", help="Figure data directory (default= MEG\Figures)"
+        "--figure_dir",
+        type=str,
+        default="MEG\Figures",
+        help="Figure data directory (default= MEG\Figures)",
     )
     parser.add_argument(
-        "--model_dir", type=str, default="MEG\Models", help="Model data directory (default= MEG\Models\)"
+        "--model_dir",
+        type=str,
+        default="MEG\Models",
+        help="Model data directory (default= MEG\Models\)",
     )
 
     # subject
-    parser.add_argument("--sub", type=int, default="8", help="Input data directory (default= 8)")
-    parser.add_argument("--hand", type=int, default="0", help="Patient hands: 0 for sx, 1 for dx (default= 0)")
+    parser.add_argument(
+        "--sub",
+        type=int,
+        default="8",
+        help="Input data directory (default= 8)",
+    )
+    parser.add_argument(
+        "--hand",
+        type=int,
+        default="0",
+        help="Patient hands: 0 for sx, 1 for dx (default= 0)",
+    )
 
     # Model Parameters
     parser.add_argument(
-        "--batch_size", type=int, default=100, metavar="N", help="input batch size for training (default: 100)"
+        "--batch_size",
+        type=int,
+        default=100,
+        metavar="N",
+        help="input batch size for training (default: 100)",
     )
     parser.add_argument(
-        "--batch_size_valid", type=int, default=30, metavar="N", help="input batch size for validation (default: 100)"
+        "--batch_size_valid",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for validation (default: 100)",
     )
     parser.add_argument(
-        "--batch_size_test", type=int, default=30, metavar="N", help="input batch size for  (default: 100)"
+        "--batch_size_test",
+        type=int,
+        default=30,
+        metavar="N",
+        help="input batch size for  (default: 100)",
     )
-    parser.add_argument("--epochs", type=int, default=200, metavar="N", help="number of epochs to train (default: 200)")
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-3, metavar="lr", help="Learning rate (default: 1e-3),"
+        "--epochs",
+        type=int,
+        default=200,
+        metavar="N",
+        help="number of epochs to train (default: 200)",
     )
     parser.add_argument(
-        "--bias", type=bool, default=False, metavar="N", help="Convolutional layers with bias(default: False)"
+        "--learning_rate",
+        type=float,
+        default=1e-3,
+        metavar="lr",
+        help="Learning rate (default: 1e-3),",
+    )
+    parser.add_argument(
+        "--bias",
+        type=bool,
+        default=False,
+        metavar="N",
+        help="Convolutional layers with bias(default: False)",
     )
 
     parser.add_argument(
-        "--duration", type=float, default=1.0, metavar="N", help="Duration of the time window  (default: 1s)"
+        "--duration",
+        type=float,
+        default=1.0,
+        metavar="N",
+        help="Duration of the time window  (default: 1s)",
     )
     parser.add_argument(
-        "--overlap", type=float, default=0.8, metavar="N", help="overlap of time window (default: 0.8s)"
+        "--overlap",
+        type=float,
+        default=0.8,
+        metavar="N",
+        help="overlap of time window (default: 0.8s)",
     )
-    parser.add_argument("--patience", type=int, default=10, metavar="N", help="Early stopping patience (default: 20)")
-    parser.add_argument("--y_measure", type=str, default="movement", help="Y type reshaping (default: movement)")
-    parser.add_argument("--experiment", type=int, default=0, metavar="N", help="Mlflow experiments id (default: 0)")
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Early stopping patience (default: 20)",
+    )
+    parser.add_argument(
+        "--y_measure",
+        type=str,
+        default="movement",
+        help="Y type reshaping (default: movement)",
+    )
+    parser.add_argument(
+        "--experiment",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Mlflow experiments id (default: 0)",
+    )
 
     # Model architecture parameters
     # Spatial sub-net
     parser.add_argument(
-        "--s_n_layer", type=int, default=2, metavar="N", help="Spatial sub-net number of layer (default: 2)"
+        "--s_n_layer",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Spatial sub-net number of layer (default: 2)",
     )
     parser.add_argument(
         "--s_kernel_size",
@@ -317,7 +449,11 @@ if __name__ == "__main__":
     )
     # Temporal sub-net
     parser.add_argument(
-        "--t_n_layer", type=int, default=5, metavar="N", help="Temporal sub-net number of layer (default: 5)"
+        "--t_n_layer",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Temporal sub-net number of layer (default: 5)",
     )
     parser.add_argument(
         "--t_kernel_size",
@@ -328,12 +464,20 @@ if __name__ == "__main__":
         help="Spatial sub-net kernel sizes (default: [20, 10, 10, 8, 5])",
     )
     parser.add_argument(
-        "--max_pooling", type=int, default=2, metavar="lr", help="Spatial sub-net max-pooling (default: 2)"
+        "--max_pooling",
+        type=int,
+        default=2,
+        metavar="lr",
+        help="Spatial sub-net max-pooling (default: 2)",
     )
 
     # MLP
     parser.add_argument(
-        "--ff_n_layer", type=int, default=3, metavar="N", help="MLP sub-net number of layer (default: 3)"
+        "--ff_n_layer",
+        type=int,
+        default=3,
+        metavar="N",
+        help="MLP sub-net number of layer (default: 3)",
     )
     parser.add_argument(
         "--ff_hidden_channels",
@@ -342,11 +486,21 @@ if __name__ == "__main__":
         metavar="N",
         help="MLP sub-net number of hidden channels (default: 1024)",
     )
-    parser.add_argument("--dropout", type=float, default=0.5, metavar="d", help="MLP dropout (default: 0.5),")
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=0.5,
+        metavar="d",
+        help="MLP dropout (default: 0.5),",
+    )
 
     # Activation
     parser.add_argument(
-        "--activation", type=str, default="relu", metavar="N", help="Activation function ti apply (default: relu)"
+        "--activation",
+        type=str,
+        default="relu",
+        metavar="N",
+        help="Activation function ti apply (default: relu)",
     )
 
     args = parser.parse_args()

@@ -1,0 +1,11 @@
+data_dir;figure_dir;model_dir;sub;hand;batch_size;batch_size_valid;batch_size_test;epochs;learning_rate;weight_decay;patience;batch_norm;s_kernel_size;s_drop;mlp_n_layer;mlp_hidden;mlp_drop;experiment;desc
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;140;5e-05;0.005;30;False;[104, 101];False;2;256;0.4;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;140;5e-05;5e-05;30;False;[104, 101];False;3;1024;0.3;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;100;30;30;140;0.0001;5e-05;30;False;[204];False;2;512;0.5;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;140;7e-05;0.005;30;False;[154, 51];False;1;128;0.4;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;140;5e-05;0.005;30;False;[204];False;2;128;0.4;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;140;6e-05;5e-05;30;False;[104, 51, 51];False;3;128;0.5;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;100;30;30;140;2e-05;0.0005;30;False;[104, 101];False;2;512;0.5;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;140;7e-05;0.0005;30;False;[104, 101];False;3;256;0.3;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;100;30;30;140;4e-05;5e-05;30;False;[104, 101];False;1;512;0.3;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;140;8e-05;0.005;30;False;[204];False;2;512;0.5;47;PSD_cnn_spatial_ADAM_l2_loss_wd_random_grid

@@ -21,9 +21,8 @@ from sklearn.pipeline import Pipeline
 from utils import *
 
 sys.path.insert(1, r"")
-# from  ECoG.Utils.utils import *
-from ECoG.SPoC.utils import standard_scaling
 from ECoG.SPoC.SPoC_param import SPoC_params
+from ECoG.Utils.utils import import_ECoG
 
 import matplotlib.pyplot as plt
 
@@ -36,7 +35,12 @@ def main(args):
     figure_path = args.figure_dir
     model_path = args.model_dir
 
-    parameters = SPoC_params(subject_n=args.sub, finger=args.finger, duration=args.duration, overlap=args.overlap)
+    parameters = SPoC_params(
+        subject_n=args.sub,
+        finger=args.finger,
+        duration=args.duration,
+        overlap=args.overlap,
+    )
 
     #%%
 
@@ -44,19 +48,14 @@ def main(args):
     sampling_rate = 1000
 
     #%%
-    # Example
-    X, y = import_ECoG(data_dir, file_name, parameters.finger)
-    X = filter_data(X, sampling_rate)
-    X = standard_scaling(X).squeeze(-1)
-
-    print("Example of fingers position : {}".format(y[0]))
-    print("epochs with events generation")
-    epochs = create_epoch(X, sampling_rate, duration=parameters.duration, overlap=parameters.overlap, ds_factor=1)
-
-    X = epochs.get_data()
-
-    #%%
-    y = y_resampling(y, X.shape[0])
+    # import ECoG <-- datadir, filename, finger, duration, overlap, normalize_input=True, y_measure="mean"
+    X, y = import_ECoG(
+        data_dir,
+        file_name,
+        parameters.finger,
+        parameters.duration,
+        parameters.overlap,
+    )
 
     # %%
     print("X shape {}, y shape {}".format(X.shape, y.shape))
@@ -67,20 +66,40 @@ def main(args):
         )
     )
 
-    pipeline = Pipeline([("Spoc", SPoC(log=True, reg="oas", rank="full")), ("Ridge", Ridge())])
+    pipeline = Pipeline(
+        [("Spoc", SPoC(log=True, reg="oas", rank="full")), ("Ridge", Ridge())]
+    )
 
     # %%
     cv = KFold(n_splits=10, shuffle=False)
-    tuned_parameters = [{"Spoc__n_components": list(map(int, list(np.arange(2, 30))))}]
 
-    clf = GridSearchCV(pipeline, tuned_parameters, scoring="neg_mean_squared_error", n_jobs=4, cv=cv, verbose=2)
+    tuned_parameters = [
+        {
+            "Spoc__n_components": list(map(int, list(np.arange(2, 30)))),
+            "Ridge__alpha": [0.8, 1.0, 2, 5, 10, 15],
+        }
+    ]
+
+    clf = GridSearchCV(
+        pipeline,
+        tuned_parameters,
+        scoring="neg_mean_squared_error",
+        n_jobs=4,
+        cv=cv,
+        verbose=3,
+    )
+
     # %%
     start = time.time()
     print("Start Fitting model ...")
     clf.fit(X_train, y_train)
 
     print(f"Training time : {time.time() - start}s ")
-    print("Number of cross-validation splits folds/iteration: {}".format(clf.n_splits_))
+    print(
+        "Number of cross-validation splits folds/iteration: {}".format(
+            clf.n_splits_
+        )
+    )
     print("Best Score and parameter combination: ")
 
     print(clf.best_score_)
@@ -100,7 +119,11 @@ def main(args):
     ax.plot(times, y_test[100:200], color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("Finger Movement")
-    ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
+    ax.set_title(
+        "Sub {}, finger {} prediction".format(
+            str(parameters.subject_n), parameters.finger
+        )
+    )
     plt.legend()
     viz.tight_layout()
     plt.savefig(os.path.join(figure_path, "ECoG_SPoC_focus.pdf"))
@@ -113,7 +136,11 @@ def main(args):
     ax.plot(times, y_test, color="r", label="True")
     ax.set_xlabel("Times")
     ax.set_ylabel("Finger Movement")
-    ax.set_title("Sub {}, finger {} prediction".format(str(parameters.subject_n), parameters.finger))
+    ax.set_title(
+        "Sub {}, finger {} prediction".format(
+            str(parameters.subject_n), parameters.finger
+        )
+    )
     plt.legend()
     plt.savefig(os.path.join(figure_path, "ECoG_SPoC.pdf"))
     plt.show()
@@ -147,11 +174,15 @@ def main(args):
         mlflow.log_metric("RMSE", rmse)
         mlflow.log_metric("MAE", mae)
 
-        mlflow.log_param("n_components", clf.best_params_["Spoc__n_components"])
+        mlflow.log_param(
+            "n_components", clf.best_params_["Spoc__n_components"]
+        )
 
         mlflow.log_artifact(os.path.join(figure_path, "ECoG_SPoC_focus.pdf"))
         mlflow.log_artifact(os.path.join(figure_path, "ECoG_SPoC.pdf"))
-        mlflow.log_artifact(os.path.join(figure_path, "ECoG_SPoC_Components_Analysis.pdf"))
+        mlflow.log_artifact(
+            os.path.join(figure_path, "ECoG_SPoC_Components_Analysis.pdf")
+        )
         mlflow.sklearn.log_model(clf, "models")
 
 
@@ -160,8 +191,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # subject
-    parser.add_argument("--sub", type=int, default="1", help="Subject number (default= 1)")
-    parser.add_argument("--finger", type=int, default="0", help="Finger (default= 0)")
+    parser.add_argument(
+        "--sub", type=int, default="1", help="Subject number (default= 1)"
+    )
+    parser.add_argument(
+        "--finger", type=int, default="0", help="Finger (default= 0)"
+    )
 
     # Directories
     parser.add_argument(
@@ -171,20 +206,40 @@ if __name__ == "__main__":
         help="Input data directory (default= Z:\Desktop\BCICIV_4_mat)",
     )
     parser.add_argument(
-        "--figure_dir", type=str, default="ECoG\Figures", help="Figure data directory (default= ECoG\Figures)"
+        "--figure_dir",
+        type=str,
+        default="ECoG\Figures",
+        help="Figure data directory (default= ECoG\Figures)",
     )
     parser.add_argument(
-        "--model_dir", type=str, default="ECoG\Models", help="Model data directory (default= ECoG\Models\)"
+        "--model_dir",
+        type=str,
+        default="ECoG\Models",
+        help="Model data directory (default= ECoG\Models\)",
     )
 
     # Model Parameters
     parser.add_argument(
-        "--duration", type=float, default=1.0, metavar="N", help="Duration of the time window  (default: 1s)"
+        "--duration",
+        type=float,
+        default=1.0,
+        metavar="N",
+        help="Duration of the time window  (default: 1s)",
     )
     parser.add_argument(
-        "--overlap", type=float, default=0.8, metavar="N", help="overlap of time window (default: 0.8s)"
+        "--overlap",
+        type=float,
+        default=0.8,
+        metavar="N",
+        help="overlap of time window (default: 0.8s)",
     )
-    parser.add_argument("--experiment", type=int, default=0, metavar="N", help="Mlflow experiments id (default: 0)")
+    parser.add_argument(
+        "--experiment",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Mlflow experiments id (default: 0)",
+    )
 
     args = parser.parse_args()
 

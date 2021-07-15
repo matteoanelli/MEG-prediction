@@ -9,14 +9,14 @@ import sys
 import numpy as np
 import torch
 from tqdm import tqdm
+import torch.nn as nn
 
-sys.path.insert(1, r"")
+sys.path.insert(1, r'')
 
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-
-    def __init__(self, patience=7, verbose=False, delta=0, path="checkpoint.pt", trace_func=print):
+    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
         """
         Args:
             patience (int):
@@ -54,7 +54,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score <= self.best_score + self.delta:
             self.counter += 1
-            self.trace_func(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -63,16 +63,13 @@ class EarlyStopping:
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
-        """Saves model when validation loss decrease."""
+        '''Saves model when validation loss decrease.'''
         if self.verbose:
-            self.trace_func(
-                f"Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ..."
-            )
+            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.4f} --> {val_loss:.4f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-
-def train(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patience, hand, model_path):
+def train(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
     """
     Train loop used to train all the DL solutions.
 
@@ -121,7 +118,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device, EPOCH
         net.train()
         train_losses = []
         valid_losses = []
-        for data, labels in trainloader:
+        for data, labels, _ in trainloader:
             # Set data to appropiate device
             data, labels = data.to(device), labels.to(device)
             # Clear the gradients
@@ -140,7 +137,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device, EPOCH
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for data, labels in validloader:
+            for data, labels, _ in validloader:
                 # Set data to appropiate device
                 data, labels = data.to(device), labels.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
@@ -150,11 +147,8 @@ def train(net, trainloader, validloader, optimizer, loss_function, device, EPOCH
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print(
-            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
-                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
-            )
-        )
+        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
+              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -171,8 +165,7 @@ def train(net, trainloader, validloader, optimizer, loss_function, device, EPOCH
 
     return net, avg_train_losses, avg_valid_losses
 
-
-def train_bp(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patience, hand, model_path):
+def train_bp(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
     """
     Train loop used to train all the DL solutions with RPS integration.
     Args:
@@ -247,11 +240,8 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device, EP
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print(
-            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
-                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
-            )
-        )
+        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
+              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -268,8 +258,7 @@ def train_bp(net, trainloader, validloader, optimizer, loss_function, device, EP
 
     return net, avg_train_losses, avg_valid_losses
 
-
-def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patience, hand, model_path):
+def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
     """
     Train loop used to train RPS_MLP.
 
@@ -318,7 +307,7 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
         net.train()
         train_losses = []
         valid_losses = []
-        for labels, bp in trainloader:
+        for _, labels, bp in trainloader:
             # Set data to appropiate device
             labels, bp = labels.to(device), bp.to(device)
             # Clear the gradients
@@ -337,7 +326,7 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
         ######################
         net.eval()  # prep model for evaluation
         with torch.no_grad():
-            for labels, bp in validloader:
+            for _, labels, bp in validloader:
                 # Set data to appropiate device
                 labels, bp = labels.to(device), bp.to(device)
                 # forward pass: compute predicted outputs by passing inputs to the model
@@ -347,11 +336,8 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print(
-            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
-                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
-            )
-        )
+        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
+              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -369,11 +355,9 @@ def train_bp_MLP(net, trainloader, validloader, optimizer, loss_function, device
     return net, avg_train_losses, avg_valid_losses
 
 
-def train_2(
-    net, trainloader, validloader, optimizer, loss_function, device, EPOCHS, patience, hand, model_path, fs=500
-):
+def train_2(net, trainloader, validloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, fs=500):
 
-    net = net.to(device)  # TODO probably to remove
+    net = net.to(device) # TODO probably to remove
     avg_train_losses = []
     avg_valid_losses = []
 
@@ -416,11 +400,8 @@ def train_2(
                 # record validation loss
                 valid_losses.append(valid_loss.item())
 
-        print(
-            "Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}".format(
-                epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)
-            )
-        )
+        print("Epoch: {}/{}. train_loss = {:.4f}, valid_loss = {:.4f}"
+              .format(epoch, EPOCHS, np.mean(train_losses), np.mean(valid_losses)))
 
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
@@ -436,3 +417,248 @@ def train_2(
     net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
 
     return net, avg_train_losses, avg_valid_losses
+
+def train_bp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path, attention=True):
+    """
+    Train loop used to train the rps_mnet to transfer learning.
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+    """
+    print("Transfer learning test subject...")
+    # freeze all the layers
+    for param in net.parameters():
+        param.requires_grad = False
+    # set to true the grad of the MLP
+    for param in net.ff.parameters():
+        param.requires_grad = True
+    if attention:
+        # set to true the grad of the attention layer
+        for param in net.attention.parameters():
+            param.requires_grad = True
+
+    # net.ff[8] = nn.Linear(1024, 1)
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+
+
+    net = net.to(device)
+    avg_train_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        for data, labels, bp in trainloader:
+            # Set data to appropiate device
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(data, bp)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+
+        train_loss = np.mean(train_losses)
+        avg_train_losses.append(train_loss)
+
+        early_stopping(train_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses
+
+
+def train_bp_fine_tuning(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+    """
+    Train loop used to train the rps_mnet to use fine tuning.
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+    """
+    print("Transfer learning test subject...")
+
+    for param in net.parameters():
+        param.requires_grad = True
+
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+
+    net = net.to(device)
+    avg_train_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        for data, labels, bp in trainloader:
+            # Set data to appropiate device
+            data, labels, bp = data.to(device), labels.to(device), bp.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(data, bp)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+
+        train_loss = np.mean(train_losses)
+        avg_train_losses.append(train_loss)
+
+        early_stopping(train_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses
+
+
+def train_mlp_transfer(net, trainloader, optimizer, loss_function, device,  EPOCHS, patience, hand, model_path):
+    """
+    Train loop used to train the rps_mlp to transfer learning.
+    Args:
+        net (torch.nn.Module):
+            The network to train.
+        trainloader (torch.utils.data.DataLoader):
+            The train loader to load the train set.
+        optimizer (torch.optim.Optimizer):
+            The optimizer to be used.
+        loss_function (torch.nn.Module):
+        device (torch.device):
+            The device where run the computation.
+        EPOCHS (int):
+            The maximum number of epochs.
+        patience:
+            The early stopping patience.
+        hand:
+            The processes hand. 0 = left, 1 = right.
+        model_path:
+            The path to save the model and the checkpoints.
+    Returns:
+        net (torch.nn.Module):
+            The trained network.
+         avg_train_losses (list):
+            List of average training loss per epoch as the model trains.
+    """
+    print("Transfer learning test subject...")
+    # freeze all the layers
+    for param in net.parameters():
+        param.requires_grad = False
+    # set to true the grad of the last layer of the MLP
+    for param in net.ff[4].parameters():
+        param.requires_grad = True
+
+    for name, param in net.named_parameters():
+        print("param name: {}, requires_grad {}.".format(name, param.requires_grad))
+
+    # net.ff[8] = nn.Linear(1024, 1)
+
+
+    net = net.to(device)
+    avg_train_losses = []
+
+    # initialize the early_stopping object
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=os.path.join(model_path, "checkpoint.pt"))
+
+    for epoch in tqdm(range(1, EPOCHS + 1)):
+        ###################
+        # train the model #
+        ###################
+        net.train()
+        train_losses = []
+        for _, labels, bp in trainloader:
+            # Set data to appropiate device
+            labels, bp = labels.to(device), bp.to(device)
+            # Clear the gradients
+            optimizer.zero_grad()
+            # Fit the network
+            out = net(bp)
+            # Loss function
+            train_loss = loss_function(out, labels[:, hand])
+            train_losses.append(train_loss.item())
+            # Backpropagation and weights update
+            train_loss.backward()
+            optimizer.step()
+
+        print("Epoch: {}/{}. train_loss = {:.4f}".format(epoch, EPOCHS, np.mean(train_losses)))
+
+        train_loss = np.mean(train_losses)
+        avg_train_losses.append(train_loss)
+
+        early_stopping(train_loss, net)
+
+        if early_stopping.early_stop:
+            print("Early stopping!")
+            break
+
+    net.load_state_dict(torch.load(os.path.join(model_path, "checkpoint.pt")))
+
+    return net, avg_train_losses

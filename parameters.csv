@@ -1,2 +1,11 @@
-data_dir;figure_dir;model_dir;sub;finger;batch_size;batch_size_valid;batch_size_test;epochs;learning_rate;bias;duration;overlap;patience;experiment;s_n_layer;s_kernel_size;t_n_layer;t_kernel_size;max_pooling;ff_n_layer;ff_hidden_channels;dropout;activation
-Z:\Desktop;MEG\Figures;MEG\Models;1;0;100;30;30;100;0.00058;False;1.4;1.2;20;6;4;[20, 20, 20, 5];4;[16, 8, 5, 5];2;3;1024;0.3;relu
+data_dir;figure_dir;model_dir;sub;hand;batch_size;batch_size_valid;batch_size_test;epochs;learning_rate;patience;y_measure;experiment
+Z:\Desktop;MEG\Figures;MEG\Models;8;1;80;30;30;100;0.00116;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;100;0.00299;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;1;100;30;30;100;0.00146;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;100;0.00169;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;1;100;30;30;100;0.00294;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;100;0.00148;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;100;0.00081;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;80;30;30;100;0.00162;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;120;30;30;100;0.00203;20;movement;27
+Z:\Desktop;MEG\Figures;MEG\Models;8;0;100;30;30;100;0.00226;20;movement;27
